@@ -9,16 +9,19 @@ import { createClient } from "@/lib/supabase/client"
 export function HeaderAuth() {
   const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? null)
+      setUserId(data.user?.id ?? null)
       setLoaded(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setEmail(session?.user?.email ?? null)
+      setUserId(session?.user?.id ?? null)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -35,17 +38,28 @@ export function HeaderAuth() {
 
   if (email) {
     return (
-      <button
-        type="button"
-        onClick={signOut}
-        className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-        aria-label="Sign out"
-        title={email}
-      >
-        <UserRound className="h-4 w-4" />
-        <span className="label-mono hidden md:inline">Sign Out</span>
-        <LogOut className="hidden h-3.5 w-3.5 md:inline" />
-      </button>
+      <div className="flex items-center gap-2">
+        {userId ? (
+          <Link
+            href={`/u/${userId}`}
+            className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            aria-label="View your profile"
+            title={email}
+          >
+            <UserRound className="h-4 w-4" />
+            <span className="label-mono hidden md:inline">Profile</span>
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          onClick={signOut}
+          className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="label-mono hidden md:inline">Sign Out</span>
+        </button>
+      </div>
     )
   }
 

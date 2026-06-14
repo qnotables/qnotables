@@ -15,6 +15,7 @@ interface ThreadRow {
   title: string
   body: string
   created_at: string
+  author_id: string
   profiles: { display_name: string } | null
   forum_replies: { count: number }[]
 }
@@ -27,7 +28,7 @@ export default async function ForumPage() {
 
   const { data: threads } = await supabase
     .from("forum_threads")
-    .select("id, title, body, created_at, profiles(display_name), forum_replies(count)")
+    .select("id, title, body, created_at, author_id, profiles(display_name), forum_replies(count)")
     .order("created_at", { ascending: false })
 
   const rows = (threads ?? []) as unknown as ThreadRow[]

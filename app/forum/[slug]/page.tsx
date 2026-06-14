@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, CornerDownRight } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
+import { ThreadArticle } from "@/components/thread-article"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
@@ -12,6 +13,7 @@ interface Thread {
   title: string
   body: string
   created_at: string
+  author_id: string
   profiles: { display_name: string } | null
 }
 
@@ -19,6 +21,7 @@ interface Reply {
   id: string
   body: string
   created_at: string
+  author_id: string
   profiles: { display_name: string } | null
 }
 
@@ -32,7 +35,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const { data: thread } = await supabase
     .from("forum_threads")
-    .select("id, title, body, created_at, profiles(display_name)")
+    .select("id, title, body, created_at, author_id, profiles(display_name)")
     .eq("id", slug)
     .maybeSingle()
 
@@ -41,7 +44,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const { data: replyData } = await supabase
     .from("forum_replies")
-    .select("id, body, created_at, profiles(display_name)")
+    .select("id, body, created_at, author_id, profiles(display_name)")
     .eq("thread_id", slug)
     .order("created_at", { ascending: true })
 
@@ -60,20 +63,15 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         </Link>
 
         {/* original post */}
-        <article className="corner-frame border border-border bg-card p-6 md:p-8">
-          <h1 className="stencil text-balance text-2xl leading-tight text-foreground md:text-3xl">
-            {t.title}
-          </h1>
-          <div className="label-mono mt-3 flex items-center gap-4 text-muted-foreground">
-            <span className="text-primary">{t.profiles?.display_name ?? "operator"}</span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> {timeAgo(t.created_at)}
-            </span>
-          </div>
-          <p className="mt-5 whitespace-pre-wrap text-pretty leading-relaxed text-foreground/90">
-            {t.body}
-          </p>
-        </article>
+        <ThreadArticle
+          id={t.id}
+          title={t.title}
+          body={t.body}
+          createdAt={t.created_at}
+          authorId={t.author_id}
+          authorName={t.profiles?.display_name ?? "operator"}
+          isOwner={user?.id === t.author_id}
+        />
 
         {/* replies */}
         <div className="mb-4 mt-10 flex items-center gap-3">
@@ -88,7 +86,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           {replies.map((r) => (
             <div key={r.id} className="border border-border bg-card p-5">
               <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground">
-                <span className="text-primary">{r.profiles?.display_name ?? "operator"}</span>
+                <Link
+                  href={`/u/${r.author_id}`}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  {r.profiles?.display_name ?? "operator"}
+                </Link>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
                 </span>

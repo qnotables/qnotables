@@ -30,6 +30,82 @@ export async function createThread(formData: FormData) {
   redirect(`/forum/${data.id}`)
 }
 
+export async function updateThread(formData: FormData) {
+  const id = String(formData.get("thread_id") ?? "")
+  const title = String(formData.get("title") ?? "").trim()
+  const body = String(formData.get("body") ?? "").trim()
+
+  if (!id) return { error: "Missing thread." }
+  if (title.length < 4 || body.length < 4) {
+    return { error: "Title and body must each be at least 4 characters." }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to edit." }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ title, body })
+    .eq("id", id)
+    .eq("author_id", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/forum/${id}`)
+  revalidatePath("/forum")
+  return { error: null }
+}
+
+export async function deleteThread(formData: FormData) {
+  const id = String(formData.get("thread_id") ?? "")
+  if (!id) return { error: "Missing thread." }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to delete." }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .delete()
+    .eq("id", id)
+    .eq("author_id", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/forum")
+  redirect("/forum")
+}
+
+export async function updateDisplayName(formData: FormData) {
+  const displayName = String(formData.get("display_name") ?? "").trim()
+
+  if (displayName.length < 2 || displayName.length > 32) {
+    return { error: "Display name must be between 2 and 32 characters." }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in." }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/u/${user.id}`)
+  revalidatePath("/forum")
+  return { error: null }
+}
+
 export async function createReply(formData: FormData) {
   const threadId = String(formData.get("thread_id") ?? "")
   const body = String(formData.get("body") ?? "").trim()
