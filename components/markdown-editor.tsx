@@ -208,7 +208,7 @@ export function MarkdownEditor({
             ))}
             <button
               type="button"
-              title="Upload image"
+              title="Upload image or video"
               disabled={uploading}
               onClick={() => fileRef.current?.click()}
               className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
@@ -222,7 +222,7 @@ export function MarkdownEditor({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               className="hidden"
               onChange={onFileChange}
             />
@@ -260,7 +260,7 @@ export function MarkdownEditor({
       {/* Upload progress / error */}
       {uploading ? (
         <p className="label-mono flex items-center gap-2 border-t border-border px-4 py-2 text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading image…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
         </p>
       ) : null}
       {uploadError ? (

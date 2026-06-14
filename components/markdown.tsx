@@ -70,15 +70,34 @@ const components: Components = {
   pre: ({ children }) => (
     <pre className="overflow-x-auto rounded border border-border bg-muted">{children}</pre>
   ),
-  img: ({ src, alt }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt ?? ""}
-      className="my-2 max-w-full rounded border border-border object-contain"
-      loading="lazy"
-    />
-  ),
+  img: ({ src, alt }) => {
+    const url = typeof src === "string" ? src : ""
+    // Media inserted via ![name](url) may point at a video file. Detect by
+    // extension (ignoring any query string) and render a <video> player.
+    const isVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url)
+    if (isVideo) {
+      return (
+        <video
+          src={url}
+          controls
+          playsInline
+          preload="metadata"
+          className="my-2 max-w-full rounded border border-border"
+        >
+          {alt ?? "Your browser does not support the video tag."}
+        </video>
+      )
+    }
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url || "/placeholder.svg"}
+        alt={alt ?? ""}
+        className="my-2 max-w-full rounded border border-border object-contain"
+        loading="lazy"
+      />
+    )
+  },
   hr: () => <hr className="border-border" />,
 }
 
