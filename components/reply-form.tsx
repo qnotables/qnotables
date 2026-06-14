@@ -2,11 +2,13 @@
 
 import { useRef, useState, useTransition } from "react"
 import { createReply } from "@/app/forum/actions"
+import { MarkdownEditor } from "@/components/markdown-editor"
 
 export function ReplyForm({ threadId }: { threadId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
+  const [resetKey, setResetKey] = useState(0)
 
   function action(formData: FormData) {
     setError(null)
@@ -15,7 +17,8 @@ export function ReplyForm({ threadId }: { threadId: string }) {
       if (res?.error) {
         setError(res.error)
       } else {
-        formRef.current?.reset()
+        // Remount the editor to clear it
+        setResetKey((k) => k + 1)
       }
     })
   }
@@ -23,16 +26,19 @@ export function ReplyForm({ threadId }: { threadId: string }) {
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3">
       <input type="hidden" name="thread_id" value={threadId} />
-      <label htmlFor="reply-body" className="label-mono text-muted-foreground">
+      <label className="label-mono text-muted-foreground">
         Add Your Reply
+        <span className="ml-2 normal-case text-muted-foreground/60">
+          (Markdown supported)
+        </span>
       </label>
-      <textarea
-        id="reply-body"
+      <MarkdownEditor
+        key={resetKey}
         name="body"
+        id="reply-body"
         required
-        rows={4}
-        placeholder="Argue the claim, not the operator."
-        className="resize-y border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
+        rows={5}
+        placeholder="Argue the claim, not the operator. Paste an image to embed it."
       />
       {error ? (
         <p className="label-mono border border-destructive/50 bg-destructive/10 px-4 py-2 text-destructive">

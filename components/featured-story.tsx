@@ -1,6 +1,7 @@
 import { ArrowUpRight, Clock, FileText } from "lucide-react"
 import { type Story, formatAgo } from "@/lib/news-data"
 import { PriorityTag } from "@/components/priority-tag"
+import { ShareButtons } from "@/components/share-buttons"
 
 export function FeaturedStory({ story }: { story: Story }) {
   const s = story
@@ -42,13 +43,16 @@ export function FeaturedStory({ story }: { story: Story }) {
           <span className="label-mono flex items-center gap-1.5 text-muted-foreground">
             <FileText className="h-3.5 w-3.5" /> {s.reports} REPORTS
           </span>
-          <a
-            href={href}
-            {...linkProps}
-            className="label-mono ml-auto flex items-center gap-1 text-foreground transition-colors hover:text-primary"
-          >
-            FULL BRIEF <ArrowUpRight className="h-4 w-4" />
-          </a>
+          <div className="ml-auto flex items-center gap-4">
+            <ShareButtons headline={s.headline} url={s.url} source={s.source} />
+            <a
+              href={href}
+              {...linkProps}
+              className="label-mono flex items-center gap-1 text-foreground transition-colors hover:text-primary"
+            >
+              FULL BRIEF <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </div>
     </article>

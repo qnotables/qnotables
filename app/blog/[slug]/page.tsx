@@ -4,22 +4,18 @@ import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
-import { blogPosts, getPost, formatDate } from "@/lib/blog-posts"
-
-export function generateStaticParams() {
-  return blogPosts.map((p) => ({ slug: p.slug }))
-}
+import { getPost, formatDate } from "@/lib/blog-posts"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getPost(slug)
+  const post = await getPost(slug)
   if (!post) return { title: "Not found — Hot and Fresh" }
   return { title: `${post.title} — Hot and Fresh`, description: post.excerpt }
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getPost(slug)
+  const post = await getPost(slug)
   if (!post) notFound()
 
   return (
@@ -49,6 +45,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Clock className="h-3.5 w-3.5" /> {post.readMinutes} MIN READ
           </span>
         </div>
+
+        {post.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.coverImage || "/placeholder.svg"}
+            alt={post.title}
+            className="mt-8 w-full border border-border object-cover"
+          />
+        ) : null}
 
         <article className="mt-8">
           <Markdown content={post.content} />

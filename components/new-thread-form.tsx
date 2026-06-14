@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { createThread } from "@/app/forum/actions"
+import { MarkdownEditor } from "@/components/markdown-editor"
 
 export function NewThreadForm() {
   const [error, setError] = useState<string | null>(null)
@@ -32,16 +33,18 @@ export function NewThreadForm() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="body" className="label-mono text-muted-foreground">
+        <label className="label-mono text-muted-foreground">
           Opening Post
+          <span className="ml-2 normal-case text-muted-foreground/60">
+            (Markdown supported — bold, images, links, code)
+          </span>
         </label>
-        <textarea
-          id="body"
+        <MarkdownEditor
           name="body"
+          id="body"
           required
-          rows={8}
-          placeholder="Lay out the claim. Bring a source if you have one."
-          className="resize-y border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
+          rows={10}
+          placeholder={"Lay out the claim. Bring a source if you have one.\n\nTip: paste an image directly into this box to upload it."}
         />
       </div>
 

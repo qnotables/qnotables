@@ -1,4 +1,11 @@
+import fs from "fs"
+import path from "path"
+import matter from "gray-matter"
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+
 export interface BlogPost {
+  id?: string // present for database-backed posts
   slug: string
   title: string
   excerpt: string
@@ -7,98 +14,152 @@ export interface BlogPost {
   readMinutes: number
   tag: string
   content: string // markdown
+  coverImage?: string | null
+  published?: boolean
+  source: "db" | "mdx"
 }
 
-export const blogPosts: BlogPost[] = [
-  {
-    slug: "how-we-rank-the-wire",
-    title: "How We Rank The Wire",
-    excerpt:
-      "A look under the hood at the signals we weigh when ordering headlines across the desks — recency, source spread, and corroboration.",
-    author: "Editorial Command",
-    date: "2026-06-10",
-    readMinutes: 6,
-    tag: "Methodology",
-    content: `## The short version
+const contentDir = path.join(process.cwd(), "content", "blog")
 
-Every headline that crosses **The Wire** is scored before it is placed. We are not trying to tell you what to think — we are trying to surface what the most credible sources are reporting, fastest, with the least noise.
+// ---------- MDX (static sample) posts ----------
 
-## The signals we weigh
+function getMdxPosts(): BlogPost[] {
+  if (!fs.existsSync(contentDir)) return []
 
-1. **Recency.** A report's age is the strongest single factor. Fresh dispatches rise; stale ones decay on a curve.
-2. **Source spread.** When multiple independent outlets file the same story, confidence climbs. A lone report is flagged, not buried.
-3. **Desk relevance.** Each item is routed to a desk based on its own category tags, with a keyword fallback.
+  const files = fs.readdirSync(contentDir).filter((f) => f.endsWith(".mdx"))
 
-> We would rather show you a corroborated story ten minutes late than an unverified one ten minutes early.
+  return files.map((filename) => {
+    const filePath = path.join(contentDir, filename)
+    const fileContent = fs.readFileSync(filePath, "utf-8")
+    const { data, content } = matter(fileContent)
+    const slug = filename.replace(".mdx", "")
 
-## What we deliberately avoid
+    return {
+      slug,
+      title: data.title || "Untitled",
+      excerpt: data.excerpt || "",
+      author: data.author || "Anonymous",
+      date: data.date || new Date().toISOString().split("T")[0],
+      readMinutes: data.readMinutes || 5,
+      tag: data.tag || "Uncategorized",
+      content,
+      coverImage: data.coverImage ?? null,
+      published: true,
+      source: "mdx",
+    } as BlogPost
+  })
+}
 
-- No engagement-bait ranking. Outrage does not move a story up.
-- No hidden editorializing in the sort order.
-- No rehosting of full articles — every card links back to the original publisher.
+// ---------- Database posts ----------
 
-## What's next
+interface BlogRow {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  cover_image: string | null
+  body: string
+  author_name: string
+  tag: string
+  read_minutes: number
+  published: boolean
+  created_at: string
+}
 
-We are working on real cross-source corroboration counts, so the "most reported" panel reflects genuine overlap rather than a synthesized estimate. More on that soon.`,
-  },
-  {
-    slug: "reading-a-feed-critically",
-    title: "Reading A Feed Critically",
-    excerpt:
-      "An aggregator is only as good as the reader operating it. A field guide to spotting thin sourcing, recycled wire copy, and missing context.",
-    author: "Standards Desk",
-    date: "2026-06-04",
-    readMinutes: 8,
-    tag: "Media Literacy",
-    content: `## Start with the source, not the headline
+function rowToPost(row: BlogRow): BlogPost {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt,
+    author: row.author_name,
+    date: row.created_at,
+    readMinutes: row.read_minutes,
+    tag: row.tag,
+    content: row.body,
+    coverImage: row.cover_image,
+    published: row.published,
+    source: "db",
+  }
+}
 
-A headline is an advertisement for a story. Before you react, look at **who** filed it and **when**. A single outlet running a dramatic claim that no one else has touched is a reason to wait, not to share.
+async function getDbPosts(): Promise<BlogPost[]> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(
+        "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+      )
+      .eq("published", true)
+      .order("created_at", { ascending: false })
 
-## Three questions for every story
+    if (error) {
+      console.error("[v0] getDbPosts error", error.message)
+      return []
+    }
+    return (data as BlogRow[]).map(rowToPost)
+  } catch (err) {
+    console.error("[v0] getDbPosts exception", err)
+    return []
+  }
+}
 
-- **Who is reporting this, and what do they have access to?**
-- **Is anyone else corroborating it independently?**
-- **What is the story *not* telling me?**
+// ---------- Public API ----------
 
-## Recycled wire copy
+/** Merge published DB posts + MDX posts. DB posts win on slug collisions. */
+export async function getAllPosts(): Promise<BlogPost[]> {
+  const [dbPosts, mdxPosts] = await Promise.all([getDbPosts(), Promise.resolve(getMdxPosts())])
 
-Much of what looks like many outlets reporting a story is actually one wire service syndicated everywhere. That is not corroboration — it is duplication. We try to collapse those into a single entry, but the habit of checking is yours to keep.
+  const bySlug = new Map<string, BlogPost>()
+  for (const p of mdxPosts) bySlug.set(p.slug, p)
+  for (const p of dbPosts) bySlug.set(p.slug, p) // DB overrides MDX
 
-## Context is a feature, not a delay
+  return Array.from(bySlug.values()).sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  )
+}
 
-The fastest possible take is rarely the most useful one. A few minutes of context — a prior event, a base rate, a definition — changes how a story should land. Slow down by exactly that much.`,
-  },
-  {
-    slug: "building-an-open-newsroom",
-    title: "Building An Open Newsroom",
-    excerpt:
-      "Why we pair the feed with a public forum — and the ground rules that keep the conversation useful instead of toxic.",
-    author: "Community Desk",
-    date: "2026-05-28",
-    readMinutes: 5,
-    tag: "Community",
-    content: `## The feed is one direction. The forum is the other.
+export async function getPost(slug: string): Promise<BlogPost | undefined> {
+  const posts = await getAllPosts()
+  return posts.find((p) => p.slug === slug)
+}
 
-A wire feed talks *at* you. The forum lets the readers talk *back* — to us and to each other. Both are better when they sit side by side.
+// ---------- Admin API (service role, bypasses RLS) ----------
 
-## Ground rules
+/** All DB posts including unpublished drafts — admin only. */
+export async function getAllPostsAdmin(): Promise<BlogPost[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("blog_posts")
+    .select(
+      "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+    )
+    .order("created_at", { ascending: false })
 
-1. **Argue the claim, not the person.**
-2. **Bring a source when you bring a correction.**
-3. **Assume the other operator is acting in good faith until proven otherwise.**
+  if (error) {
+    console.error("[v0] getAllPostsAdmin error", error.message)
+    return []
+  }
+  return (data as BlogRow[]).map(rowToPost)
+}
 
-## Moderation philosophy
+/** Fetch a single DB post by id (any publish state) — admin only. */
+export async function getPostByIdAdmin(id: string): Promise<BlogPost | undefined> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("blog_posts")
+    .select(
+      "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+    )
+    .eq("id", id)
+    .maybeSingle()
 
-We moderate for *signal*, not for agreement. You can be completely wrong and still be welcome, as long as you are arguing honestly and citing your reasoning. What gets removed is harassment, spam, and bad-faith manipulation.
-
-## Get involved
-
-Create an account, start a thread, and tell us what we are missing. The best corrections we have ever run started as a forum post.`,
-  },
-]
-
-export function getPost(slug: string): BlogPost | undefined {
-  return blogPosts.find((p) => p.slug === slug)
+  if (error) {
+    console.error("[v0] getPostByIdAdmin error", error.message)
+    return undefined
+  }
+  return data ? rowToPost(data as BlogRow) : undefined
 }
 
 export function formatDate(iso: string): string {

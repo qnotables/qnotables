@@ -7,11 +7,15 @@ import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HeaderAuth } from "@/components/header-auth"
 import { useDeskFilter } from "@/components/desk-filter-context"
+import { SearchOverlay } from "@/components/search-overlay"
 
-export function SiteHeader() {
+type WireStory = { id: string; headline: string; summary: string; source: string; url?: string }
+
+export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
   const [now, setNow] = useState<string>("")
   const { active, setActive } = useDeskFilter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     const tick = () => {
@@ -31,6 +35,12 @@ export function SiteHeader() {
   }, [])
 
   return (
+    <>
+      <SearchOverlay
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        wireStories={wireStories}
+      />
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
       {/* status bar */}
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-1.5 italic text-muted-foreground md:px-6">
@@ -69,6 +79,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setSearchOpen(true)}
             className="hidden items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex"
             aria-label="Search dispatches"
           >
@@ -130,5 +141,6 @@ export function SiteHeader() {
         ))}
       </nav>
     </header>
+    </>
   )
 }
