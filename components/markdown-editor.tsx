@@ -25,6 +25,8 @@ interface MarkdownEditorProps {
   placeholder?: string
   rows?: number
   required?: boolean
+  // Blob folder for uploaded images ("forum" | "blog"). Defaults to "forum".
+  uploadFolder?: "forum" | "blog"
 }
 
 // A transform reads the current value + selection and returns the next value
@@ -69,6 +71,7 @@ export function MarkdownEditor({
   placeholder = "Write in Markdown…",
   rows = 8,
   required,
+  uploadFolder = "forum",
 }: MarkdownEditorProps) {
   const [value, setValue] = useState(defaultValue)
   const [tab, setTab] = useState<"write" | "preview">("write")
@@ -135,6 +138,7 @@ export function MarkdownEditor({
     try {
       const fd = new FormData()
       fd.append("file", file)
+      fd.append("folder", uploadFolder)
       const res = await fetch("/api/upload", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error ?? "Upload failed")

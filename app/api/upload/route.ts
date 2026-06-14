@@ -22,13 +22,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 })
     }
 
-    // 5 MB cap
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File must be under 5 MB" }, { status: 400 })
+    // 8 MB cap
+    if (file.size > 8 * 1024 * 1024) {
+      return NextResponse.json({ error: "File must be under 8 MB" }, { status: 400 })
     }
 
+    // Optional folder param ("forum" | "blog"), sanitized to a known set.
+    const folderRaw = String(formData.get("folder") ?? "forum")
+    const folder = folderRaw === "blog" ? "blog" : "forum"
+
     const ext = file.name.split(".").pop() ?? "bin"
-    const filename = `forum/${user.id}/${Date.now()}.${ext}`
+    const filename = `${folder}/${user.id}/${Date.now()}.${ext}`
 
     const blob = await put(filename, file, { access: "public" })
 
