@@ -1,7 +1,6 @@
 import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export interface BlogPost {
@@ -124,8 +123,10 @@ export function rowToPost(row: BlogRow): BlogPost {
 
 async function getDbPosts(): Promise<BlogPost[]> {
   try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
+    // Use admin client so this works both in RSC (with cookies) and in
+    // contexts where the cookie store isn't available (generateStaticParams, etc.)
+    const admin = createAdminClient()
+    const { data, error } = await admin
       .from("blog_posts")
       .select(
         "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
