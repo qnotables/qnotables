@@ -17,14 +17,24 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
-    // Restrict to images only
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 })
+    // Restrict to images and videos
+    const isImage = file.type.startsWith("image/")
+    const isVideo = file.type.startsWith("video/")
+    if (!isImage && !isVideo) {
+      return NextResponse.json(
+        { error: "Only image and video files are allowed" },
+        { status: 400 },
+      )
     }
 
-    // 8 MB cap
-    if (file.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: "File must be under 8 MB" }, { status: 400 })
+    // Size caps: 8 MB for images, 50 MB for videos
+    const maxBytes = isVideo ? 50 * 1024 * 1024 : 8 * 1024 * 1024
+    if (file.size > maxBytes) {
+      const limitLabel = isVideo ? "50 MB" : "8 MB"
+      return NextResponse.json(
+        { error: `${isVideo ? "Video" : "Image"} must be under ${limitLabel}` },
+        { status: 400 },
+      )
     }
 
     // Optional folder param ("forum" | "blog"), sanitized to a known set.
