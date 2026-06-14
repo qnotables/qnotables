@@ -81,8 +81,8 @@ function categorizeArticle(headline: string, summary: string): Category {
     }
   }
   
-  // Default to WORLD if no other category matches
-  return "WORLD"
+  // Default to OTHER if no other category matches
+  return "OTHER"
 }
 
 async function fetchWatkinsFeed(): Promise<Story[]> {
