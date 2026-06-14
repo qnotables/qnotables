@@ -232,11 +232,6 @@ export function MarkdownEditor({
 
       {/* Write area — always mounted so the ref/selection persist across tab switches */}
       <div className={tab === "write" ? "block" : "hidden"}>
-        <div className="flex flex-col border-t border-border bg-muted/30 px-4 py-2">
-          <p className="label-mono text-xs text-muted-foreground">
-            💡 For images, use a direct URL ending in .jpg, .png, .webp, or .gif, or upload via the upload button above.
-          </p>
-        </div>
         <textarea
           ref={taRef}
           id={id}
