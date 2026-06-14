@@ -100,9 +100,11 @@ async function fetchWatkinsFeed(): Promise<Story[]> {
       const headline = (item.title ?? "").trim()
       const summary = stripHtml(item.contentSnippet || item.content || "").slice(0, 220)
       const published = item.isoDate || item.pubDate
-      const minutesAgo = published
-        ? Math.max(1, Math.round((Date.now() - new Date(published).getTime()) / 60000))
-        : 60 + i * 7
+      const publishedMs = published ? new Date(published).getTime() : NaN
+      const minutesAgo =
+        published && !isNaN(publishedMs)
+          ? Math.max(1, Math.round((Date.now() - publishedMs) / 60000))
+          : 60 + i * 7
       const reports = hashReports(headline)
 
       return {

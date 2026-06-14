@@ -5,6 +5,8 @@ import { SiteFooter } from "@/components/site-footer"
 import { getCategories, getTags, getPostsByDate } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Archives — Hot and Fresh",
   description: "Search and browse field notes by category, tag, and date.",
@@ -94,7 +96,7 @@ export default async function ArchivesPage() {
               {years.map((year) => (
                 <Link
                   key={year}
-                  href={`/archives/${year}`}
+                  href={`/archives/year/${year}`}
                   className="label-mono border border-border bg-card px-4 py-3 text-center transition-all hover:border-primary hover:text-primary"
                 >
                   {year}

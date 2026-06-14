@@ -3,13 +3,10 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getPostsByCategory, getCategories } from "@/lib/archives"
+import { getPostsByCategory } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 
-export async function generateStaticParams() {
-  const categories = await getCategories()
-  return categories.map((cat) => ({ category: cat }))
-}
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params

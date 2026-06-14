@@ -3,13 +3,10 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getPostsByTag, getTags } from "@/lib/archives"
+import { getPostsByTag } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 
-export async function generateStaticParams() {
-  const tags = await getTags()
-  return tags.map((tag) => ({ tag }))
-}
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params
