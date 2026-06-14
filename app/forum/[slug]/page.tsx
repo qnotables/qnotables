@@ -99,7 +99,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           href="/forum"
           className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
         >
-          <ArrowLeft className="h-4 w-4" /> The Mess Hall
+          <ArrowLeft className="h-4 w-4" /> The Town Hall
         </Link>
 
         {/* original post */}

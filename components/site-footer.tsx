@@ -16,7 +16,7 @@ const columns = [
     title: "Community",
     links: [
       { label: "Field Notes (Blog)", href: "/blog" },
-      { label: "The Mess Hall (Forum)", href: "/forum" },
+      { label: "The Town Hall (Forum)", href: "/forum" },
       { label: "Sign In", href: "/auth/login" },
       { label: "Create Account", href: "/auth/sign-up" },
     ],

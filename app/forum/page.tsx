@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
 export const metadata = {
-  title: "The Mess Hall — Hot and Fresh",
+  title: "The Town Hall — Hot and Fresh",
   description: "Open forum for operators. Start a thread, file a reply, argue the claim.",
 }
 
@@ -46,7 +46,7 @@ export default async function ForumPage() {
       <main className="mx-auto max-w-4xl px-4 py-10 md:px-6">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
-          <h1 className="stencil text-3xl text-foreground md:text-4xl">The Mess Hall</h1>
+          <h1 className="stencil text-3xl text-foreground md:text-4xl">The Town Hall</h1>
           <span className="label-mono hidden text-muted-foreground sm:inline">
             // OPEN FORUM
           </span>
