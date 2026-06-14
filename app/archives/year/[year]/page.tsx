@@ -6,14 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { getPostsByDate } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 
-export async function generateStaticParams() {
-  const years = []
-  const currentYear = new Date().getFullYear()
-  for (let year = currentYear; year >= 2020; year--) {
-    years.push({ year: year.toString() })
-  }
-  return years
-}
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ year: string }> }) {
   const { year } = await params
