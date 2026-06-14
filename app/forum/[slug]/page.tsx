@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
 import { Markdown } from "@/components/markdown"
+import { ReplyVotes } from "@/components/reply-votes"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
@@ -55,6 +56,34 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const replies = (replyData ?? []) as unknown as Reply[]
 
+  // Fetch votes for all replies
+  const { data: allVotes } = await supabase
+    .from("reply_votes")
+    .select("reply_id, vote_type")
+    .in("reply_id", replies.map((r) => r.id))
+
+  // Fetch current user's votes
+  const { data: userVotes } = user
+    ? await supabase
+        .from("reply_votes")
+        .select("reply_id, vote_type")
+        .eq("user_id", user.id)
+        .in("reply_id", replies.map((r) => r.id))
+    : { data: [] }
+
+  const voteMap = new Map<string, string[]>()
+  const userVoteMap = new Map<string, string>()
+
+  for (const vote of allVotes ?? []) {
+    const votes = voteMap.get(vote.reply_id) ?? []
+    votes.push(vote.vote_type)
+    voteMap.set(vote.reply_id, votes)
+  }
+
+  for (const vote of userVotes ?? []) {
+    userVoteMap.set(vote.reply_id, vote.vote_type)
+  }
+
   // Build a nested reply tree: replies without parents are top-level,
   // replies with parents are nested under them
   const topLevelReplies = replies.filter((r) => !r.parent_reply_id)
@@ -98,16 +127,24 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
             <div key={r.id}>
               {/* top-level reply */}
               <div className="border border-border bg-card p-5">
-                <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground">
-                  <Link
-                    href={`/u/${r.author_id}`}
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    {r.profiles?.display_name ?? "operator"}
-                  </Link>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
-                  </span>
+                <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/u/${r.author_id}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {r.profiles?.display_name ?? "operator"}
+                    </Link>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
+                    </span>
+                  </div>
+                  <ReplyVotes
+                    replyId={r.id}
+                    initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
+                    initialDownVotes={voteMap.get(r.id)?.filter((v) => v === "down").length ?? 0}
+                    userVote={userVoteMap.get(r.id) as "up" | "down" | undefined}
+                  />
                 </div>
                 <div className="mt-2">
                   <Markdown content={r.body} />
@@ -119,16 +156,24 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                 <div className="ml-4 flex flex-col gap-3 border-l-2 border-border py-3">
                   {nestedReplies(r).map((nested) => (
                     <div key={nested.id} className="border border-border bg-muted/20 p-4">
-                      <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground text-sm">
-                        <Link
-                          href={`/u/${nested.author_id}`}
-                          className="text-primary underline-offset-4 hover:underline"
-                        >
-                          {nested.profiles?.display_name ?? "operator"}
-                        </Link>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
-                        </span>
+                      <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground text-sm">
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/u/${nested.author_id}`}
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            {nested.profiles?.display_name ?? "operator"}
+                          </Link>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
+                          </span>
+                        </div>
+                        <ReplyVotes
+                          replyId={nested.id}
+                          initialUpVotes={voteMap.get(nested.id)?.filter((v) => v === "up").length ?? 0}
+                          initialDownVotes={voteMap.get(nested.id)?.filter((v) => v === "down").length ?? 0}
+                          userVote={userVoteMap.get(nested.id) as "up" | "down" | undefined}
+                        />
                       </div>
                       <div className="mt-2 text-sm">
                         <Markdown content={nested.body} />
