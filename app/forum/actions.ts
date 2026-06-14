@@ -107,18 +107,41 @@ export async function updateDisplayName(formData: FormData) {
   return { error: null }
 }
 
+export async function createReply(formData: FormData) {
+  const threadId = String(formData.get("thread_id") ?? "")
+  const body = String(formData.get("body") ?? "").trim()
+  const parentReplyId = String(formData.get("parent_reply_id") ?? "") || null
+
+  if (!threadId) return { error: "Missing thread." }
+  if (body.length < 2) return { error: "Reply is too short." }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to reply." }
+
+  const { error } = await supabase
+    .from("forum_replies")
+    .insert({
+      thread_id: threadId,
+      body,
+      author_id: user.id,
+      parent_reply_id: parentReplyId,
+    })
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/forum/${threadId}`)
+  return { error: null }
+}
+
 export async function deleteThreadAsAdmin(threadId: string) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to delete." }
-
-  const { error: authError } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single()
 
   // Check admin status via ADMIN_EMAILS
   if (!isAdminEmail(user.email)) {
@@ -132,6 +155,126 @@ export async function deleteThreadAsAdmin(threadId: string) {
 
   if (error) return { error: error.message }
 
+  revalidatePath("/forum")
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function lockThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_locked: true })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/forum/${threadId}`)
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function unlockThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_locked: false })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/forum/${threadId}`)
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function pinThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_pinned: true })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/forum")
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function unpinThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_pinned: false })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/forum")
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function softDeleteThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_soft_deleted: true })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/forum")
+  revalidatePath("/admin/forum")
+  return { error: null }
+}
+
+export async function restoreThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_soft_deleted: false })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
   revalidatePath("/forum")
   revalidatePath("/admin/forum")
   return { error: null }

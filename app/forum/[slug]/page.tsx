@@ -15,6 +15,9 @@ interface Thread {
   body: string
   created_at: string
   author_id: string
+  is_locked: boolean
+  is_pinned: boolean
+  is_soft_deleted: boolean
   profiles: { display_name: string } | null
 }
 
@@ -23,6 +26,7 @@ interface Reply {
   body: string
   created_at: string
   author_id: string
+  parent_reply_id: string | null
   profiles: { display_name: string } | null
 }
 
@@ -36,20 +40,26 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const { data: thread } = await supabase
     .from("forum_threads")
-    .select("id, title, body, created_at, author_id, profiles(display_name)")
+    .select("id, title, body, created_at, author_id, is_locked, is_pinned, is_soft_deleted, profiles(display_name)")
     .eq("id", slug)
     .maybeSingle()
 
-  if (!thread) notFound()
+  if (!thread || thread.is_soft_deleted) notFound()
   const t = thread as unknown as Thread
 
   const { data: replyData } = await supabase
     .from("forum_replies")
-    .select("id, body, created_at, author_id, profiles(display_name)")
+    .select("id, body, created_at, author_id, parent_reply_id, profiles(display_name)")
     .eq("thread_id", slug)
     .order("created_at", { ascending: true })
 
   const replies = (replyData ?? []) as unknown as Reply[]
+
+  // Build a nested reply tree: replies without parents are top-level,
+  // replies with parents are nested under them
+  const topLevelReplies = replies.filter((r) => !r.parent_reply_id)
+  const nestedReplies = (parent: Reply) =>
+    replies.filter((r) => r.parent_reply_id === parent.id)
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -84,29 +94,62 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         </div>
 
         <div className="flex flex-col gap-3">
-          {replies.map((r) => (
-            <div key={r.id} className="border border-border bg-card p-5">
-              <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground">
-                <Link
-                  href={`/u/${r.author_id}`}
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  {r.profiles?.display_name ?? "operator"}
-                </Link>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
-                </span>
+          {topLevelReplies.map((r) => (
+            <div key={r.id}>
+              {/* top-level reply */}
+              <div className="border border-border bg-card p-5">
+                <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground">
+                  <Link
+                    href={`/u/${r.author_id}`}
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    {r.profiles?.display_name ?? "operator"}
+                  </Link>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <Markdown content={r.body} />
+                </div>
               </div>
-              <div className="mt-2">
-                <Markdown content={r.body} />
-              </div>
+
+              {/* nested replies (replies to this reply) */}
+              {nestedReplies(r).length > 0 && (
+                <div className="ml-4 flex flex-col gap-3 border-l-2 border-border py-3">
+                  {nestedReplies(r).map((nested) => (
+                    <div key={nested.id} className="border border-border bg-muted/20 p-4">
+                      <div className="label-mono mb-2 flex items-center gap-3 text-muted-foreground text-sm">
+                        <Link
+                          href={`/u/${nested.author_id}`}
+                          className="text-primary underline-offset-4 hover:underline"
+                        >
+                          {nested.profiles?.display_name ?? "operator"}
+                        </Link>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm">
+                        <Markdown content={nested.body} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         {/* reply box */}
         <div className="mt-8 border-t border-border pt-8">
-          {user ? (
+          {t.is_locked ? (
+            <div className="border border-border bg-muted/20 p-6 text-center">
+              <p className="label-mono text-muted-foreground">
+                This thread is locked. No new replies can be posted.
+              </p>
+            </div>
+          ) : user ? (
             <ReplyForm threadId={t.id} />
           ) : (
             <div className="border border-border bg-card p-6 text-center">

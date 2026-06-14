@@ -4,7 +4,15 @@ import { useRef, useState, useTransition } from "react"
 import { createReply } from "@/app/forum/actions"
 import { MarkdownEditor } from "@/components/markdown-editor"
 
-export function ReplyForm({ threadId }: { threadId: string }) {
+export function ReplyForm({
+  threadId,
+  parentReplyId,
+  onCancel,
+}: {
+  threadId: string
+  parentReplyId?: string
+  onCancel?: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -19,6 +27,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
       } else {
         // Remount the editor to clear it
         setResetKey((k) => k + 1)
+        onCancel?.()
       }
     })
   }
@@ -26,8 +35,9 @@ export function ReplyForm({ threadId }: { threadId: string }) {
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3">
       <input type="hidden" name="thread_id" value={threadId} />
+      {parentReplyId && <input type="hidden" name="parent_reply_id" value={parentReplyId} />}
       <label className="label-mono text-muted-foreground">
-        Add Your Reply
+        {parentReplyId ? "Reply to this comment" : "Add Your Reply"}
         <span className="ml-2 normal-case text-muted-foreground/60">
           (Markdown supported)
         </span>
@@ -37,7 +47,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
         name="body"
         id="reply-body"
         required
-        rows={5}
+        rows={parentReplyId ? 3 : 5}
         placeholder="Argue the claim, not the operator. Paste an image to embed it."
       />
       {error ? (
@@ -45,13 +55,24 @@ export function ReplyForm({ threadId }: { threadId: string }) {
           {error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="label-mono self-start bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-      >
-        {pending ? "Posting..." : "Post Reply"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="label-mono bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {pending ? "Posting..." : parentReplyId ? "Post Reply" : "Post Reply"}
+        </button>
+        {parentReplyId && onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="label-mono border border-border px-6 py-2.5 transition-colors hover:border-primary"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }
