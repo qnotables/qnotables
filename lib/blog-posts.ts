@@ -17,15 +17,18 @@ export interface BlogPost {
   category?: string
   tags?: string[] // many-to-many
   postType?: string // Field Note, News Brief, etc.
+  priority?: "low" | "medium" | "high" | "critical"
+  featured?: boolean
   content: string // markdown
   coverImage?: string | null
-  published?: boolean
   status?: "draft" | "published" | "scheduled" | "hidden" | "archived"
-  featured?: boolean
   sourceUrl?: string
   sourceName?: string
+  seoTitle?: string
+  seoDescription?: string
   publishedAt?: string
   updatedAt?: string
+  published?: boolean // legacy
   source: "db" | "mdx"
 }
 
@@ -78,8 +81,11 @@ export interface BlogRow {
   published: boolean
   status?: "draft" | "published" | "scheduled" | "hidden" | "archived"
   featured?: boolean
+  priority?: "low" | "medium" | "high" | "critical"
   source_url?: string
   source_name?: string
+  seo_title?: string
+  seo_description?: string
   created_at: string
   published_at?: string
   updated_at?: string
@@ -100,13 +106,16 @@ export function rowToPost(row: BlogRow): BlogPost {
     category: row.category,
     tags: row.blog_post_tags?.map((t) => t.tag) || [],
     postType: row.post_type,
+    priority: row.priority,
+    featured: row.featured,
     content: row.body,
     coverImage: row.cover_image,
     published: row.published,
     status: row.status || (row.published ? "published" : "draft"),
-    featured: row.featured,
     sourceUrl: row.source_url,
     sourceName: row.source_name,
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
     source: "db",
