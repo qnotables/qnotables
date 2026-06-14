@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowRight, BarChart3, MessageSquare, BookOpen, Lock } from "lucide-react"
+import { ArrowRight, BarChart3, MessageSquare, BookOpen, Lock, Megaphone } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
 
@@ -165,6 +165,24 @@ export default async function AdminPage() {
                     <h3 className="stencil text-foreground group-hover:text-primary">Settings</h3>
                     <p className="label-mono mt-2 text-sm text-muted-foreground">
                       Admin users, permissions, config
+                    </p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
+                </div>
+              </Link>
+
+              {/* Ad Management */}
+              <Link
+                href="/admin/ads"
+                className="group border border-border bg-card p-6 transition-colors hover:border-primary"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="stencil text-foreground group-hover:text-primary">
+                      Ad Management
+                    </h3>
+                    <p className="label-mono mt-2 text-sm text-muted-foreground">
+                      Create, edit, and manage promotional banners
                     </p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
