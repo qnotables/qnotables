@@ -8,14 +8,24 @@ export interface BlogPost {
   id?: string // present for database-backed posts
   slug: string
   title: string
+  subtitle?: string
   excerpt: string
   author: string
   date: string // ISO
   readMinutes: number
   tag: string
+  category?: string
+  tags?: string[] // many-to-many
+  postType?: string // Field Note, News Brief, etc.
   content: string // markdown
   coverImage?: string | null
   published?: boolean
+  status?: "draft" | "published" | "scheduled" | "hidden" | "archived"
+  featured?: boolean
+  sourceUrl?: string
+  sourceName?: string
+  publishedAt?: string
+  updatedAt?: string
   source: "db" | "mdx"
 }
 
@@ -52,33 +62,53 @@ function getMdxPosts(): BlogPost[] {
 
 // ---------- Database posts ----------
 
-interface BlogRow {
+export interface BlogRow {
   id: string
   slug: string
   title: string
+  subtitle?: string
   excerpt: string
   cover_image: string | null
   body: string
   author_name: string
   tag: string
+  category?: string
+  post_type?: string
   read_minutes: number
   published: boolean
+  status?: "draft" | "published" | "scheduled" | "hidden" | "archived"
+  featured?: boolean
+  source_url?: string
+  source_name?: string
   created_at: string
+  published_at?: string
+  updated_at?: string
+  blog_post_tags?: Array<{ tag: string }>
 }
 
-function rowToPost(row: BlogRow): BlogPost {
+export function rowToPost(row: BlogRow): BlogPost {
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
+    subtitle: row.subtitle,
     excerpt: row.excerpt,
     author: row.author_name,
-    date: row.created_at,
+    date: row.published_at || row.created_at,
     readMinutes: row.read_minutes,
     tag: row.tag,
+    category: row.category,
+    tags: row.blog_post_tags?.map((t) => t.tag) || [],
+    postType: row.post_type,
     content: row.body,
     coverImage: row.cover_image,
     published: row.published,
+    status: row.status || (row.published ? "published" : "draft"),
+    featured: row.featured,
+    sourceUrl: row.source_url,
+    sourceName: row.source_name,
+    publishedAt: row.published_at,
+    updatedAt: row.updated_at,
     source: "db",
   }
 }
@@ -89,10 +119,10 @@ async function getDbPosts(): Promise<BlogPost[]> {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(
-        "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+        "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
       )
-      .eq("published", true)
-      .order("created_at", { ascending: false })
+      .eq("status", "published")
+      .order("published_at", { ascending: false, nullsFirst: false })
 
     if (error) {
       console.error("[v0] getDbPosts error", error.message)
@@ -133,9 +163,9 @@ export async function getAllPostsAdmin(): Promise<BlogPost[]> {
   const { data, error } = await admin
     .from("blog_posts")
     .select(
-      "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
     )
-    .order("created_at", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
 
   if (error) {
     console.error("[v0] getAllPostsAdmin error", error.message)
@@ -150,7 +180,7 @@ export async function getPostByIdAdmin(id: string): Promise<BlogPost | undefined
   const { data, error } = await admin
     .from("blog_posts")
     .select(
-      "id, slug, title, excerpt, cover_image, body, author_name, tag, read_minutes, published, created_at",
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
     )
     .eq("id", id)
     .maybeSingle()

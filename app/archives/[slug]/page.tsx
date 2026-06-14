@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -22,15 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ArchivePostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPost(slug)
   if (!post) notFound()
-
-  // Redirect /blog/slug to /archives/slug
-  if (slug !== post.slug) {
-    redirect(`/archives/${post.slug}`)
-  }
 
   const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
 
