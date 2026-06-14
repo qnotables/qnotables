@@ -2,15 +2,16 @@ import Link from "next/link"
 import { ArrowUpRight, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { blogPosts, formatDate } from "@/lib/blog-posts"
+import { getAllPosts, formatDate } from "@/lib/blog-posts"
 
 export const metadata = {
   title: "Field Notes — Hot and Fresh",
   description: "Essays and dispatches on methodology, media literacy, and the newsroom.",
 }
 
-export default function BlogPage() {
-  const [lead, ...rest] = blogPosts
+export default async function BlogPage() {
+  const posts = await getAllPosts()
+  const [lead, ...rest] = posts
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
