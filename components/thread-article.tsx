@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Clock, Pencil, Trash2, X, Loader2 } from "lucide-react"
 import { updateThread, deleteThread } from "@/app/forum/actions"
 import { timeAgo } from "@/lib/time"
+import { Markdown } from "@/components/markdown"
+import { MarkdownEditor } from "@/components/markdown-editor"
 
 interface ThreadArticleProps {
   id: string
@@ -73,14 +75,12 @@ export function ThreadArticle({
             <label htmlFor="edit-body" className="label-mono text-muted-foreground">
               Body
             </label>
-            <textarea
+            <MarkdownEditor
               id="edit-body"
               name="body"
               defaultValue={body}
               required
-              minLength={4}
               rows={8}
-              className="resize-y border border-border bg-background px-3 py-2 leading-relaxed text-foreground outline-none focus:border-primary"
             />
           </div>
 
@@ -149,9 +149,9 @@ export function ThreadArticle({
           </span>
         ) : null}
       </div>
-      <p className="mt-5 whitespace-pre-wrap text-pretty leading-relaxed text-foreground/90">
-        {body}
-      </p>
+      <div className="mt-5">
+        <Markdown content={body} />
+      </div>
     </article>
   )
 }

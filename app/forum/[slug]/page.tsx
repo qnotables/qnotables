@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
+import { Markdown } from "@/components/markdown"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
@@ -96,9 +97,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                   <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
                 </span>
               </div>
-              <p className="whitespace-pre-wrap text-pretty leading-relaxed text-foreground/90">
-                {r.body}
-              </p>
+              <div className="mt-2">
+                <Markdown content={r.body} />
+              </div>
             </div>
           ))}
         </div>
