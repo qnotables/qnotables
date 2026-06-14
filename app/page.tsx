@@ -37,15 +37,19 @@ export default async function Page() {
           <span className="h-2 w-2 bg-primary" />
           <h1 className="stencil text-xl text-foreground">Situation Report</h1>
           {live ? (
-            <a
-              href="https://rumble.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="label-mono hidden items-center gap-1 text-primary transition-colors hover:text-primary/80 sm:inline-flex"
-              title="Open Rumble live stream"
+            <button
+              onClick={() => {
+                window.open(
+                  "https://rumble.com/c/Qnotables",
+                  "rumble_popout",
+                  "width=1000,height=700,resizable=yes,scrollbars=yes"
+                )
+              }}
+              className="label-mono hidden items-center gap-1 text-primary transition-colors hover:text-primary/80 sm:inline-flex cursor-pointer"
+              title="Open Rumble live stream in popout"
             >
               // <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" /> LIVE STREAM
-            </a>
+            </button>
           ) : (
             <span className="label-mono hidden text-muted-foreground sm:inline">
               // CACHED BRIEF
