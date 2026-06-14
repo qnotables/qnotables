@@ -35,9 +35,6 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-            `${window.location.origin}/auth/callback`,
           data: {
             display_name: displayName,
           },
@@ -110,6 +107,17 @@ export default function SignUpPage() {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="space-y-2 rounded border border-border bg-background/50 p-3 text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground">Development Mode</p>
+          <p>
+            {"Email verification is currently enabled in development. See "}
+            <code className="bg-muted px-1 py-0.5 text-muted-foreground">SUPABASE_EMAIL_SETUP.md</code>
+            {" to disable it for immediate access."}
+          </p>
+          <p className="italic">
+            {"In production, email verification will be required to prevent spam."}
+          </p>
+        </div>
         <button
           type="submit"
           disabled={isLoading}
