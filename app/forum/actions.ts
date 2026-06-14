@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { isAdminEmail } from "@/lib/admin"
 
 export async function createThread(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
@@ -106,25 +107,32 @@ export async function updateDisplayName(formData: FormData) {
   return { error: null }
 }
 
-export async function createReply(formData: FormData) {
-  const threadId = String(formData.get("thread_id") ?? "")
-  const body = String(formData.get("body") ?? "").trim()
-
-  if (!threadId) return { error: "Missing thread." }
-  if (body.length < 2) return { error: "Reply is too short." }
-
+export async function deleteThreadAsAdmin(threadId: string) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "You must be signed in to reply." }
+  if (!user) return { error: "You must be signed in to delete." }
+
+  const { error: authError } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single()
+
+  // Check admin status via ADMIN_EMAILS
+  if (!isAdminEmail(user.email)) {
+    return { error: "You do not have permission to delete threads." }
+  }
 
   const { error } = await supabase
-    .from("forum_replies")
-    .insert({ thread_id: threadId, body, author_id: user.id })
+    .from("forum_threads")
+    .delete()
+    .eq("id", threadId)
 
   if (error) return { error: error.message }
 
-  revalidatePath(`/forum/${threadId}`)
+  revalidatePath("/forum")
+  revalidatePath("/admin/forum")
   return { error: null }
 }

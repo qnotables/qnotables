@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Trash2, Eye } from "lucide-react"
+import { ArrowLeft, Eye } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
+import { ForumDeleteButton } from "@/components/forum-delete-button"
 
 export const metadata = {
   title: "Forum Moderation | qnotables.ai",
@@ -105,12 +106,7 @@ export default async function ForumModerationPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Link>
-                    <button
-                      className="flex items-center justify-center rounded p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      title="Delete thread"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <ForumDeleteButton threadId={t.id} />
                   </div>
                 </div>
               )
