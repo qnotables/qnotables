@@ -138,7 +138,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
         <span className="my-1 hidden h-4 w-px bg-border md:mx-2 md:inline-block" aria-hidden="true" />
         {[
           { label: "ARCHIVES", href: "/archives" },
-          { label: "FORUM", href: "/forum" },
+          { label: "TOWN HALL", href: "/forum" },
         ].map((link) => (
           <Link
             key={link.href}

@@ -221,7 +221,7 @@ export function SearchOverlay({ open, onClose, wireStories = [] }: Props) {
             <section>
               <div className="mb-3 flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary" />
-                <h2 className="label-mono text-xs text-primary">FORUM THREADS</h2>
+                <h2 className="label-mono text-xs text-primary">TOWN HALL THREADS</h2>
               </div>
               <ul className="flex flex-col gap-2">
                 {results.threads.map((t) => (

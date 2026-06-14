@@ -68,7 +68,7 @@ export default async function AdminPage() {
           <div className="border border-border bg-card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="label-mono text-muted-foreground">FORUM THREADS</p>
+                <p className="label-mono text-muted-foreground">TOWN HALL THREADS</p>
                 <p className="stencil mt-2 text-2xl text-foreground">{stats.threads}</p>
               </div>
               <MessageSquare className="h-8 w-8 text-primary opacity-50" />
@@ -78,7 +78,7 @@ export default async function AdminPage() {
           <div className="border border-border bg-card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="label-mono text-muted-foreground">FORUM REPLIES</p>
+                <p className="label-mono text-muted-foreground">TOWN HALL REPLIES</p>
                 <p className="stencil mt-2 text-2xl text-foreground">{stats.replies}</p>
               </div>
               <MessageSquare className="h-8 w-8 text-primary opacity-50" />
@@ -109,7 +109,7 @@ export default async function AdminPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="stencil text-foreground group-hover:text-primary">
-                      Forum Moderation
+                      Town Hall Moderation
                     </h3>
                     <p className="label-mono mt-2 text-sm text-muted-foreground">
                       Review threads, manage replies, user actions
