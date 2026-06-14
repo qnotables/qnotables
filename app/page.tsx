@@ -6,6 +6,7 @@ import { TrendingPanel } from "@/components/trending-panel"
 import { BriefSignup } from "@/components/brief-signup"
 import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
+import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { getNews } from "@/lib/rss"
 import { categories } from "@/lib/news-data"
@@ -77,6 +78,7 @@ export default async function Page() {
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
+        <DeskNav />
         <WireFeed desks={desks} />
       </main>
 
