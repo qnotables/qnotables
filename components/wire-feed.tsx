@@ -9,8 +9,8 @@ type Desk = { cat: Category; stories: Story[] }
 export function WireFeed({ desks }: { desks: Desk[] }) {
   const { active } = useDeskFilter()
 
-  const visible = active === "ALL" ? desks : desks.filter((d) => d.cat === active)
-  const isFiltered = active !== "ALL"
+  const visible = active === "NOTABLES" ? desks : desks.filter((d) => d.cat === active)
+  const isFiltered = active !== "NOTABLES"
 
   return (
     <>
