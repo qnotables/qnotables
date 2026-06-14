@@ -44,14 +44,24 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
       {/* status bar */}
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-1.5 italic text-muted-foreground md:px-6">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            window.open(
+              "https://rumble.com/c/Qnotables",
+              "rumble_popout",
+              "width=1000,height=700,resizable=yes,scrollbars=yes"
+            )
+          }}
+          className="flex items-center gap-2 transition-colors hover:text-primary"
+        >
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
-          <span className="label-mono text-foreground">LIVE FEED</span>
+          <span className="label-mono text-foreground hover:text-primary">LIVE FEED</span>
           <span className="label-mono hidden sm:inline">// 17 SOURCES MONITORED</span>
-        </div>
+        </button>
         <span className="label-mono tabular-nums">{now || "--:--:-- EST"}</span>
       </div>
 
@@ -106,10 +116,10 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
         } flex-col gap-1 border-t border-border px-4 pb-3 md:flex md:flex-row md:items-center md:gap-0 md:border-t md:px-6 md:py-0`}
         aria-label="News categories"
       >
-        {["ALL", ...categories].map((cat) => (
+        {["NOTABLES", ...categories].map((cat) => (
           <a
             key={cat}
-            href={cat === "ALL" ? "/#wire" : `/#desk-${cat}`}
+            href={cat === "NOTABLES" ? "/#wire" : `/#desk-${cat}`}
             onClick={() => {
               setActive(cat)
               setMenuOpen(false)

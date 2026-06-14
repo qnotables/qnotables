@@ -2,6 +2,7 @@ import Link from "next/link"
 import { MessageSquare, Plus, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { Markdown } from "@/components/markdown"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
@@ -20,10 +21,22 @@ interface ThreadRow {
   forum_replies: { count: number }[]
 }
 
-// Extract the first image URL from markdown content (e.g., ![alt](url))
-function extractFirstImageFromMarkdown(markdown: string): string | null {
-  const match = markdown.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/)
-  return match ? match[1] : null
+// Extract text content from markdown (strip markdown syntax for preview)
+function stripMarkdown(markdown: string): string {
+  return (
+    markdown
+      // Remove markdown link syntax
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
+      // Remove markdown image syntax
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, "")
+      // Remove bold/italic markers
+      .replace(/[*_]/g, "")
+      // Remove code markers
+      .replace(/`/g, "")
+      // Clean up multiple spaces
+      .replace(/\s+/g, " ")
+      .trim()
+  )
 }
 
 export default async function ForumPage() {
@@ -80,7 +93,7 @@ export default async function ForumPage() {
           <div className="flex flex-col gap-3">
             {rows.map((t) => {
               const replyCount = t.forum_replies?.[0]?.count ?? 0
-              const imageUrl = extractFirstImageFromMarkdown(t.body)
+              const bodyPreview = stripMarkdown(t.body)
               return (
                 <Link
                   key={t.id}
@@ -97,15 +110,8 @@ export default async function ForumPage() {
                     <h2 className="stencil text-balance text-lg text-foreground transition-colors group-hover:text-primary">
                       {t.title}
                     </h2>
-                    {imageUrl && (
-                      <img
-                        src={imageUrl}
-                        alt={t.title}
-                        className="mt-2 max-h-32 w-auto rounded border border-border object-cover"
-                      />
-                    )}
                     <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                      {t.body}
+                      {bodyPreview}
                     </p>
                     <div className="label-mono mt-3 flex items-center gap-3 text-muted-foreground">
                       <span className="text-foreground">

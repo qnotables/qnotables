@@ -126,7 +126,7 @@ export function MarkdownEditor({
       icon: <Image className="h-3.5 w-3.5" />,
       label: "Image URL",
       run: () => {
-        const url = prompt("Image URL:")
+        const url = prompt("Image URL (or upload via the button):")
         if (url) insertAtCaret(`![image](${url})`)
       },
     },
