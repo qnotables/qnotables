@@ -15,6 +15,7 @@ import {
   Eye,
   Pencil,
   Loader2,
+  Clock,
 } from "lucide-react"
 import { Markdown } from "@/components/markdown"
 
@@ -27,6 +28,16 @@ interface MarkdownEditorProps {
   required?: boolean
   // Blob folder for uploaded images ("forum" | "blog"). Defaults to "forum".
   uploadFolder?: "forum" | "blog"
+}
+
+// Calculate word count and reading time
+function calculateStats(text: string) {
+  const trimmed = text.trim()
+  const characters = trimmed.length
+  const words = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length
+  // Average reading speed: 180 words per minute
+  const readingTime = Math.max(1, Math.round(words / 180))
+  return { characters, words, readingTime }
 }
 
 // A transform reads the current value + selection and returns the next value
@@ -77,6 +88,7 @@ export function MarkdownEditor({
   const [tab, setTab] = useState<"write" | "preview">("write")
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const stats = calculateStats(value)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   // Caret position to restore after a state-driven edit re-renders the textarea.
@@ -175,7 +187,7 @@ export function MarkdownEditor({
     <div className="flex flex-col gap-0 border border-border focus-within:border-primary">
       {/* Tab bar + toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-1">
-        <div className="flex">
+        <div className="flex items-center gap-2">
           {(["write", "preview"] as const).map((t) => (
             <button
               key={t}
@@ -191,6 +203,15 @@ export function MarkdownEditor({
               {t}
             </button>
           ))}
+
+          {/* Stats display */}
+          <div className="label-mono ml-auto flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
+            <span title="Word count">{stats.words} words</span>
+            <span title="Character count">{stats.characters} chars</span>
+            <span className="flex items-center gap-1" title="Estimated reading time">
+              <Clock className="h-3 w-3" /> {stats.readingTime} min
+            </span>
+          </div>
         </div>
 
         {tab === "write" && (

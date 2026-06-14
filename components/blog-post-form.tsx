@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom"
 import Link from "next/link"
 import { ImagePlus, Loader2, Save, X } from "lucide-react"
 import { MarkdownEditor } from "@/components/markdown-editor"
+import { TextStats } from "@/components/text-stats"
+import { SeoField } from "@/components/seo-field"
 import { createPost, updatePost } from "@/app/blog/actions"
 import type { BlogPost } from "@/lib/blog-posts"
 
@@ -104,6 +106,9 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
   const isEdit = Boolean(post?.id)
   const action = isEdit ? updatePost : createPost
   const [state, formAction] = useActionState(action, { error: null })
+  const [excerptValue, setExcerptValue] = useState(post?.excerpt ?? "")
+  const [seoTitleValue, setSeoTitleValue] = useState(post?.seoTitle ?? "")
+  const [seoDescriptionValue, setSeoDescriptionValue] = useState(post?.seoDescription ?? "")
 
   const inputClass =
     "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary"
@@ -127,6 +132,19 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
         />
       </div>
 
+      <div className="flex flex-col gap-2">
+        <label htmlFor="subtitle" className="label-mono text-muted-foreground">
+          Subtitle <span className="text-muted-foreground/60">(optional)</span>
+        </label>
+        <input
+          id="subtitle"
+          name="subtitle"
+          defaultValue={post?.subtitle ?? ""}
+          placeholder="A supporting headline or summary"
+          className={inputClass}
+        />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
           <label htmlFor="tag" className="label-mono text-muted-foreground">
@@ -140,6 +158,21 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
           />
         </div>
         <div className="flex flex-col gap-2">
+          <label htmlFor="category" className="label-mono text-muted-foreground">
+            Category <span className="text-muted-foreground/60">(optional)</span>
+          </label>
+          <input
+            id="category"
+            name="category"
+            defaultValue={post?.category ?? ""}
+            placeholder="e.g., Analysis, News, Research"
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-2">
           <label htmlFor="author_name" className="label-mono text-muted-foreground">
             Author
           </label>
@@ -150,6 +183,23 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
             placeholder="Editorial Desk"
             className={inputClass}
           />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="post_type" className="label-mono text-muted-foreground">
+            Post Type <span className="text-muted-foreground/60">(optional)</span>
+          </label>
+          <select id="post_type" name="post_type" defaultValue={post?.postType ?? ""} className={inputClass}>
+            <option value="">— Select Type —</option>
+            <option value="Field Note">Field Note</option>
+            <option value="News Brief">News Brief</option>
+            <option value="Research Thread">Research Thread</option>
+            <option value="Show Notes">Show Notes</option>
+            <option value="Source Archive">Source Archive</option>
+            <option value="Opinion">Opinion</option>
+            <option value="Explainer">Explainer</option>
+            <option value="Timeline">Timeline</option>
+            <option value="Document Drop">Document Drop</option>
+          </select>
         </div>
       </div>
 
@@ -167,14 +217,18 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="excerpt" className="label-mono text-muted-foreground">
-          Excerpt
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="excerpt" className="label-mono text-muted-foreground">
+            Excerpt
+          </label>
+          <TextStats text={excerptValue} />
+        </div>
         <textarea
           id="excerpt"
           name="excerpt"
           rows={2}
-          defaultValue={post?.excerpt}
+          value={excerptValue}
+          onChange={(e) => setExcerptValue(e.target.value)}
           placeholder="A one or two sentence summary shown in listings."
           className={`${inputClass} resize-y leading-relaxed`}
         />
@@ -194,18 +248,110 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
         />
       </div>
 
-      <label className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          name="published"
-          defaultChecked={post?.published ?? true}
-          className="h-4 w-4 accent-primary"
-        />
-        <span className="label-mono text-foreground">Published</span>
-        <span className="label-mono text-muted-foreground">
-          (uncheck to save as a private draft)
-        </span>
-      </label>
+      <div className="border-t border-border pt-6">
+        <h3 className="label-mono mb-4 text-sm font-semibold text-foreground">Publishing & Metadata</h3>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="status" className="label-mono text-muted-foreground">
+              Status
+            </label>
+            <select id="status" name="status" defaultValue={post?.status ?? "draft"} className={inputClass}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="hidden">Hidden</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="priority" className="label-mono text-muted-foreground">
+              Priority
+            </label>
+            <select id="priority" name="priority" defaultValue={post?.priority ?? "medium"} className={inputClass}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <label className="mt-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            name="featured"
+            defaultChecked={post?.featured ?? false}
+            className="h-4 w-4 accent-primary"
+          />
+          <span className="label-mono text-foreground">Featured Post</span>
+          <span className="label-mono text-muted-foreground">(Show in featured section)</span>
+        </label>
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <h3 className="label-mono mb-4 text-sm font-semibold text-foreground">SEO & Sharing</h3>
+
+        <div className="gap-4">
+          <SeoField
+            label="SEO Title (optional)"
+            value={seoTitleValue}
+            onChange={setSeoTitleValue}
+            name="seo_title"
+            maxLength={60}
+            recommendedLength={{ min: 30, max: 60 }}
+            placeholder="For search engines (leave blank to use main title)"
+          />
+        </div>
+
+        <div className="mt-4 gap-4">
+          <SeoField
+            label="SEO Description (optional)"
+            value={seoDescriptionValue}
+            onChange={setSeoDescriptionValue}
+            name="seo_description"
+            maxLength={160}
+            recommendedLength={{ min: 120, max: 160 }}
+            placeholder="For search engines (leave blank to use excerpt)"
+            rows={2}
+            isTextarea
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <h3 className="label-mono mb-4 text-sm font-semibold text-foreground">Source & Links</h3>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="source_name" className="label-mono text-muted-foreground">
+              Source Name <span className="text-muted-foreground/60">(optional)</span>
+            </label>
+            <input
+              id="source_name"
+              name="source_name"
+              defaultValue={post?.sourceName ?? ""}
+              placeholder="e.g., Reuters, AP News"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="source_url" className="label-mono text-muted-foreground">
+              Source URL <span className="text-muted-foreground/60">(optional)</span>
+            </label>
+            <input
+              id="source_url"
+              name="source_url"
+              type="url"
+              defaultValue={post?.sourceUrl ?? ""}
+              placeholder="https://example.com"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
 
       {state?.error ? (
         <p className="label-mono border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">

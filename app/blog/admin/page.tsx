@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowLeft, Plus, Pencil, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Eye, EyeOff, Filter } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { BlogDeleteButton } from "@/components/blog-delete-button"
@@ -12,7 +12,17 @@ export const metadata = {
   title: "Blog Admin — Hot and Fresh",
 }
 
-export default async function BlogAdminPage() {
+interface BlogAdminPageProps {
+  searchParams: Promise<{
+    status?: string
+    category?: string
+    tag?: string
+    sort?: string
+  }>
+}
+
+export default async function BlogAdminPage({ searchParams }: BlogAdminPageProps) {
+  const params = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -21,18 +31,55 @@ export default async function BlogAdminPage() {
   if (!user) redirect("/auth/login")
   if (!isAdminEmail(user.email)) redirect("/blog")
 
-  const posts = await getAllPostsAdmin()
+  let posts = await getAllPostsAdmin()
+
+  // Ensure posts is always an array
+  if (!Array.isArray(posts)) {
+    posts = []
+  }
+
+  // Filter by status if specified
+  if (params.status) {
+    posts = posts.filter((p) => p.status === params.status)
+  }
+
+  // Filter by category if specified
+  if (params.category) {
+    posts = posts.filter((p) => p.category === params.category)
+  }
+
+  // Filter by tag if specified
+  if (params.tag) {
+    posts = posts.filter((p) => p.tags?.includes(params.tag!))
+  }
+
+  // Sort by date (newest first is default, or by title)
+  if (params.sort === "title") {
+    posts.sort((a, b) => a.title.localeCompare(b.title))
+  }
+
+  // Get unique categories and tags for filter UI
+  const categories = Array.from(new Set(posts.map((p) => p.category).filter(Boolean)))
+  const allTags = Array.from(new Set(posts.flatMap((p) => p.tags || [])))
+
+  const statusOptions = [
+    { value: "draft", label: "Draft" },
+    { value: "published", label: "Published" },
+    { value: "scheduled", label: "Scheduled" },
+    { value: "hidden", label: "Hidden" },
+    { value: "archived", label: "Archived" },
+  ]
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-10 md:px-6">
         <Link
           href="/blog"
           className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
         >
-          <ArrowLeft className="h-4 w-4" /> Field Notes
+          <ArrowLeft className="h-4 w-4" /> Archives
         </Link>
 
         <div className="mb-8 flex flex-wrap items-center gap-3">
@@ -46,9 +93,80 @@ export default async function BlogAdminPage() {
           </Link>
         </div>
 
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4">
+          <Filter className="h-5 w-5 text-muted-foreground" />
+
+          <form method="GET" className="contents">
+            {/* Status Filter */}
+            <select
+              name="status"
+              defaultValue={params.status || ""}
+              className="label-mono border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
+              onChange={(e) => e.target.form?.submit()}
+            >
+              <option value="">All Status</option>
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <select
+                name="category"
+                defaultValue={params.category || ""}
+                className="label-mono border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
+                onChange={(e) => e.target.form?.submit()}
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Tag Filter */}
+            {allTags.length > 0 && (
+              <select
+                name="tag"
+                defaultValue={params.tag || ""}
+                className="label-mono border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
+                onChange={(e) => e.target.form?.submit()}
+              >
+                <option value="">All Tags</option>
+                {allTags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Sort */}
+            <select
+              name="sort"
+              defaultValue={params.sort || "date"}
+              className="label-mono ml-auto border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
+              onChange={(e) => e.target.form?.submit()}
+            >
+              <option value="date">Date (Newest)</option>
+              <option value="title">Title (A-Z)</option>
+            </select>
+          </form>
+        </div>
+
         {posts.length === 0 ? (
           <div className="border border-dashed border-border p-10 text-center">
-            <p className="text-muted-foreground">No posts yet.</p>
+            <p className="text-muted-foreground">
+              {params.status || params.category || params.tag
+                ? "No posts match these filters."
+                : "No posts yet."}
+            </p>
             <Link
               href="/blog/admin/new"
               className="label-mono mt-4 inline-flex items-center gap-2 text-primary hover:underline"
@@ -77,20 +195,39 @@ export default async function BlogAdminPage() {
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <div className="label-mono mb-1 flex items-center gap-2 text-primary">
-                    <span>{post.tag}</span>
-                    <span className="text-muted-foreground">{formatDate(post.date)}</span>
-                    {post.published ? (
+                  <div className="label-mono mb-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <span className="text-primary">{post.tag}</span>
+                    {post.category && (
+                      <>
+                        <span>•</span>
+                        <span>{post.category}</span>
+                      </>
+                    )}
+                    {post.postType && (
+                      <>
+                        <span>•</span>
+                        <span>{post.postType}</span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <span>{formatDate(post.date)}</span>
+                    {post.status === "published" ? (
                       <span className="inline-flex items-center gap-1 text-foreground">
                         <Eye className="h-3 w-3" /> live
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
-                        <EyeOff className="h-3 w-3" /> draft
+                      <span className="inline-flex items-center gap-1">
+                        <EyeOff className="h-3 w-3" /> {post.status}
                       </span>
+                    )}
+                    {post.featured && (
+                      <span className="rounded bg-primary/20 px-1.5 text-primary">★ Featured</span>
                     )}
                   </div>
                   <h2 className="stencil truncate text-lg text-foreground">{post.title}</h2>
+                  {post.subtitle && (
+                    <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{post.subtitle}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
