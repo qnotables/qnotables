@@ -12,12 +12,15 @@ import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const { featured, topStories, feed, trending, live } = await getNews()
-  const tickerItems = [featured, ...topStories, ...feed].map((s) => ({
+  const wireStories = [featured, ...topStories, ...feed].map((s) => ({
+    id: s.id,
     headline: s.headline,
+    summary: s.summary,
+    source: s.source,
     url: s.url,
   }))
 
-  // Group the wire feed into desks, keeping only desks that have stories.
+  const tickerItems = wireStories.map((s) => ({ headline: s.headline, url: s.url }))
   const desks = categories
     .map((cat) => ({ cat, stories: feed.filter((s) => s.category === cat) }))
     .filter((d) => d.stories.length > 0)
@@ -25,7 +28,7 @@ export default async function Page() {
   return (
     <DeskFilterProvider>
     <div id="top" className="min-h-screen tactical-grid">
-      <SiteHeader />
+      <SiteHeader wireStories={wireStories} />
       <NewsTicker items={tickerItems} />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
