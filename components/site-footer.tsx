@@ -3,15 +3,32 @@ import { Radio } from "lucide-react"
 const columns = [
   {
     title: "Desks",
-    links: ["World", "Politics", "Defense", "Economy", "Tech", "Science"],
+    links: [
+      { label: "World", href: "/#desk-WORLD" },
+      { label: "Politics", href: "/#desk-POLITICS" },
+      { label: "Defense", href: "/#desk-DEFENSE" },
+      { label: "Economy", href: "/#desk-ECONOMY" },
+      { label: "Tech", href: "/#desk-TECH" },
+      { label: "Science", href: "/#desk-SCIENCE" },
+    ],
   },
   {
-    title: "Organization",
-    links: ["About", "Editorial Standards", "Source List", "Corrections", "Careers"],
+    title: "Community",
+    links: [
+      { label: "Field Notes (Blog)", href: "/blog" },
+      { label: "The Mess Hall (Forum)", href: "/forum" },
+      { label: "Sign In", href: "/auth/login" },
+      { label: "Create Account", href: "/auth/sign-up" },
+    ],
   },
   {
     title: "Access",
-    links: ["Daily Briefing", "Wire API", "RSS Feeds", "Mobile", "Contact"],
+    links: [
+      { label: "Daily Briefing", href: "#" },
+      { label: "Shop", href: "/shop" },
+      { label: "RSS Feeds", href: "#" },
+      { label: "Contact", href: "#" },
+    ],
   },
 ]
 
@@ -23,7 +40,7 @@ export function SiteFooter() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2">
               <Radio className="h-6 w-6 text-primary" aria-hidden="true" />
-              <span className="stencil text-2xl text-foreground">Dispatch</span>
+              <span className="stencil text-2xl text-foreground">Hot and Fresh</span>
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
               An independent aggregator ranking verified reporting from trusted
@@ -36,12 +53,12 @@ export function SiteFooter() {
               <h3 className="label-mono text-primary">{col.title}</h3>
               <ul className="mt-3 space-y-2">
                 {col.links.map((link) => (
-                  <li key={link}>
+                  <li key={link.label}>
                     <a
-                      href="#"
+                      href={link.href}
                       className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {link}
+                      {link.label}
                     </a>
                   </li>
                 ))}
@@ -52,7 +69,7 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="label-mono text-muted-foreground">
-            DISPATCH INTEL DESK // EST. 2026
+            HOT AND FRESH NEWS DESK // EST. 2026
           </span>
           <span className="label-mono text-muted-foreground">
             AGGREGATED CONTENT LINKS TO ORIGINAL PUBLISHERS

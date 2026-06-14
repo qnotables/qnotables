@@ -18,10 +18,12 @@ export function DeskFilterProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Returns a no-op fallback when used outside a provider (e.g. on the blog/forum
+// pages) so the shared SiteHeader can render on every route without crashing.
 export function useDeskFilter() {
   const ctx = useContext(DeskFilterContext)
   if (!ctx) {
-    throw new Error("useDeskFilter must be used within a DeskFilterProvider")
+    return { active: "ALL", setActive: () => {} }
   }
   return ctx
 }

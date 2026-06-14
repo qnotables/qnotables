@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, Radio, Search, ShoppingBag } from "lucide-react"
 import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { HeaderAuth } from "@/components/header-auth"
 import { useDeskFilter } from "@/components/desk-filter-context"
 
 export function SiteHeader() {
@@ -82,6 +83,7 @@ export function SiteHeader() {
             <ShoppingBag className="h-4 w-4" />
             <span className="label-mono hidden font-semibold md:inline">Shop</span>
           </Link>
+          <HeaderAuth />
           <ThemeToggle />
         </div>
       </div>
@@ -96,7 +98,7 @@ export function SiteHeader() {
         {["ALL", ...categories].map((cat) => (
           <a
             key={cat}
-            href={cat === "ALL" ? "#wire" : `#desk-${cat}`}
+            href={cat === "ALL" ? "/#wire" : `/#desk-${cat}`}
             onClick={() => {
               setActive(cat)
               setMenuOpen(false)
@@ -109,6 +111,22 @@ export function SiteHeader() {
           >
             {cat}
           </a>
+        ))}
+
+        {/* section links to other parts of the site */}
+        <span className="my-1 hidden h-4 w-px bg-border md:mx-2 md:inline-block" aria-hidden="true" />
+        {[
+          { label: "BLOG", href: "/blog" },
+          { label: "FORUM", href: "/forum" },
+        ].map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={() => setMenuOpen(false)}
+            className="label-mono border-l-2 border-transparent px-3 py-2 text-left text-muted-foreground transition-colors hover:text-foreground md:border-l-0 md:border-b-2"
+          >
+            {link.label}
+          </Link>
         ))}
       </nav>
     </header>
