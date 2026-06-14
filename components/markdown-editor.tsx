@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Bold,
   Italic,
@@ -27,40 +27,39 @@ interface MarkdownEditorProps {
   required?: boolean
 }
 
-type ToolbarAction = {
-  icon: React.ReactNode
-  label: string
-  action: (textarea: HTMLTextAreaElement) => void
+// A transform reads the current value + selection and returns the next value
+// plus the caret range to restore. All edits flow through React state so the
+// controlled <textarea> stays in sync (direct DOM mutation is ignored by React).
+type EditResult = { value: string; selectionStart: number; selectionEnd: number }
+
+function wrapText(
+  value: string,
+  start: number,
+  end: number,
+  before: string,
+  after: string,
+  placeholder = "",
+): EditResult {
+  const selected = value.slice(start, end) || placeholder
+  const next = value.slice(0, start) + before + selected + after + value.slice(end)
+  return {
+    value: next,
+    selectionStart: start + before.length,
+    selectionEnd: start + before.length + selected.length,
+  }
 }
 
-function wrap(ta: HTMLTextAreaElement, before: string, after: string, placeholder = "") {
-  const { selectionStart: s, selectionEnd: e, value } = ta
-  const selected = value.slice(s, e) || placeholder
-  const next = value.slice(0, s) + before + selected + after + value.slice(e)
-  ta.value = next
-  ta.selectionStart = s + before.length
-  ta.selectionEnd = s + before.length + selected.length
-  ta.focus()
-  ta.dispatchEvent(new Event("input", { bubbles: true }))
+function prefixLine(value: string, start: number, prefix: string): EditResult {
+  const lineStart = value.lastIndexOf("\n", start - 1) + 1
+  const next = value.slice(0, lineStart) + prefix + value.slice(lineStart)
+  const caret = start + prefix.length
+  return { value: next, selectionStart: caret, selectionEnd: caret }
 }
 
-function insertLine(ta: HTMLTextAreaElement, prefix: string) {
-  const { selectionStart: s, value } = ta
-  const lineStart = value.lastIndexOf("\n", s - 1) + 1
-  const before = value.slice(0, lineStart)
-  const after = value.slice(lineStart)
-  ta.value = before + prefix + after
-  ta.selectionStart = ta.selectionEnd = lineStart + prefix.length + (s - lineStart)
-  ta.focus()
-  ta.dispatchEvent(new Event("input", { bubbles: true }))
-}
-
-function insertAtCursor(ta: HTMLTextAreaElement, text: string) {
-  const { selectionStart: s, value } = ta
-  ta.value = value.slice(0, s) + text + value.slice(s)
-  ta.selectionStart = ta.selectionEnd = s + text.length
-  ta.focus()
-  ta.dispatchEvent(new Event("input", { bubbles: true }))
+function insertText(value: string, start: number, end: number, text: string): EditResult {
+  const next = value.slice(0, start) + text + value.slice(end)
+  const caret = start + text.length
+  return { value: next, selectionStart: caret, selectionEnd: caret }
 }
 
 export function MarkdownEditor({
@@ -77,54 +76,55 @@ export function MarkdownEditor({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // Caret position to restore after a state-driven edit re-renders the textarea.
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null)
 
-  const toolbarActions: ToolbarAction[] = [
-    {
-      icon: <Bold className="h-3.5 w-3.5" />,
-      label: "Bold",
-      action: (ta) => wrap(ta, "**", "**", "bold text"),
-    },
-    {
-      icon: <Italic className="h-3.5 w-3.5" />,
-      label: "Italic",
-      action: (ta) => wrap(ta, "_", "_", "italic text"),
-    },
-    {
-      icon: <Heading2 className="h-3.5 w-3.5" />,
-      label: "Heading",
-      action: (ta) => insertLine(ta, "## "),
-    },
-    {
-      icon: <List className="h-3.5 w-3.5" />,
-      label: "Bullet list",
-      action: (ta) => insertLine(ta, "- "),
-    },
-    {
-      icon: <ListOrdered className="h-3.5 w-3.5" />,
-      label: "Numbered list",
-      action: (ta) => insertLine(ta, "1. "),
-    },
-    {
-      icon: <Quote className="h-3.5 w-3.5" />,
-      label: "Blockquote",
-      action: (ta) => insertLine(ta, "> "),
-    },
-    {
-      icon: <Code className="h-3.5 w-3.5" />,
-      label: "Inline code",
-      action: (ta) => wrap(ta, "`", "`", "code"),
-    },
-    {
-      icon: <Link2 className="h-3.5 w-3.5" />,
-      label: "Link",
-      action: (ta) => wrap(ta, "[", "](https://)", "link title"),
-    },
+  // Restore the caret/selection after value updates from a toolbar or insert action.
+  useEffect(() => {
+    if (pendingSelection.current && taRef.current) {
+      const { start, end } = pendingSelection.current
+      taRef.current.focus()
+      taRef.current.setSelectionRange(start, end)
+      pendingSelection.current = null
+    }
+  }, [value])
+
+  // Apply an edit transform using the textarea's live selection + current value.
+  function applyEdit(fn: (value: string, start: number, end: number) => EditResult) {
+    const ta = taRef.current
+    const start = ta?.selectionStart ?? value.length
+    const end = ta?.selectionEnd ?? value.length
+    const result = fn(value, start, end)
+    pendingSelection.current = { start: result.selectionStart, end: result.selectionEnd }
+    setValue(result.value)
+  }
+
+  // Insert text at the current caret, even from async flows (upload/paste) where
+  // the textarea may have lost focus. Falls back to appending at the end.
+  function insertAtCaret(text: string) {
+    const ta = taRef.current
+    const start = ta?.selectionStart ?? value.length
+    const end = ta?.selectionEnd ?? value.length
+    const result = insertText(value, start, end, text)
+    pendingSelection.current = { start: result.selectionStart, end: result.selectionEnd }
+    setValue(result.value)
+  }
+
+  const toolbarActions = [
+    { icon: <Bold className="h-3.5 w-3.5" />, label: "Bold", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "**", "**", "bold text")) },
+    { icon: <Italic className="h-3.5 w-3.5" />, label: "Italic", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "_", "_", "italic text")) },
+    { icon: <Heading2 className="h-3.5 w-3.5" />, label: "Heading", run: () => applyEdit((v, s) => prefixLine(v, s, "## ")) },
+    { icon: <List className="h-3.5 w-3.5" />, label: "Bullet list", run: () => applyEdit((v, s) => prefixLine(v, s, "- ")) },
+    { icon: <ListOrdered className="h-3.5 w-3.5" />, label: "Numbered list", run: () => applyEdit((v, s) => prefixLine(v, s, "1. ")) },
+    { icon: <Quote className="h-3.5 w-3.5" />, label: "Blockquote", run: () => applyEdit((v, s) => prefixLine(v, s, "> ")) },
+    { icon: <Code className="h-3.5 w-3.5" />, label: "Inline code", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "`", "`", "code")) },
+    { icon: <Link2 className="h-3.5 w-3.5" />, label: "Link", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "[", "](https://)", "link title")) },
     {
       icon: <Image className="h-3.5 w-3.5" />,
       label: "Image URL",
-      action: (ta) => {
+      run: () => {
         const url = prompt("Image URL:")
-        if (url) insertAtCursor(ta, `![image](${url})`)
+        if (url) insertAtCaret(`![image](${url})`)
       },
     },
   ]
@@ -138,9 +138,7 @@ export function MarkdownEditor({
       const res = await fetch("/api/upload", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error ?? "Upload failed")
-      if (taRef.current) {
-        insertAtCursor(taRef.current, `![${file.name}](${json.url})`)
-      }
+      insertAtCaret(`![${file.name}](${json.url})`)
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -154,28 +152,16 @@ export function MarkdownEditor({
     e.target.value = ""
   }
 
-  // Allow paste-to-upload for images
+  // Paste-to-upload for images copied to the clipboard.
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
     const items = e.clipboardData?.items
     if (!items) return
-    
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
-      
-      // Skip non-file items
-      if (item.kind !== "file") continue
-      
-      // Check if it's an image
-      if (item.type.startsWith("image/")) {
+      if (item.kind === "file" && item.type.startsWith("image/")) {
         e.preventDefault()
-        try {
-          const file = item.getAsFile()
-          if (file) {
-            handleFileUpload(file)
-          }
-        } catch (err) {
-          setUploadError("Failed to access pasted image")
-        }
+        const file = item.getAsFile()
+        if (file) handleFileUpload(file)
         break
       }
     }
@@ -185,7 +171,6 @@ export function MarkdownEditor({
     <div className="flex flex-col gap-0 border border-border focus-within:border-primary">
       {/* Tab bar + toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-1">
-        {/* Write / Preview tabs */}
         <div className="flex">
           {(["write", "preview"] as const).map((t) => (
             <button
@@ -204,7 +189,6 @@ export function MarkdownEditor({
           ))}
         </div>
 
-        {/* Toolbar (only in write mode) */}
         {tab === "write" && (
           <div className="flex flex-wrap items-center gap-0.5 py-1">
             {toolbarActions.map((a) => (
@@ -212,13 +196,12 @@ export function MarkdownEditor({
                 key={a.label}
                 type="button"
                 title={a.label}
-                onClick={() => taRef.current && a.action(taRef.current)}
+                onClick={a.run}
                 className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {a.icon}
               </button>
             ))}
-            {/* Upload image from device */}
             <button
               type="button"
               title="Upload image"
@@ -243,8 +226,8 @@ export function MarkdownEditor({
         )}
       </div>
 
-      {/* Write area */}
-      {tab === "write" ? (
+      {/* Write area — always mounted so the ref/selection persist across tab switches */}
+      <div className={tab === "write" ? "block" : "hidden"}>
         <textarea
           ref={taRef}
           id={id}
@@ -257,8 +240,10 @@ export function MarkdownEditor({
           onPaste={onPaste}
           className="w-full resize-y bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
         />
-      ) : (
-        /* Preview area */
+      </div>
+
+      {/* Preview area */}
+      {tab === "preview" && (
         <div className="min-h-[120px] bg-background px-4 py-3">
           {value.trim() ? (
             <Markdown content={value} />
@@ -268,22 +253,17 @@ export function MarkdownEditor({
         </div>
       )}
 
-      {/* Upload error */}
+      {/* Upload progress / error */}
+      {uploading ? (
+        <p className="label-mono flex items-center gap-2 border-t border-border px-4 py-2 text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading image…
+        </p>
+      ) : null}
       {uploadError ? (
         <p className="label-mono border-t border-destructive/40 px-4 py-2 text-destructive">
           {uploadError}
         </p>
       ) : null}
-
-      {/* Hidden textarea carries value when using preview tab (for form submission) */}
-      {tab === "preview" && (
-        <textarea name={name} required={required} value={value} readOnly className="hidden" />
-      )}
-      
-      {/* Hidden input ensures value is always available in form data on write tab */}
-      {tab === "write" && (
-        <input type="hidden" name={name} value={value} />
-      )}
     </div>
   )
 }
