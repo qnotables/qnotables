@@ -10,7 +10,7 @@ type DeskFilterContextValue = {
 const DeskFilterContext = createContext<DeskFilterContextValue | null>(null)
 
 export function DeskFilterProvider({ children }: { children: ReactNode }) {
-  const [active, setActive] = useState<string>("ALL")
+  const [active, setActive] = useState<string>("NOTABLES")
   return (
     <DeskFilterContext.Provider value={{ active, setActive }}>
       {children}
@@ -23,7 +23,7 @@ export function DeskFilterProvider({ children }: { children: ReactNode }) {
 export function useDeskFilter() {
   const ctx = useContext(DeskFilterContext)
   if (!ctx) {
-    return { active: "ALL", setActive: () => {} }
+    return { active: "NOTABLES", setActive: () => {} }
   }
   return ctx
 }
