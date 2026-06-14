@@ -1,0 +1,74 @@
+import { Analytics } from '@vercel/analytics/next'
+import type { Metadata, Viewport } from 'next'
+import { Oswald, IBM_Plex_Mono } from 'next/font/google'
+import { ThemeProvider } from '@/components/theme-provider'
+import './globals.css'
+
+const oswald = Oswald({
+  variable: '--font-oswald',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+})
+const plexMono = IBM_Plex_Mono({
+  variable: '--font-plex-mono',
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+})
+
+export const metadata: Metadata = {
+  title: 'Hot and Fresh — Global News Aggregator',
+  description:
+    'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
+  },
+}
+
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#e9e6da' },
+    { media: '(prefers-color-scheme: dark)', color: '#1c1d16' },
+  ],
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${oswald.variable} ${plexMono.variable} bg-background`}
+    >
+      <body className="font-mono antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+        {process.env.NODE_ENV === 'production' && <Analytics />}
+      </body>
+    </html>
+  )
+}
