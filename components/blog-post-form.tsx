@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom"
 import Link from "next/link"
 import { ImagePlus, Loader2, Save, X } from "lucide-react"
 import { MarkdownEditor } from "@/components/markdown-editor"
+import { TextStats } from "@/components/text-stats"
+import { SeoField } from "@/components/seo-field"
 import { createPost, updatePost } from "@/app/blog/actions"
 import type { BlogPost } from "@/lib/blog-posts"
 
@@ -104,6 +106,9 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
   const isEdit = Boolean(post?.id)
   const action = isEdit ? updatePost : createPost
   const [state, formAction] = useActionState(action, { error: null })
+  const [excerptValue, setExcerptValue] = useState(post?.excerpt ?? "")
+  const [seoTitleValue, setSeoTitleValue] = useState(post?.seoTitle ?? "")
+  const [seoDescriptionValue, setSeoDescriptionValue] = useState(post?.seoDescription ?? "")
 
   const inputClass =
     "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary"
@@ -212,14 +217,18 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="excerpt" className="label-mono text-muted-foreground">
-          Excerpt
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="excerpt" className="label-mono text-muted-foreground">
+            Excerpt
+          </label>
+          <TextStats text={excerptValue} />
+        </div>
         <textarea
           id="excerpt"
           name="excerpt"
           rows={2}
-          defaultValue={post?.excerpt}
+          value={excerptValue}
+          onChange={(e) => setExcerptValue(e.target.value)}
           placeholder="A one or two sentence summary shown in listings."
           className={`${inputClass} resize-y leading-relaxed`}
         />
@@ -284,30 +293,29 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
       <div className="border-t border-border pt-6">
         <h3 className="label-mono mb-4 text-sm font-semibold text-foreground">SEO & Sharing</h3>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="seo_title" className="label-mono text-muted-foreground">
-            SEO Title <span className="text-muted-foreground/60">(optional)</span>
-          </label>
-          <input
-            id="seo_title"
+        <div className="gap-4">
+          <SeoField
+            label="SEO Title (optional)"
+            value={seoTitleValue}
+            onChange={setSeoTitleValue}
             name="seo_title"
-            defaultValue={post?.seoTitle ?? ""}
+            maxLength={60}
+            recommendedLength={{ min: 30, max: 60 }}
             placeholder="For search engines (leave blank to use main title)"
-            className={inputClass}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="seo_description" className="label-mono text-muted-foreground">
-            SEO Description <span className="text-muted-foreground/60">(optional)</span>
-          </label>
-          <textarea
-            id="seo_description"
+        <div className="mt-4 gap-4">
+          <SeoField
+            label="SEO Description (optional)"
+            value={seoDescriptionValue}
+            onChange={setSeoDescriptionValue}
             name="seo_description"
-            rows={2}
-            defaultValue={post?.seoDescription ?? ""}
+            maxLength={160}
+            recommendedLength={{ min: 120, max: 160 }}
             placeholder="For search engines (leave blank to use excerpt)"
-            className={`${inputClass} resize-y leading-relaxed`}
+            rows={2}
+            isTextarea
           />
         </div>
       </div>
