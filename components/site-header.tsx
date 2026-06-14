@@ -106,10 +106,10 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
         } flex-col gap-1 border-t border-border px-4 pb-3 md:flex md:flex-row md:items-center md:gap-0 md:border-t md:px-6 md:py-0`}
         aria-label="News categories"
       >
-        {["ALL", ...categories].map((cat) => (
+        {["NOTABLES", ...categories].map((cat) => (
           <a
             key={cat}
-            href={cat === "ALL" ? "/#wire" : `/#desk-${cat}`}
+            href={cat === "NOTABLES" ? "/#wire" : `/#desk-${cat}`}
             onClick={() => {
               setActive(cat)
               setMenuOpen(false)
