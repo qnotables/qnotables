@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
 import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
+import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { getNews } from "@/lib/rss"
 import { categories } from "@/lib/news-data"
 
@@ -31,6 +32,7 @@ export default async function Page() {
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader wireStories={wireStories} />
       <NewsTicker items={tickerItems} />
+      <TopAd />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
         {/* section label */}
@@ -73,6 +75,7 @@ export default async function Page() {
           {/* sidebar */}
           <aside className="flex flex-col gap-6">
             <TrendingPanel items={trending} />
+            <SidebarAd />
             <BriefSignup />
           </aside>
         </div>
@@ -82,6 +85,7 @@ export default async function Page() {
         <WireFeed desks={desks} />
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
     </DeskFilterProvider>
