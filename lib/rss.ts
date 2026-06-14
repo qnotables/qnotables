@@ -19,7 +19,7 @@ type FeedSource = {
 
 // BBC feeds carry clean titles + media thumbnails; Google News queries give varied sources.
 const SOURCES: FeedSource[] = [
-  { category: "Notables", url: "https://sys.8kun.top/qresearch/tripcode.xml", defaultSource: "/Qresearch/" },
+  { category: "WORLD", url: "https://sys.8kun.top/qresearch/tripcode.xml", defaultSource: "Wire" },
   { category: "POLITICS", url: "https://www.watkinsreport.com/atom.xml ", defaultSource: "BBC News" },
   { category: "ECONOMY", url: "https://feeds.bbci.co.uk/news/business/rss.xml", defaultSource: "BBC News" },
   { category: "TECH", url: "https://feeds.bbci.co.uk/news/technology/rss.xml", defaultSource: "BBC News" },

@@ -156,13 +156,28 @@ export function MarkdownEditor({
 
   // Allow paste-to-upload for images
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const item = Array.from(e.clipboardData.items).find((i) =>
-      i.type.startsWith("image/"),
-    )
-    if (item) {
-      e.preventDefault()
-      const file = item.getAsFile()
-      if (file) handleFileUpload(file)
+    const items = e.clipboardData?.items
+    if (!items) return
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      
+      // Skip non-file items
+      if (item.kind !== "file") continue
+      
+      // Check if it's an image
+      if (item.type.startsWith("image/")) {
+        e.preventDefault()
+        try {
+          const file = item.getAsFile()
+          if (file) {
+            handleFileUpload(file)
+          }
+        } catch (err) {
+          setUploadError("Failed to access pasted image")
+        }
+        break
+      }
     }
   }
 
@@ -260,9 +275,14 @@ export function MarkdownEditor({
         </p>
       ) : null}
 
-      {/* Hidden textarea carries value when using write tab (for SSR / form fallback) */}
+      {/* Hidden textarea carries value when using preview tab (for form submission) */}
       {tab === "preview" && (
         <textarea name={name} required={required} value={value} readOnly className="hidden" />
+      )}
+      
+      {/* Hidden input ensures value is always available in form data on write tab */}
+      {tab === "write" && (
+        <input type="hidden" name={name} value={value} />
       )}
     </div>
   )
