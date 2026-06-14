@@ -33,6 +33,11 @@ export default async function BlogAdminPage({ searchParams }: BlogAdminPageProps
 
   let posts = await getAllPostsAdmin()
 
+  // Ensure posts is always an array
+  if (!Array.isArray(posts)) {
+    posts = []
+  }
+
   // Filter by status if specified
   if (params.status) {
     posts = posts.filter((p) => p.status === params.status)
