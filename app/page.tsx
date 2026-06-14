@@ -12,7 +12,10 @@ import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const { featured, topStories, feed, trending, live } = await getNews()
-  const headlines = [featured, ...topStories, ...feed].map((s) => s.headline)
+  const tickerItems = [featured, ...topStories, ...feed].map((s) => ({
+    headline: s.headline,
+    url: s.url,
+  }))
 
   // Group the wire feed into desks, keeping only desks that have stories.
   const desks = categories
@@ -23,7 +26,7 @@ export default async function Page() {
     <DeskFilterProvider>
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
-      <NewsTicker headlines={headlines} />
+      <NewsTicker items={tickerItems} />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
         {/* section label */}
