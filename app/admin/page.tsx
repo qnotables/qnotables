@@ -119,18 +119,18 @@ export default async function AdminPage() {
                 </div>
               </Link>
 
-              {/* Blog Management */}
+              {/* Archives Management */}
               <Link
-                href="/blog/admin"
+                href="/archives/admin"
                 className="group border border-border bg-card p-6 transition-colors hover:border-primary"
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="stencil text-foreground group-hover:text-primary">
-                      Blog Management
+                      Archives Management
                     </h3>
                     <p className="label-mono mt-2 text-sm text-muted-foreground">
-                      Create, edit, publish field notes
+                      Create, edit, publish field notes and research
                     </p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
