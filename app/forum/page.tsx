@@ -20,6 +20,12 @@ interface ThreadRow {
   forum_replies: { count: number }[]
 }
 
+// Extract the first image URL from markdown content (e.g., ![alt](url))
+function extractFirstImageFromMarkdown(markdown: string): string | null {
+  const match = markdown.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/)
+  return match ? match[1] : null
+}
+
 export default async function ForumPage() {
   const supabase = await createClient()
   const {
@@ -74,6 +80,7 @@ export default async function ForumPage() {
           <div className="flex flex-col gap-3">
             {rows.map((t) => {
               const replyCount = t.forum_replies?.[0]?.count ?? 0
+              const imageUrl = extractFirstImageFromMarkdown(t.body)
               return (
                 <Link
                   key={t.id}
@@ -90,6 +97,13 @@ export default async function ForumPage() {
                     <h2 className="stencil text-balance text-lg text-foreground transition-colors group-hover:text-primary">
                       {t.title}
                     </h2>
+                    {imageUrl && (
+                      <img
+                        src={imageUrl}
+                        alt={t.title}
+                        className="mt-2 max-h-32 w-auto rounded border border-border object-cover"
+                      />
+                    )}
                     <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                       {t.body}
                     </p>
