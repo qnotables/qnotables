@@ -30,6 +30,7 @@ function DashboardLoginContent() {
 
     setLoading(true)
     setError("")
+    console.log("[v0] Attempting login with key:", keyToUse ? "***" : "empty")
 
     try {
       const res = await fetch("/api/dashboard/auth", {
@@ -39,16 +40,21 @@ function DashboardLoginContent() {
       })
 
       const data = await res.json()
+      console.log("[v0] Auth response status:", res.status)
+      console.log("[v0] Auth response:", data)
 
       if (!res.ok) {
+        console.error("[v0] Auth failed:", data.error)
         setError(data.error || "Invalid key")
         setLoading(false)
         return
       }
 
+      console.log("[v0] Auth successful, redirecting to dashboard")
       // Redirect to dashboard
       router.push("/dashboard")
     } catch (err) {
+      console.error("[v0] Login error:", err)
       setError("An error occurred")
       setLoading(false)
     }
