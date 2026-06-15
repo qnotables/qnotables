@@ -3,7 +3,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getAdminUser } from "@/lib/admin"
+import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
 export const metadata = {
   title: "Forum — Admin Dashboard",
@@ -11,9 +11,9 @@ export const metadata = {
 }
 
 export default async function ForumPage() {
-  const admin = await getAdminUser()
-  if (!admin) {
-    redirect("/auth/login")
+  const hasAccess = await validateDashboardAccess()
+  if (!hasAccess) {
+    redirect("/dashboard/login")
   }
 
   return (
