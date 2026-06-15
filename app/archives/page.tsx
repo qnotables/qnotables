@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Calendar, Tag, Folder, Clock, ArrowRight } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getCategories, getTags } from "@/lib/archives"
+import { getCategories, getTags, getAvailableMonths } from "@/lib/archives"
 import { getAllPosts, formatDate } from "@/lib/blog-posts"
 
 export const dynamic = "force-dynamic"
@@ -13,10 +13,11 @@ export const metadata = {
 }
 
 export default async function ArchivesPage() {
-  const [categories, tags, posts] = await Promise.all([
+  const [categories, tags, posts, months] = await Promise.all([
     getCategories(),
     getTags(),
     getAllPosts(),
+    getAvailableMonths(),
   ])
 
   // Get years that actually have posts
@@ -147,6 +148,31 @@ export default async function ArchivesPage() {
                       className="label-mono border border-border bg-card px-2 py-0.5 text-xs transition-all hover:border-primary hover:text-primary"
                     >
                       #{tag}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Months */}
+            {months.length > 0 && (
+              <div>
+                <div className="mb-3 flex items-center gap-2 border-b border-border pb-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <h2 className="label-mono text-xs font-semibold text-primary">BY MONTH</h2>
+                </div>
+                <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+                  {months.map(({ year, month, count }) => (
+                    <Link
+                      key={`${year}-${month}`}
+                      href={`/archives/year-month/${year}/${String(month).padStart(2, "0")}`}
+                      className="label-mono border-l-2 border-transparent px-3 py-1 text-sm text-muted-foreground transition-all hover:border-primary hover:text-foreground"
+                    >
+                      {new Date(year, month - 1).toLocaleString("default", {
+                        month: "short",
+                        year: "numeric",
+                      })}
+                      <span className="ml-1 text-xs text-muted-foreground">({count})</span>
                     </Link>
                   ))}
                 </div>
