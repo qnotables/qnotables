@@ -1,45 +1,56 @@
 "use client"
 
-import { useActionState, useRef, useState } from "react"
-import { useFormStatus } from "react-dom"
+import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ImagePlus, Loader2, Save, X } from "lucide-react"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { ImagePlus, Loader2, Save, X, AlertCircle, Check } from "lucide-react"
 import { TextStats } from "@/components/text-stats"
-import { SeoField } from "@/components/seo-field"
+import { Markdown } from "@/components/markdown"
 import { createPostDashboard, updatePostDashboard } from "@/app/dashboard/blog/blog-form-actions"
 import type { BlogPost } from "@/lib/blog-posts"
 
-type Tab = "info" | "content" | "publish" | "seo" | "advanced"
+type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
 
-function SubmitButton({ isEdit }: { isEdit: boolean }) {
-  const { pending } = useFormStatus()
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="label-mono inline-flex items-center gap-2 bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-    >
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-      {pending ? "Saving…" : isEdit ? "Update Post" : "Create Post"}
-    </button>
-  )
+const DRAFT_KEY = "hot-and-fresh-new-post-draft"
+const AUTOSAVE_DELAY = 5000 // 5 seconds
+
+interface PostFormData {
+  title: string
+  subtitle: string
+  excerpt: string
+  slug: string
+  body: string
+  category: string
+  post_type: string
+  author_name: string
+  tag: string
+  featured: boolean
+  priority: string
+  status: string
+  show_title: boolean
+  episode_date: string
+  source_name: string
+  source_url: string
+  seo_title: string
+  seo_description: string
+  cover_image: string
+  og_image_url: string
 }
 
 function ImageField({
   name,
   label,
-  defaultUrl,
+  value,
+  onChange,
   accept = "image/*",
   uploadFolder = "blog",
 }: {
   name: string
   label: string
-  defaultUrl?: string | null
+  value: string
+  onChange: (url: string) => void
   accept?: string
   uploadFolder?: string
 }) {
-  const [url, setUrl] = useState<string>(defaultUrl ?? "")
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -54,7 +65,7 @@ function ImageField({
       const res = await fetch("/api/dashboard/upload", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error ?? "Upload failed")
-      setUrl(json.url)
+      onChange(json.url)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -65,13 +76,13 @@ function ImageField({
   return (
     <div className="flex flex-col gap-2">
       <label className="label-mono text-sm font-semibold text-foreground">{label}</label>
-      <input type="hidden" name={name} value={url} />
-      {url ? (
+      <input type="hidden" name={name} value={value} />
+      {value ? (
         <div className="relative w-full max-w-sm overflow-hidden border border-border">
-          <img src={url || "/placeholder.svg"} alt="Preview" className="h-40 w-full object-cover" />
+          <img src={value || "/placeholder.svg"} alt="Preview" className="h-40 w-full object-cover" />
           <button
             type="button"
-            onClick={() => setUrl("")}
+            onClick={() => onChange("")}
             className="absolute right-2 top-2 inline-flex items-center gap-1 border border-border bg-background/90 px-2 py-1 text-xs text-foreground transition-colors hover:border-primary"
           >
             <X className="h-3 w-3" /> Remove
@@ -89,9 +100,19 @@ function ImageField({
             {uploading ? "Uploading…" : "Upload"}
           </button>
           <input
+            ref={fileRef}
+            type="file"
+            accept={accept}
+            onChange={(e) => {
+              const file = e.currentTarget.files?.[0]
+              if (file) upload(file)
+            }}
+            className="hidden"
+          />
+          <input
             type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
             placeholder="…or paste URL"
             className="label-mono w-full border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
@@ -105,35 +126,171 @@ function ImageField({
 export function DashboardBlogForm({ post }: { post?: BlogPost }) {
   const isEdit = !!post?.id
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<Tab>("info")
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [bodyLength, setBodyLength] = useState(post?.content?.length ?? 0)
+  const [activeTab, setActiveTab] = useState<Tab>("write")
+  const [formData, setFormData] = useState<PostFormData>(() => {
+    // Try to load from localStorage first (only on new posts)
+    if (typeof window !== "undefined" && !isEdit) {
+      const saved = localStorage.getItem(DRAFT_KEY)
+      if (saved) {
+        try {
+          return JSON.parse(saved)
+        } catch {
+          // Fall through to default
+        }
+      }
+    }
+    // Otherwise use post data or defaults
+    return {
+      title: post?.title ?? "",
+      subtitle: post?.subtitle ?? "",
+      excerpt: post?.excerpt ?? "",
+      slug: post?.slug ?? "",
+      body: post?.content ?? "",
+      category: post?.category ?? "",
+      post_type: post?.postType ?? "",
+      author_name: post?.authorName ?? "Editorial Desk",
+      tag: post?.tag ?? "Field Notes",
+      featured: post?.featured ?? false,
+      priority: post?.priority ?? "medium",
+      status: post?.status ?? "draft",
+      show_title: post?.showTitle ?? true,
+      episode_date: post?.episodeDate ?? "",
+      source_name: post?.sourceName ?? "",
+      source_url: post?.sourceUrl ?? "",
+      seo_title: post?.seoTitle ?? "",
+      seo_description: post?.seoDescription ?? "",
+      cover_image: post?.coverImage ?? "",
+      og_image_url: post?.ogImageUrl ?? "",
+    }
+  })
+
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const [submitMode, setSubmitMode] = useState<"draft" | "publish">("draft")
   const [state, formAction] = useActionState(
     isEdit ? updatePostDashboard : createPostDashboard,
     { error: null },
   )
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout>()
+  const formRef = useRef<HTMLFormElement>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Auto-generate slug from title if slug is empty
+  useEffect(() => {
+    if (!isEdit && formData.slug === "" && formData.title.length > 0) {
+      const newSlug = formData.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .slice(0, 80)
+      setFormData((prev) => ({ ...prev, slug: newSlug }))
+    }
+  }, [formData.title, isEdit])
+
+  // Autosave to localStorage
+  useEffect(() => {
+    if (isEdit) return // Don't autosave when editing existing posts
+
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
+
+    setSaveStatus("saving")
+    autosaveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData))
+      setSaveStatus("saved")
+      setTimeout(() => setSaveStatus("idle"), 2000)
+    }, AUTOSAVE_DELAY)
+
+    return () => {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
+    }
+  }, [formData, isEdit])
 
   // On success, redirect to blog dashboard
-  if (state.success) {
-    router.push("/dashboard/blog")
+  useEffect(() => {
+    if (state.success) {
+      if (!isEdit) localStorage.removeItem(DRAFT_KEY)
+      router.push("/dashboard/blog")
+    }
+  }, [state.success, isEdit, router])
+
+  const handleFieldChange = useCallback((field: keyof PostFormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement> | null, mode: "draft" | "publish") => {
+    if (e) e.preventDefault()
+    setSubmitMode(mode)
+
+    // Validation
+    if (!formData.title.trim()) {
+      alert("Title is required")
+      return
+    }
+    if (!formData.slug.trim()) {
+      alert("Slug is required")
+      return
+    }
+    if (!formData.body.trim()) {
+      alert("Body content is required")
+      return
+    }
+    if (mode === "publish") {
+      if (!formData.category.trim()) {
+        alert("Category is required to publish")
+        return
+      }
+      if (!formData.post_type.trim()) {
+        alert("Post type is required to publish")
+        return
+      }
+    }
+
+    setIsSubmitting(true)
+
+    const fd = new FormData()
+    if (isEdit) fd.append("id", post!.id)
+    fd.append("title", formData.title)
+    fd.append("subtitle", formData.subtitle)
+    fd.append("excerpt", formData.excerpt)
+    fd.append("slug", formData.slug)
+    fd.append("body", formData.body)
+    fd.append("category", formData.category)
+    fd.append("post_type", formData.post_type)
+    fd.append("author_name", formData.author_name)
+    fd.append("tag", formData.tag)
+    fd.append("featured", formData.featured ? "on" : "")
+    fd.append("priority", formData.priority)
+    fd.append("status", mode === "publish" ? "published" : "draft")
+    fd.append("show_title", formData.show_title ? "on" : "")
+    fd.append("episode_date", formData.episode_date)
+    fd.append("source_name", formData.source_name)
+    fd.append("source_url", formData.source_url)
+    fd.append("seo_title", formData.seo_title)
+    fd.append("seo_description", formData.seo_description)
+    fd.append("cover_image", formData.cover_image)
+    fd.append("og_image_url", formData.og_image_url)
+
+    // Call the server action
+    await formAction(fd)
+    setIsSubmitting(false)
   }
 
-  const tabs: { id: Tab; label: string; icon?: string }[] = [
-    { id: "info", label: "Basic Info" },
-    { id: "content", label: "Content" },
-    { id: "publish", label: "Publish" },
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "write", label: "Write" },
+    { id: "preview", label: "Preview" },
+    { id: "details", label: "Details" },
+    { id: "sources", label: "Sources" },
     { id: "seo", label: "SEO" },
-    { id: "advanced", label: "Advanced" },
+    { id: "settings", label: "Settings" },
   ]
 
   return (
-    <form action={formAction} className="mx-auto max-w-4xl">
-      {isEdit && <input type="hidden" name="id" value={post!.id} />}
-
+    <div className="mx-auto max-w-4xl">
       {/* Sticky header with tabs and submit */}
       <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -149,26 +306,65 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
               </button>
             ))}
           </div>
-          <SubmitButton isEdit={isEdit} />
+          <div className="flex items-center gap-3">
+            {!isEdit && saveStatus !== "idle" && (
+              <div
+                className={`label-mono text-xs flex items-center gap-1 ${
+                  saveStatus === "saved" ? "text-green-600" : "text-muted-foreground"
+                }`}
+              >
+                {saveStatus === "saving" ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Saving draft…
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3 w-3" />
+                    Draft saved
+                  </>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleSubmit(null, "draft")}
+              className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting && submitMode === "draft" ? "Saving…" : "Save Draft"}
+            </button>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleSubmit(null, "publish")}
+              className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              <Check className="h-4 w-4" />
+              {isSubmitting && submitMode === "publish" ? "Publishing…" : "Publish"}
+            </button>
+          </div>
         </div>
       </div>
 
       {state.error && (
-        <div className="mb-4 border border-destructive bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {state.error}
+        <div className="mb-4 mx-4 mt-4 border border-destructive bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>{state.error}</div>
         </div>
       )}
 
-      <div className="space-y-8 px-4 py-6">
-        {/* BASIC INFO TAB */}
-        {activeTab === "info" && (
+      <form ref={formRef} className="space-y-8 px-4 py-6">
+        {/* WRITE TAB */}
+        {activeTab === "write" && (
           <div className="space-y-6">
             <div>
               <label className="label-mono block text-sm font-semibold text-foreground">Title *</label>
               <input
                 type="text"
-                name="title"
-                defaultValue={post?.title ?? ""}
+                value={formData.title}
+                onChange={(e) => handleFieldChange("title", e.target.value)}
                 required
                 placeholder="e.g., Breaking News: Global Market Shifts"
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
@@ -176,21 +372,10 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
             </div>
 
             <div>
-              <label className="label-mono block text-sm font-semibold text-foreground">Subtitle</label>
-              <input
-                type="text"
-                name="subtitle"
-                defaultValue={post?.subtitle ?? ""}
-                placeholder="Secondary headline (optional)"
-                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
               <label className="label-mono block text-sm font-semibold text-foreground">Excerpt *</label>
               <textarea
-                name="excerpt"
-                defaultValue={post?.excerpt ?? ""}
+                value={formData.excerpt}
+                onChange={(e) => handleFieldChange("excerpt", e.target.value)}
                 required
                 placeholder="Summary for archives and feeds (60-160 chars recommended)"
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
@@ -198,64 +383,79 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
               />
             </div>
 
-            <div>
-              <label className="label-mono block text-sm font-semibold text-foreground">URL Slug</label>
-              <input
-                type="text"
-                name="slug"
-                defaultValue={post?.slug ?? ""}
-                placeholder="Leave empty to auto-generate from title"
-                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="label-mono text-sm font-semibold text-foreground">Body *</label>
+                <TextStats text={formData.body} showTime />
+              </div>
+              <textarea
+                value={formData.body}
+                onChange={(e) => handleFieldChange("body", e.target.value)}
+                required
+                placeholder="Write your post in Markdown. Supports **bold**, *italic*, [links](url), etc."
+                className="label-mono w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary font-mono text-sm"
+                rows={24}
               />
-              <p className="label-mono mt-1 text-xs text-muted-foreground">
-                Auto-generated from title if blank. Lowercase, hyphens only.
-              </p>
             </div>
-
-            <ImageField name="cover_image" label="Cover Image" defaultUrl={post?.coverImage} uploadFolder="blog" />
           </div>
         )}
 
-        {/* CONTENT TAB */}
-        {activeTab === "content" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="label-mono font-semibold text-foreground">Body *</h3>
-              <TextStats text={post?.content ?? ""} showTime />
+        {/* PREVIEW TAB */}
+        {activeTab === "preview" && (
+          <div className="prose-invert max-w-none">
+            <div className="mb-6">
+              <h1 className="stencil text-3xl mb-2">{formData.title || "Untitled"}</h1>
+              {formData.subtitle && <p className="text-lg text-muted-foreground">{formData.subtitle}</p>}
             </div>
-            <MarkdownEditor
-              name="body"
-              defaultValue={post?.content ?? ""}
-              rows={24}
-              required
-              uploadFolder="blog"
-              placeholder="Write your post in Markdown. Supports **bold**, *italic*, [links](url), etc."
-            />
+            {formData.body ? (
+              <Markdown content={formData.body} />
+            ) : (
+              <p className="label-mono text-muted-foreground italic">No content yet. Write something to preview.</p>
+            )}
           </div>
         )}
 
-        {/* PUBLISH TAB */}
-        {activeTab === "publish" && (
+        {/* DETAILS TAB */}
+        {activeTab === "details" && (
           <div className="space-y-6">
             <div>
-              <label className="label-mono block text-sm font-semibold text-foreground">Status</label>
-              <select
-                name="status"
-                defaultValue={post?.status ?? "draft"}
+              <label className="label-mono block text-sm font-semibold text-foreground">URL Slug *</label>
+              <input
+                type="text"
+                value={formData.slug}
+                onChange={(e) => handleFieldChange("slug", e.target.value)}
+                required
+                placeholder="auto-generated from title"
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
+              />
+              <p className="label-mono mt-1 text-xs text-muted-foreground">Auto-generated from title if left empty</p>
             </div>
+
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Subtitle</label>
+              <input
+                type="text"
+                value={formData.subtitle}
+                onChange={(e) => handleFieldChange("subtitle", e.target.value)}
+                placeholder="Secondary headline"
+                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <ImageField
+              name="cover_image"
+              label="Cover Image"
+              value={formData.cover_image}
+              onChange={(url) => handleFieldChange("cover_image", url)}
+              uploadFolder="blog"
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  name="featured"
-                  defaultChecked={post?.featured ?? false}
+                  checked={formData.featured}
+                  onChange={(e) => handleFieldChange("featured", e.target.checked)}
                   className="h-4 w-4 border border-border bg-background"
                 />
                 <span className="label-mono text-sm text-foreground">Featured Post</span>
@@ -264,8 +464,8 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
               <label className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  name="show_title"
-                  defaultChecked={post?.showTitle === true}
+                  checked={formData.show_title}
+                  onChange={(e) => handleFieldChange("show_title", e.target.checked)}
                   className="h-4 w-4 border border-border bg-background"
                 />
                 <span className="label-mono text-sm text-foreground">Show Title in Display</span>
@@ -275,8 +475,8 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
             <div>
               <label className="label-mono block text-sm font-semibold text-foreground">Priority</label>
               <select
-                name="priority"
-                defaultValue={post?.priority ?? "medium"}
+                value={formData.priority}
+                onChange={(e) => handleFieldChange("priority", e.target.value)}
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
               >
                 <option value="low">Low</option>
@@ -290,11 +490,49 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
               <label className="label-mono block text-sm font-semibold text-foreground">Episode Date</label>
               <input
                 type="date"
-                name="episode_date"
-                defaultValue={post?.episodeDate ? new Date(post.episodeDate).toISOString().split("T")[0] : ""}
+                value={formData.episode_date}
+                onChange={(e) => handleFieldChange("episode_date", e.target.value)}
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
               />
               <p className="label-mono mt-1 text-xs text-muted-foreground">For podcast/show episodes</p>
+            </div>
+          </div>
+        )}
+
+        {/* SOURCES TAB */}
+        {activeTab === "sources" && (
+          <div className="space-y-6">
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Author Name</label>
+              <input
+                type="text"
+                value={formData.author_name}
+                onChange={(e) => handleFieldChange("author_name", e.target.value)}
+                placeholder="Editorial Desk"
+                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Source Name</label>
+              <input
+                type="text"
+                value={formData.source_name}
+                onChange={(e) => handleFieldChange("source_name", e.target.value)}
+                placeholder="Original source/publication"
+                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Source URL</label>
+              <input
+                type="url"
+                value={formData.source_url}
+                onChange={(e) => handleFieldChange("source_url", e.target.value)}
+                placeholder="https://example.com"
+                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
             </div>
           </div>
         )}
@@ -306,67 +544,59 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
               <label className="label-mono block text-sm font-semibold text-foreground">SEO Title</label>
               <input
                 type="text"
-                name="seo_title"
-                defaultValue={post?.seoTitle ?? ""}
+                value={formData.seo_title}
+                onChange={(e) => handleFieldChange("seo_title", e.target.value)}
                 placeholder="50-60 chars (leave empty to use main title)"
                 maxLength={60}
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
               />
+              <p className="label-mono mt-1 text-xs text-muted-foreground">{formData.seo_title.length}/60 characters</p>
             </div>
 
             <div>
               <label className="label-mono block text-sm font-semibold text-foreground">SEO Description</label>
               <textarea
-                name="seo_description"
-                defaultValue={post?.seoDescription ?? ""}
+                value={formData.seo_description}
+                onChange={(e) => handleFieldChange("seo_description", e.target.value)}
                 placeholder="155-160 chars (meta description)"
                 maxLength={160}
                 className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
                 rows={3}
               />
+              <p className="label-mono mt-1 text-xs text-muted-foreground">{formData.seo_description.length}/160 characters</p>
             </div>
 
             <ImageField
               name="og_image_url"
               label="Open Graph Image"
-              defaultUrl={post?.ogImageUrl}
-              accept="image/*"
+              value={formData.og_image_url}
+              onChange={(url) => handleFieldChange("og_image_url", url)}
               uploadFolder="og"
             />
           </div>
         )}
 
-        {/* ADVANCED TAB */}
-        {activeTab === "advanced" && (
+        {/* SETTINGS TAB */}
+        {activeTab === "settings" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="label-mono block text-sm font-semibold text-foreground">Tag</label>
+                <label className="label-mono block text-sm font-semibold text-foreground">Category *</label>
                 <input
                   type="text"
-                  name="tag"
-                  defaultValue={post?.tag ?? "Field Notes"}
-                  placeholder="e.g., Breaking News"
-                  className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="label-mono block text-sm font-semibold text-foreground">Category</label>
-                <input
-                  type="text"
-                  name="category"
-                  defaultValue={post?.category ?? ""}
+                  value={formData.category}
+                  onChange={(e) => handleFieldChange("category", e.target.value)}
                   placeholder="e.g., Markets, Politics"
                   className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
                 />
+                <p className="label-mono mt-1 text-xs text-muted-foreground">Required to publish</p>
               </div>
 
               <div>
-                <label className="label-mono block text-sm font-semibold text-foreground">Post Type</label>
+                <label className="label-mono block text-sm font-semibold text-foreground">Post Type *</label>
                 <select
-                  name="post_type"
-                  defaultValue={post?.postType ?? ""}
+                  value={formData.post_type}
+                  onChange={(e) => handleFieldChange("post_type", e.target.value)}
                   className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
                 >
                   <option value="">Select type</option>
@@ -375,54 +605,75 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   <option value="episode">Episode</option>
                   <option value="analysis">Analysis</option>
                 </select>
+                <p className="label-mono mt-1 text-xs text-muted-foreground">Required to publish</p>
               </div>
 
               <div>
-                <label className="label-mono block text-sm font-semibold text-foreground">Author Name</label>
+                <label className="label-mono block text-sm font-semibold text-foreground">Tag</label>
                 <input
                   type="text"
-                  name="author_name"
-                  defaultValue={post?.authorName ?? "Editorial Desk"}
-                  placeholder="Author name"
+                  value={formData.tag}
+                  onChange={(e) => handleFieldChange("tag", e.target.value)}
+                  placeholder="Field Notes"
                   className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
                 />
               </div>
-            </div>
 
-            <div className="border-t border-border pt-4">
-              <h4 className="label-mono mb-4 font-semibold text-foreground">Source Information</h4>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="label-mono block text-sm font-semibold text-foreground">Source Name</label>
-                  <input
-                    type="text"
-                    name="source_name"
-                    defaultValue={post?.sourceName ?? ""}
-                    placeholder="Original source"
-                    className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="label-mono block text-sm font-semibold text-foreground">Source URL</label>
-                  <input
-                    type="url"
-                    name="source_url"
-                    defaultValue={post?.sourceUrl ?? ""}
-                    placeholder="https://example.com"
-                    className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-                  />
-                </div>
+              <div>
+                <label className="label-mono block text-sm font-semibold text-foreground">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleFieldChange("status", e.target.value)}
+                  className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </form>
 
-      {/* Footer with submit button */}
-      <div className="border-t border-border bg-background/50 px-4 py-6 text-right">
-        <SubmitButton isEdit={isEdit} />
-      </div>
-    </form>
+      {/* Clear draft button */}
+      {!isEdit && (
+        <div className="border-t border-border bg-background/50 px-4 py-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Clear the local draft? This cannot be undone.")) {
+                localStorage.removeItem(DRAFT_KEY)
+                setFormData({
+                  title: "",
+                  subtitle: "",
+                  excerpt: "",
+                  slug: "",
+                  body: "",
+                  category: "",
+                  post_type: "",
+                  author_name: "Editorial Desk",
+                  tag: "Field Notes",
+                  featured: false,
+                  priority: "medium",
+                  status: "draft",
+                  show_title: true,
+                  episode_date: "",
+                  source_name: "",
+                  source_url: "",
+                  seo_title: "",
+                  seo_description: "",
+                  cover_image: "",
+                  og_image_url: "",
+                })
+              }
+            }}
+            className="label-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Clear local draft
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
