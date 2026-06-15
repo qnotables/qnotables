@@ -4,66 +4,68 @@ import Image from "next/image"
 import { useState } from "react"
 import { ShoppingBag, Truck } from "lucide-react"
 import { CheckoutDialog, type CheckoutRequest } from "@/components/checkout-dialog"
-
-type Product = {
-  id: string
-  name: string
-  codename: string
-  price: number
-  image: string
-  options: string[]
-  optionLabel: string
-}
-
-const PRODUCTS: Product[] = [
-  {
-    id: "field-tee",
-    name: "Field Tee",
-    codename: "STD-ISSUE",
-    price: 32,
-    image: "/shop/field-tee.png",
-    optionLabel: "Size",
-    options: ["S", "M", "L", "XL", "2XL"],
-  },
-  {
-    id: "recon-cap",
-    name: "Recon Cap",
-    codename: "HEADGEAR",
-    price: 28,
-    image: "/shop/recon-cap.png",
-    optionLabel: "Fit",
-    options: ["One Size"],
-  },
-  {
-    id: "morale-patch",
-    name: "Morale Patch",
-    codename: "INSIGNIA",
-    price: 12,
-    image: "/shop/morale-patch.png",
-    optionLabel: "Backing",
-    options: ["Velcro", "Iron-on"],
-  },
-  {
-    id: "field-mug",
-    name: "Field Mug",
-    codename: "MESS-KIT",
-    price: 18,
-    image: "/shop/field-mug.png",
-    optionLabel: "Finish",
-    options: ["Olive", "Charcoal"],
-  },
-]
+import { PRODUCTS, getProduct, dollars } from "@/lib/products"
 
 export function MerchGrid() {
+  // Map of product IDs to UI metadata (codename, image, options)
+  const productUI: Record<string, { codename: string; image: string; optionLabel: string; options: string[] }> = {
+    "field-tee": {
+      codename: "STD-ISSUE",
+      image: "/shop/field-tee.png",
+      optionLabel: "Size",
+      options: ["S", "M", "L", "XL", "2XL"],
+    },
+    "recon-cap": {
+      codename: "HEADGEAR",
+      image: "/shop/recon-cap.png",
+      optionLabel: "Fit",
+      options: ["One Size"],
+    },
+    "morale-patch": {
+      codename: "INSIGNIA",
+      image: "/shop/morale-patch.png",
+      optionLabel: "Backing",
+      options: ["Velcro", "Iron-on"],
+    },
+    "field-mug": {
+      codename: "MESS-KIT",
+      image: "/shop/field-mug.png",
+      optionLabel: "Finish",
+      options: ["Olive", "Charcoal"],
+    },
+    "sticker-pack": {
+      codename: "MARKS",
+      image: "/shop/sticker-pack.png",
+      optionLabel: "Style",
+      options: ["Classic"],
+    },
+    "sourced-notebook": {
+      codename: "LEDGER",
+      image: "/shop/sourced-notebook.png",
+      optionLabel: "Binding",
+      options: ["Hardcover"],
+    },
+  }
+
   const [selected, setSelected] = useState<Record<string, string>>(
-    Object.fromEntries(PRODUCTS.map((p) => [p.id, p.options[0]])),
+    Object.fromEntries(
+      PRODUCTS.filter((p) => p.type === "good").map((p) => [
+        p.id,
+        productUI[p.id]?.options[0] || "",
+      ]),
+    ),
   )
   const [request, setRequest] = useState<CheckoutRequest | null>(null)
 
+  const goods = PRODUCTS.filter((p) => p.type === "good")
+
   return (
     <>
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      {PRODUCTS.map((product) => (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {goods.map((product) => {
+        const ui = productUI[product.id]
+        if (!ui) return null
+        return (
         <section
           key={product.id}
           className="corner-frame flex flex-col border border-border bg-card"
@@ -73,26 +75,26 @@ export function MerchGrid() {
               src={product.image || "/placeholder.svg"}
               alt={`${product.name} product photo`}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover"
             />
             <span className="label-mono absolute left-3 top-3 bg-background/80 px-2 py-1 text-primary backdrop-blur">
-              {product.codename}
+              {ui.codename}
             </span>
           </div>
 
           <div className="flex flex-1 flex-col p-4">
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="stencil text-xl text-foreground">{product.name}</h3>
-              <span className="stencil text-xl text-primary">${product.price}</span>
+              <span className="stencil text-xl text-primary">${dollars(product.priceInCents)}</span>
             </div>
 
             <div className="mt-4">
               <span className="label-mono text-muted-foreground">
-                {product.optionLabel}
+                {ui.optionLabel}
               </span>
               <div className="mt-2 flex flex-wrap gap-2">
-                {product.options.map((opt) => (
+                {ui.options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
@@ -132,7 +134,8 @@ export function MerchGrid() {
             </p>
           </div>
         </section>
-      ))}
+        )
+      })}
     </div>
 
     <CheckoutDialog
