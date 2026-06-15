@@ -88,7 +88,31 @@ function priorityFor(minutesAgo: number, reports: number): Story["priority"] {
 }
 
 function imageFrom(item: ParsedItem): string | undefined {
-  return item.mediaThumbnail?.$?.url || item.mediaContent?.$?.url || undefined
+  // Try media namespace first (most common)
+  if (item.mediaThumbnail?.$?.url) return item.mediaThumbnail.$url
+  if (item.mediaContent?.$?.url) return item.mediaContent.$url
+  
+  // Try image field (some RSS feeds)
+  if (item.image?.url) return item.image.url
+  
+  // Try enclosure (podcasts, media feeds)
+  if (Array.isArray(item.enclosure)) {
+    const mediaEnclosure = item.enclosure.find((e: any) => 
+      e.$?.type?.startsWith("image/")
+    )
+    if (mediaEnclosure?.$?.url) return mediaEnclosure.$url
+  } else if (item.enclosure?.$?.type?.startsWith("image/")) {
+    return item.enclosure.$url
+  }
+  
+  // Try description for img tag (last resort)
+  const desc = item.description || item.content
+  if (desc) {
+    const imgMatch = desc.match(/<img[^>]+src=["']([^"']+)["']/i)
+    if (imgMatch?.[1]) return imgMatch[1]
+  }
+  
+  return undefined
 }
 
 // Categorize an article based on keywords found in title + summary.
@@ -165,8 +189,15 @@ export async function getNews(): Promise<NewsBundle> {
   // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
   if (blogPostStory && blogPostStory.image) {
     const used = new Set<string>([blogPostStory.id])
-    const topStories = stories.slice(0, 2)
+    let topStories = stories.slice(0, 2)
     topStories.forEach((s) => used.add(s.id))
+    
+    // Ensure topStories have images - use fallback if needed
+    const topFallbackImages = ["/images/story-satellite.png", "/images/story-port.png"]
+    topStories = topStories.map((s, i) => ({
+      ...s,
+      image: s.image || topFallbackImages[i],
+    }))
 
     const feed = stories.filter((s) => !used.has(s.id)).slice(0, 30)
 
