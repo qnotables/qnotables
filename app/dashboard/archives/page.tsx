@@ -1,21 +1,22 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isAdminEmail } from "@/lib/admin"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ArchivesTable } from "@/components/archives-table"
+import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
 export const metadata = {
-  title: "Manage Archives — Dashboard",
+  title: "Archives Management — Admin Dashboard",
+  description: "View, edit, and manage all posts in the archive.",
 }
 
 export default async function ArchivesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect("/auth/login")
-  if (!isAdminEmail(user.email)) redirect("/")
+  const hasAccess = await validateDashboardAccess()
+  if (!hasAccess) {
+    redirect("/dashboard/login")
+  }
 
   // Fetch all posts
   const admin = createAdminClient()
@@ -37,25 +38,29 @@ export default async function ArchivesPage() {
   }))
 
   return (
-    <div id="top" className="min-h-screen tactical-grid">
+    <>
       <SiteHeader />
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12">
+          <Link
+            href="/dashboard"
+            className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
 
-      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        <div className="mb-8 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="h-2 w-2 bg-primary" />
-            <h1 className="stencil text-3xl md:text-4xl text-foreground">Archives Management</h1>
+          <div className="mb-8">
+            <h1 className="stencil mb-2 text-3xl text-foreground">Archives Management</h1>
+            <p className="label-mono text-muted-foreground">
+              View, edit, and manage all posts in the archive. {posts.length} total posts.
+            </p>
           </div>
+
+          <ArchivesTable initialPosts={posts} />
         </div>
-
-        <p className="label-mono mb-6 text-muted-foreground">
-          View, edit, and manage all posts in the archive. {posts.length} total posts.
-        </p>
-
-        <ArchivesTable initialPosts={posts} />
       </main>
-
       <SiteFooter />
-    </div>
+    </>
   )
 }
