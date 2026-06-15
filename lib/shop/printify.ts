@@ -1,9 +1,15 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !key) {
+    throw new Error("Supabase credentials not configured")
+  }
+
+  return createClient(url, key)
+}
 
 export interface PrintifySettings {
   printify_api_key?: string
@@ -45,6 +51,7 @@ export interface PrintifySyncLog {
  * Fetch Printify settings for the shop
  */
 export async function getPrintifySettings(): Promise<PrintifySettings | null> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("shop_settings")
     .select("*")
@@ -62,6 +69,7 @@ export async function getPrintifySettings(): Promise<PrintifySettings | null> {
  * Update Printify settings
  */
 export async function updatePrintifySettings(settings: Partial<PrintifySettings>) {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("shop_settings")
     .update({
@@ -85,6 +93,7 @@ export async function logPrintifySync(
   message?: string,
   details?: any,
 ) {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("printify_sync_log")
     .insert([
@@ -106,6 +115,7 @@ export async function logPrintifySync(
  * Get recent Printify sync logs
  */
 export async function getPrintifySyncLogs(limit = 20): Promise<PrintifySyncLog[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("printify_sync_log")
     .select("*")
@@ -184,6 +194,7 @@ export async function testPrintifyConnection(apiKey: string, shopId: string): Pr
  * Get products that are connected to Printify
  */
 export async function getPrintifyConnectedProducts() {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -198,6 +209,7 @@ export async function getPrintifyConnectedProducts() {
  * Disconnect a product from Printify
  */
 export async function disconnectProductFromPrintify(productId: string) {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .update({

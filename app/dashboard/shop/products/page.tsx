@@ -4,6 +4,8 @@ import { Plus, Search, Filter, Edit, Trash2, Eye, Star } from "lucide-react"
 import { getAllProducts } from "@/lib/shop/products"
 import { formatPrice } from "@/lib/shop/products"
 
+export const dynamic = "force-dynamic"
+
 async function ProductsTable() {
   const products = await getAllProducts()
 

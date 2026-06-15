@@ -4,6 +4,8 @@ import { getOrders } from "@/lib/shop/products"
 import { formatPrice } from "@/lib/shop/products"
 import { Eye } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 async function OrdersTable() {
   const orders = await getOrders()
 

@@ -3,6 +3,8 @@ import Link from "next/link"
 import { getAllProducts } from "@/lib/shop/products"
 import { formatPrice } from "@/lib/shop/products"
 
+export const dynamic = "force-dynamic"
+
 async function ProductGrid() {
   const products = await getAllProducts()
   const active = products.filter((p) => p.status === "active")

@@ -1,9 +1,15 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !key) {
+    throw new Error("Supabase credentials not configured")
+  }
+
+  return createClient(url, key)
+}
 
 export interface Product {
   id: string
@@ -70,6 +76,7 @@ export interface Order {
 }
 
 export async function getAllProducts(): Promise<Product[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -80,6 +87,7 @@ export async function getAllProducts(): Promise<Product[]> {
 }
 
 export async function getProductsByStatus(status: string): Promise<Product[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -91,6 +99,7 @@ export async function getProductsByStatus(status: string): Promise<Product[]> {
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -104,6 +113,7 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -115,6 +125,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 }
 
 export async function getProductVariants(productId: string): Promise<ProductVariant[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("product_variants")
     .select("*")
@@ -126,6 +137,7 @@ export async function getProductVariants(productId: string): Promise<ProductVari
 }
 
 export async function getOrders(): Promise<Order[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("orders")
     .select("*")
@@ -136,6 +148,7 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 export async function getOrdersByStatus(status: string): Promise<Order[]> {
+  const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("orders")
     .select("*")
@@ -148,6 +161,7 @@ export async function getOrdersByStatus(status: string): Promise<Order[]> {
 
 export async function getShopStats() {
   try {
+    const supabase = getSupabaseClient()
     const [allProducts, activeProducts, featuredProducts, allOrders, paidOrders] = await Promise.all([
       supabase.from("products").select("id", { count: "exact" }).then((r) => r.count || 0),
       supabase.from("products").select("id", { count: "exact" }).eq("status", "active").then((r) => r.count || 0),

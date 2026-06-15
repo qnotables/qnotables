@@ -4,6 +4,8 @@ import { Plus, Package, ShoppingCart, BarChart3, Settings, Zap } from "lucide-re
 import { getShopStats, getAllProducts, getOrders } from "@/lib/shop/products"
 import { formatPrice } from "@/lib/shop/products"
 
+export const dynamic = "force-dynamic"
+
 async function ShopStatsCards() {
   const stats = await getShopStats()
 
