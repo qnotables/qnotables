@@ -3,7 +3,7 @@ import Link from "next/link"
 import { BarChart3, BookOpen, FileUp, Archive, ShoppingCart, Users, Megaphone } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getAdminUser } from "@/lib/admin"
+import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
 export const metadata = {
   title: "Admin Dashboard — Hot and Fresh",
@@ -63,10 +63,10 @@ const DASHBOARD_SECTIONS = [
 ]
 
 export default async function DashboardPage() {
-  // Check admin access
-  const admin = await getAdminUser()
-  if (!admin) {
-    redirect("/auth/login")
+  // Check secret key authentication
+  const hasAccess = await validateDashboardAccess()
+  if (!hasAccess) {
+    redirect("/dashboard/login")
   }
 
   return (
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
           <div className="mb-12">
             <h1 className="stencil mb-2 text-3xl text-foreground md:text-4xl">Admin Dashboard</h1>
             <p className="label-mono text-muted-foreground">
-              Welcome back, {admin.email}. Manage your content and site settings.
+              Dashboard access granted. Manage your content and site settings.
             </p>
           </div>
 
