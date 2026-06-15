@@ -10,8 +10,8 @@ import {
 } from "@/lib/news-data"
 
 // Single RSS source: Watkins Report
-const RSS_FEED_URL = "https://8ch.net/qnotables/tripcode.xml"
-const DEFAULT_SOURCE = "qnotables"
+const RSS_FEED_URL = "https://8ch.net/qresearch/tripcode.xml "
+const DEFAULT_SOURCE = "/qr/"
 
 type ParsedItem = {
   mediaThumbnail?: { $?: { url?: string } }
