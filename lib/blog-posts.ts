@@ -202,6 +202,11 @@ export async function getPostByIdAdmin(id: string): Promise<BlogPost | undefined
   return data ? rowToPost(data as BlogRow) : undefined
 }
 
+export async function getLatestPost(): Promise<BlogPost | undefined> {
+  const posts = await getAllPosts()
+  return posts[0] // Already sorted newest first
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",

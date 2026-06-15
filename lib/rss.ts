@@ -8,6 +8,7 @@ import {
   feed as fallbackFeed,
   trending as fallbackTrending,
 } from "@/lib/news-data"
+import { getLatestPost } from "@/lib/blog-posts"
 
 // Single RSS source: Watkins Report
 const RSS_FEED_URL = "https://8ch.net/qresearch/tripcode.xml"
@@ -45,6 +46,25 @@ function stripHtml(input = ""): string {
     .replace(/&[^;]+;/g, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+// Convert a blog post to a Story for the news feed
+function blogPostToStory(post: Awaited<ReturnType<typeof getLatestPost>>): Story | null {
+  if (!post) return null
+  
+  return {
+    id: post.id || post.slug,
+    headline: post.title,
+    summary: post.excerpt,
+    source: "HOT AND FRESH",
+    category: (post.category?.toUpperCase() as Category) || "OTHER",
+    minutesAgo: Math.floor((Date.now() - new Date(post.publishedAt || post.date).getTime()) / 60000),
+    readMinutes: post.readMinutes,
+    reports: 1,
+    image: post.coverImage || undefined,
+    url: `/archives/${post.slug}`,
+    priority: "FLASH" as const,
+  }
 }
 
 // Deterministic pseudo-count for ranking stability.
@@ -136,7 +156,33 @@ export type NewsBundle = {
 }
 
 export async function getNews(): Promise<NewsBundle> {
+  // Check for latest blog post first
+  const latestBlogPost = await getLatestPost()
+  const blogPostStory = blogPostToStory(latestBlogPost)
+  
   const stories = await fetchWatkinsFeed()
+
+  // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
+  if (blogPostStory && blogPostStory.image) {
+    const used = new Set<string>([blogPostStory.id])
+    const topStories = stories.slice(0, 2)
+    topStories.forEach((s) => used.add(s.id))
+
+    const feed = stories.filter((s) => !used.has(s.id)).slice(0, 30)
+
+    const allStories = [blogPostStory, ...stories]
+    const trending = allStories
+      .sort((a, b) => b.reports - a.reports)
+      .slice(0, 5)
+      .map((s, i) => ({
+        rank: i + 1,
+        headline: s.headline,
+        reports: s.reports,
+        url: s.url,
+      }))
+
+    return { featured: blogPostStory, topStories, feed, trending, live: true }
+  }
 
   // No live data available — fall back to the static placeholders.
   if (stories.length === 0) {
