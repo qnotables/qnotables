@@ -9,6 +9,7 @@ import { WireFeed } from "@/components/wire-feed"
 import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
+import { LiveStreamButton } from "@/components/live-stream-button"
 import { getNews } from "@/lib/rss"
 import { categories } from "@/lib/news-data"
 
@@ -39,25 +40,7 @@ export default async function Page() {
         <div className="mb-5 flex items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
           <h1 className="stencil text-xl text-foreground">Situation Report</h1>
-          {live ? (
-            <button
-              onClick={() => {
-                window.open(
-                  "https://rumble.com/c/Qnotables",
-                  "rumble_popout",
-                  "width=1000,height=700,resizable=yes,scrollbars=yes"
-                )
-              }}
-              className="label-mono hidden items-center gap-1 text-primary transition-colors hover:text-primary/80 sm:inline-flex cursor-pointer"
-              title="Open Rumble live stream in popout"
-            >
-              // <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" /> LIVE STREAM
-            </button>
-          ) : (
-            <span className="label-mono hidden text-muted-foreground sm:inline">
-              // CACHED BRIEF
-            </span>
-          )}
+          <LiveStreamButton live={live} />
           <span className="ml-auto h-px flex-1 bg-border" />
         </div>
 
