@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Menu, Radio, Search, ShoppingBag } from "lucide-react"
+import { Menu, Flag, Search, ShoppingBag } from "lucide-react"
 import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HeaderAuth } from "@/components/header-auth"
@@ -78,7 +78,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
             <Menu className="h-4 w-4" />
           </button>
           <a href="#top" className="flex items-baseline gap-2">
-            <Radio className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Flag className="h-6 w-6 text-primary" aria-hidden="true" />
             <span className="stencil text-2xl leading-none text-foreground md:text-3xl">
               Hot and Fresh
             </span>
