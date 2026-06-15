@@ -27,3 +27,16 @@ export async function getAdminUser() {
   if (!user || !isAdminEmail(user.email)) return null
   return user
 }
+
+/**
+ * Check if a user is admin or moderator (for client-side display).
+ * Returns true if user is admin (in ADMIN_EMAILS allowlist).
+ */
+export async function checkAdminAccess(): Promise<boolean> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return false
+  return isAdminEmail(user.email)
+}
