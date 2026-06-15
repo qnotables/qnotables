@@ -80,7 +80,7 @@ export const PRODUCTS: Product[] = [
     type: "good",
     name: "Sticker Pack",
     description: "Set of 5 durable vinyl stickers with HOT AND FRESH branding.",
-    priceInCents: 800,
+    priceInCents: 700,
     shippable: true,
   },
   {
@@ -88,7 +88,7 @@ export const PRODUCTS: Product[] = [
     type: "good",
     name: "Sourced Notebook",
     description: "Premium lined notebook with HOT AND FRESH logo. Perfect for story notes.",
-    priceInCents: 2800,
+    priceInCents: 1700,
     shippable: true,
   },
 ]
