@@ -72,7 +72,7 @@ export function MerchGrid() {
         >
           <div className="relative aspect-square w-full overflow-hidden border-b border-border bg-muted">
             <Image
-              src={product.image || "/placeholder.svg"}
+              src={ui.image || "/placeholder.svg"}
               alt={`${product.name} product photo`}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -118,7 +118,7 @@ export function MerchGrid() {
               onClick={() =>
                 setRequest({
                   productId: product.id,
-                  title: `${product.name} — ${product.optionLabel}: ${selected[product.id]}`,
+                  title: `${product.name} — ${ui.optionLabel}: ${selected[product.id]}`,
                   quantity: 1,
                 })
               }

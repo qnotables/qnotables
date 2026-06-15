@@ -73,7 +73,7 @@ export function sanitizeMarkdown(markdown: string): string {
   // Basic markdown is safe; only sanitize if it contains HTML
   if (!markdown.includes("<")) return markdown
 
-  const html = marked.parse(markdown)
+  const html = marked.parseInline(markdown) as string
   const clean = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "p", "br", "ul", "ol", "li", "blockquote", "code", "pre"],
     ALLOWED_ATTR: ["href", "target", "rel"],

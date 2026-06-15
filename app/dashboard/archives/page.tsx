@@ -19,10 +19,22 @@ export default async function ArchivesPage() {
 
   // Fetch all posts
   const admin = createAdminClient()
-  const { data: posts = [] } = await admin
+  const { data: postsData = [] } = await admin
     .from("blog_posts")
     .select("id, slug, title, published_at, status, published, tag, category, author_name")
     .order("published_at", { ascending: false, nullsFirst: false })
+
+  const posts = (postsData || []).map((p: any) => ({
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    published_at: p.published_at,
+    status: p.status,
+    published: p.published,
+    tag: p.tag,
+    category: p.category,
+    author_name: p.author_name,
+  }))
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
