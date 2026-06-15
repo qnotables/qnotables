@@ -65,6 +65,7 @@ export function MerchGrid() {
       {goods.map((product) => {
         const ui = productUI[product.id]
         if (!ui) return null
+        return (
         <section
           key={product.id}
           className="corner-frame flex flex-col border border-border bg-card"
@@ -133,6 +134,7 @@ export function MerchGrid() {
             </p>
           </div>
         </section>
+        )
       })}
     </div>
 
