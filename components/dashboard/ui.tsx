@@ -3,18 +3,48 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import type { LucideIcon } from "lucide-react"
 
+export interface Breadcrumb {
+  label: string
+  href?: string
+}
+
 export function PageHeader({
   title,
   description,
   action,
+  breadcrumbs,
 }: {
   title: string
   description?: string
   action?: React.ReactNode
+  breadcrumbs?: Breadcrumb[]
 }) {
   return (
     <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div>
+        {breadcrumbs && breadcrumbs.length > 0 ? (
+          <nav aria-label="Breadcrumb" className="mb-2">
+            <ol className="label-mono flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+              <li>
+                <Link href="/dashboard" className="transition-colors hover:text-foreground">
+                  Dashboard
+                </Link>
+              </li>
+              {breadcrumbs.map((crumb, i) => (
+                <li key={`${crumb.label}-${i}`} className="flex items-center gap-1">
+                  <span aria-hidden className="text-muted-foreground/50">/</span>
+                  {crumb.href ? (
+                    <Link href={crumb.href} className="transition-colors hover:text-foreground">
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="text-foreground">{crumb.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : null}
         <div className="mb-2 flex items-center gap-2">
           <span className="h-2 w-2 bg-primary" />
           <h1 className="stencil text-2xl text-foreground md:text-3xl">{title}</h1>

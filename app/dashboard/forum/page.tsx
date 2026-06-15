@@ -1,41 +1,75 @@
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
+import { PageHeader, StatCard } from "@/components/dashboard/ui"
+import { ForumTable, type ForumThreadRow } from "@/components/dashboard/forum-table"
+import { MessageSquare, Pin, Lock } from "lucide-react"
 
 export const metadata = {
-  title: "Forum — Admin Dashboard",
-  description: "Manage forum discussions and users.",
+  title: "Forum Management — Admin Dashboard",
+  description: "Moderate forum discussions and topics.",
 }
 
 export default async function ForumPage() {
   const hasAccess = await validateDashboardAccess()
-  if (!hasAccess) {
-    redirect("/dashboard/login")
+  if (!hasAccess) redirect("/dashboard/login")
+
+  const admin = createAdminClient()
+
+  const { data: threadsData } = await admin
+    .from("forum_threads")
+    .select("id, title, author_id, category, created_at, is_pinned, is_locked, is_featured, is_soft_deleted")
+    .order("created_at", { ascending: false })
+
+  const threadsRaw = (threadsData || []).filter((t: any) => !t.is_soft_deleted)
+
+  // author names
+  const authorIds = Array.from(new Set(threadsRaw.map((t: any) => t.author_id).filter(Boolean)))
+  const authorMap = new Map<string, string>()
+  if (authorIds.length > 0) {
+    const { data: profs } = await admin.from("profiles").select("id, display_name, username").in("id", authorIds)
+    for (const p of profs || []) {
+      authorMap.set(p.id, p.display_name || p.username || "Anonymous")
+    }
   }
 
-  return (
-    <>
-      <SiteHeader />
-      <main className="min-h-screen bg-background">
-        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12">
-          <Link
-            href="/dashboard"
-            className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
+  // reply counts
+  const { data: repliesData } = await admin.from("forum_replies").select("thread_id")
+  const replyCounts = new Map<string, number>()
+  for (const r of repliesData || []) {
+    replyCounts.set(r.thread_id, (replyCounts.get(r.thread_id) ?? 0) + 1)
+  }
 
-          <div className="border border-border bg-card p-8 text-center">
-            <h1 className="stencil mb-2 text-2xl text-foreground">Forum Management</h1>
-            <p className="label-mono text-muted-foreground">Coming soon</p>
-          </div>
-        </div>
-      </main>
-      <SiteFooter />
-    </>
+  const threads: ForumThreadRow[] = threadsRaw.map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    author: authorMap.get(t.author_id) ?? "Anonymous",
+    category: t.category,
+    replies: replyCounts.get(t.id) ?? 0,
+    createdAt: t.created_at,
+    isPinned: Boolean(t.is_pinned),
+    isLocked: Boolean(t.is_locked),
+    isFeatured: Boolean(t.is_featured),
+  }))
+
+  const pinned = threads.filter((t) => t.isPinned).length
+  const locked = threads.filter((t) => t.isLocked).length
+
+  return (
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Forum Management"
+        description="Moderate discussions — pin, lock, feature, or remove threads."
+        breadcrumbs={[{ label: "Forum" }]}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Total Threads" value={threads.length} icon={MessageSquare} />
+        <StatCard label="Pinned" value={pinned} icon={Pin} />
+        <StatCard label="Locked" value={locked} icon={Lock} />
+      </div>
+
+      <ForumTable threads={threads} />
+    </div>
   )
 }

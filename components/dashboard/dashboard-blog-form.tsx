@@ -38,7 +38,7 @@ function CoverImageField({ defaultUrl, name = "cover_image", label = "Cover Imag
       const fd = new FormData()
       fd.append("file", file)
       fd.append("folder", "blog")
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
+      const res = await fetch("/api/dashboard/upload", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error ?? "Upload failed")
       setUrl(json.url)

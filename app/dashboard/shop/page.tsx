@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Package, DollarSign, ShoppingCart } from "lucide-react"
-import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
+import { Package, DollarSign, ShoppingCart } from "lucide-react"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
+import { PageHeader } from "@/components/dashboard/ui"
 import { PRODUCTS } from "@/lib/products"
 
 export const metadata = {
@@ -64,25 +62,14 @@ export default async function ShopDashboardPage() {
   const subscriptions = PRODUCTS.filter((p) => p.type === "subscription")
 
   return (
-    <>
-      <SiteHeader />
-      <main className="min-h-screen bg-background">
-        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12">
-          <Link
-            href="/dashboard"
-            className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Shop Management"
+        description="Manage shop products, orders, and subscriptions."
+        breadcrumbs={[{ label: "Shop" }]}
+      />
 
-          <div className="mb-8">
-            <h1 className="stencil mb-2 text-3xl text-foreground">Shop Management</h1>
-            <p className="label-mono text-muted-foreground">
-              Manage shop products, orders, and subscriptions.
-            </p>
-          </div>
-
+      <div>
           {/* KPI cards */}
           <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="border border-border bg-card p-6">
@@ -275,9 +262,7 @@ export default async function ShopDashboardPage() {
               </table>
             </div>
           </div>
-        </div>
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </div>
   )
 }
