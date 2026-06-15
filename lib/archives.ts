@@ -121,6 +121,38 @@ export async function getPostsByDate(year: number, month?: number): Promise<Blog
   }
 }
 
+/** Get all available year/month combinations for archive browsing */
+export async function getAvailableMonths(): Promise<Array<{ year: number; month: number; count: number }>> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select("published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+
+    if (error) throw error
+
+    const months = new Map<string, number>()
+    for (const row of (data as { published_at: string }[]) || []) {
+      if (!row.published_at) continue
+      const date = new Date(row.published_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+      months.set(key, (months.get(key) || 0) + 1)
+    }
+
+    return Array.from(months.entries())
+      .map(([key, count]) => {
+        const [year, month] = key.split("-")
+        return { year: parseInt(year), month: parseInt(month), count }
+      })
+      .sort((a, b) => (b.year !== a.year ? b.year - a.year : b.month - a.month))
+  } catch (err) {
+    console.error("[v0] getAvailableMonths error", err)
+    return []
+  }
+}
+
 /** Get featured posts */
 export async function getFeaturedPosts(): Promise<BlogPost[]> {
   try {
