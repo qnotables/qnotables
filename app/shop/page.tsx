@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Radio } from "lucide-react"
+import Image from "next/image"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ShopHero } from "@/components/shop-hero"
 import { MembershipComparison } from "@/components/membership-comparison"
@@ -21,7 +21,13 @@ export default function ShopPage() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
           <Link href="/" className="flex items-baseline gap-2" aria-label="Back to HOT AND FRESH home">
-            <Radio className="h-6 w-6 self-center text-primary" aria-hidden="true" />
+            <Image
+              src="/us-flag.png"
+              alt="American flag"
+              width={32}
+              height={20}
+              className="h-5 w-8"
+            />
             <span className="stencil text-2xl leading-none text-foreground md:text-3xl">
               HOT AND FRESH
             </span>
