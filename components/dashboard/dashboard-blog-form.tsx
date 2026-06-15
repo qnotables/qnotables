@@ -13,6 +13,18 @@ type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
 const DRAFT_KEY = "hot-and-fresh-new-post-draft"
 const AUTOSAVE_DELAY = 5000 // 5 seconds
 
+const POST_TYPE_OPTIONS = [
+  "Field Note",
+  "News Brief",
+  "Research Thread",
+  "Show Notes",
+  "Source Archive",
+  "Opinion",
+  "Explainer",
+  "Timeline",
+  "Document Drop",
+] as const
+
 interface PostFormData {
   title: string
   subtitle: string
@@ -600,10 +612,11 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
                 >
                   <option value="">Select type</option>
-                  <option value="article">Article</option>
-                  <option value="dispatch">Dispatch</option>
-                  <option value="episode">Episode</option>
-                  <option value="analysis">Analysis</option>
+                  {POST_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
                 </select>
                 <p className="label-mono mt-1 text-xs text-muted-foreground">Required to publish</p>
               </div>
