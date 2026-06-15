@@ -52,6 +52,24 @@ const PRODUCTS: Product[] = [
     optionLabel: "Finish",
     options: ["Olive", "Charcoal"],
   },
+  {
+    id: "sticker-pack",
+    name: "Sticker Pack",
+    codename: "MARKS",
+    price: 8,
+    image: "/shop/sticker-pack.png",
+    optionLabel: "Style",
+    options: ["Classic"],
+  },
+  {
+    id: "sourced-notebook",
+    name: "Sourced Notebook",
+    codename: "LEDGER",
+    price: 28,
+    image: "/shop/sourced-notebook.png",
+    optionLabel: "Binding",
+    options: ["Hardcover"],
+  },
 ]
 
 export function MerchGrid() {
@@ -62,7 +80,7 @@ export function MerchGrid() {
 
   return (
     <>
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {PRODUCTS.map((product) => (
         <section
           key={product.id}
@@ -73,7 +91,7 @@ export function MerchGrid() {
               src={product.image || "/placeholder.svg"}
               alt={`${product.name} product photo`}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover"
             />
             <span className="label-mono absolute left-3 top-3 bg-background/80 px-2 py-1 text-primary backdrop-blur">

@@ -75,6 +75,22 @@ export const PRODUCTS: Product[] = [
     priceInCents: 1800,
     shippable: true,
   },
+  {
+    id: "sticker-pack",
+    type: "good",
+    name: "Sticker Pack",
+    description: "Set of 5 durable vinyl stickers with HOT AND FRESH branding.",
+    priceInCents: 800,
+    shippable: true,
+  },
+  {
+    id: "sourced-notebook",
+    type: "good",
+    name: "Sourced Notebook",
+    description: "Premium lined notebook with HOT AND FRESH logo. Perfect for story notes.",
+    priceInCents: 2800,
+    shippable: true,
+  },
 ]
 
 export function getProduct(id: string): Product | undefined {
