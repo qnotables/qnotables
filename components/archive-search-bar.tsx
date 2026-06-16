@@ -22,10 +22,9 @@ interface ArchiveSearchProps {
   months: Array<{ year: number; month: number }>
   sources: string[]
   tags: string[]
-  onFiltersChange: (filters: ArchiveFilters) => void
 }
 
-export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, months, sources, tags, onFiltersChange }: ArchiveSearchProps) {
+export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, months, sources, tags }: ArchiveSearchProps) {
   const [filters, setFilters] = useState<ArchiveFilters>({
     search: "",
     category: "",
@@ -41,7 +40,6 @@ export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, mon
   const handleFilterChange = (key: keyof ArchiveFilters, value: any) => {
     const updated = { ...filters, [key]: value }
     setFilters(updated)
-    onFiltersChange(updated)
   }
 
   const activeFilterCount = Object.values(filters).filter(v => v && (Array.isArray(v) ? v.length > 0 : true)).length
@@ -58,7 +56,6 @@ export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, mon
       tags: [],
     }
     setFilters(cleared)
-    onFiltersChange(cleared)
   }
 
   return (
