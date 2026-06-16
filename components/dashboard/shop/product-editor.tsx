@@ -2,16 +2,12 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Save, X, Upload, AlertCircle } from "lucide-react"
-import { createProduct, updateProduct, deleteProduct } from "@/app/dashboard/shop/shop-actions"
-import { generateSlug, formatPrice } from "@/lib/shop/products"
+import { Save, X, AlertCircle } from "lucide-react"
+import { generateSlug } from "@/lib/shop/products"
 import type { Product } from "@/lib/shop/products"
-
-const DASHBOARD_SECRET_KEY = process.env.NEXT_PUBLIC_DASHBOARD_SECRET_KEY || ""
 
 const PRODUCT_TYPES = ["manual", "printify", "digital", "membership"]
 const STATUSES = ["draft", "active", "hidden", "sold_out", "archived"]
-const FULFILLMENT_METHODS = ["manual", "printify", "digital"]
 
 interface ProductEditorProps {
   product?: Product
@@ -46,7 +42,6 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
   const handleFieldChange = (field: string, value: any) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value }
-      // Auto-generate slug from name if slug is empty or matches old name slug
       if (field === "name" && !product?.slug) {
         updated.slug = generateSlug(value)
       }
@@ -59,7 +54,6 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
     setIsSubmitting(true)
 
     try {
-      // Validation
       if (!formData.name.trim()) {
         throw new Error("Product name is required")
       }
@@ -68,7 +62,6 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
       }
 
       const formDataObj = new FormData()
-      formDataObj.append("secret_key", DASHBOARD_SECRET_KEY)
       formDataObj.append("name", formData.name)
       formDataObj.append("slug", formData.slug)
       formDataObj.append("product_type", formData.product_type)
@@ -86,10 +79,15 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
       formDataObj.append("seo_title", formData.seo_title)
       formDataObj.append("seo_description", formData.seo_description)
 
-      if (isNew) {
-        await createProduct(formDataObj)
-      } else if (product?.id) {
-        await updateProduct(product.id, formDataObj)
+      const endpoint = isNew ? "/api/shop/products/create" : `/api/shop/products/${product?.id}/update`
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formDataObj,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to save product")
       }
 
       router.push("/dashboard/shop/products")
@@ -105,7 +103,15 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
     if (!confirm("Are you sure? This cannot be undone.")) return
 
     try {
-      await deleteProduct(product.id, DASHBOARD_SECRET_KEY)
+      const response = await fetch(`/api/shop/products/${product.id}/delete`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to delete product")
+      }
+
       router.push("/dashboard/shop/products")
       router.refresh()
     } catch (err) {
