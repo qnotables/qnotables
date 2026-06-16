@@ -168,6 +168,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: url('/bg-main.png');
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
   }
   html {
     @apply font-mono;
