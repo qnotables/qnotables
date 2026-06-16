@@ -44,7 +44,7 @@ export async function SidebarAd() {
         buttonText: ads[0].button_text,
         buttonLink: ads[0].button_link,
       }}
-      className="sticky top-6"
+      className="sticky top-6 w-full"
     />
   )
 }
