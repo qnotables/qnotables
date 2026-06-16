@@ -1,144 +1,174 @@
 "use client"
 
-import {
-  Share2,
-  Share,
-  Mail,
-  MessageCircle,
-} from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { Share2, Mail, MessageCircle, Link2, Check } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { createShareUrl, type SharePlatform } from "@/lib/rss-utils"
 
-interface ShareButtonsProps {
-  headline: string
+export interface ShareButtonsProps {
+  /** Preferred title prop. */
+  title?: string
+  /** Backward-compatible alias for title. */
+  headline?: string
+  /** Canonical URL of the post. Falls back to current page URL. */
   url?: string
+  /** Short excerpt included in share text where supported. */
+  excerpt?: string
+  /** Backward-compatible source label, appended to share text. */
   source?: string
+  /** Hashtags (without leading #) for platforms that support them. */
+  hashtags?: string[]
+  className?: string
 }
 
-export function ShareButtons({ headline, url, source }: ShareButtonsProps) {
+export function ShareButtons({
+  title,
+  headline,
+  url,
+  excerpt,
+  source,
+  hashtags = [],
+  className = "",
+}: ShareButtonsProps) {
   const [showMenu, setShowMenu] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [canNativeShare, setCanNativeShare] = useState(false)
   const [menuPosition, setMenuPosition] = useState<{ top: string; left: string }>({ top: "0", left: "0" })
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // The story URL — if not provided, link back to qnotables.ai
-  const storyUrl = url || "https://qnotables.ai"
-  const baseUrl = "https://qnotables.ai"
+  const shareTitle = title || headline || "HOT AND FRESH"
+  const shareExcerpt = excerpt || source
 
-  // Share text: "Headline - Source via @qnotables"
-  const shareText = `${headline}${source ? ` - ${source}` : ""} via @qnotables`
-
-  // Build share URLs for each platform
-  const shareLinks = {
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(storyUrl)}&via=qnotables`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(storyUrl)}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(storyUrl)}`,
-    reddit: `https://reddit.com/submit?url=${encodeURIComponent(storyUrl)}&title=${encodeURIComponent(headline)}`,
-    truthsocial: `https://truthsocial.com/@qnotables/posts/new?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(storyUrl)}`,
-    telegram: `https://t.me/share/url?url=${encodeURIComponent(storyUrl)}&text=${encodeURIComponent(headline)}`,
-    email: `mailto:?subject=${encodeURIComponent(`${headline} - via qnotables.ai`)}&body=${encodeURIComponent(`${headline}\n\n${storyUrl}\n\nShared via qnotables.ai`)}`,
-  }
-
-  const openShare = (platform: string) => {
-    const url = shareLinks[platform as keyof typeof shareLinks]
+  // Resolve the canonical URL on the client (falls back to current location).
+  const [shareUrl, setShareUrl] = useState(url || "")
+  useEffect(() => {
     if (url) {
-      window.open(url, "_blank", "noopener,noreferrer")
+      setShareUrl(url)
+    } else if (typeof window !== "undefined") {
+      setShareUrl(window.location.href)
     }
-  }
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      setCanNativeShare(true)
+    }
+  }, [url])
 
-  // Calculate position when menu shows
+  const openShare = useCallback(
+    (platform: SharePlatform) => {
+      const link = createShareUrl(platform, {
+        url: shareUrl,
+        title: shareTitle,
+        excerpt: shareExcerpt,
+        hashtags,
+      })
+      if (platform === "email") {
+        window.location.href = link
+      } else {
+        window.open(link, "_blank", "noopener,noreferrer,nofollow")
+      }
+      setShowMenu(false)
+    },
+    [shareUrl, shareTitle, shareExcerpt, hashtags],
+  )
+
+  const copyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("[v0] copy link failed:", err)
+    }
+  }, [shareUrl])
+
+  const nativeShare = useCallback(async () => {
+    try {
+      await navigator.share({
+        title: shareTitle,
+        text: shareExcerpt || shareTitle,
+        url: shareUrl,
+      })
+      setShowMenu(false)
+    } catch {
+      // User cancelled or share failed — ignore silently.
+    }
+  }, [shareTitle, shareExcerpt, shareUrl])
+
+  // Position the dropdown menu relative to the trigger button.
   useEffect(() => {
     if (showMenu && buttonRef.current && menuRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
-      const menuHeight = menuRef.current.offsetHeight || 50
-      
-      // Position menu below button, adjusted so it doesn't go off-screen
-      const top = rect.top + rect.height + window.scrollY + 8
-      const left = Math.max(8, rect.right - 200 + window.scrollX)
-      
-      setMenuPosition({
-        top: `${top}px`,
-        left: `${left}px`,
-      })
+      const top = rect.bottom + window.scrollY + 8
+      const left = Math.max(8, rect.right - 220 + window.scrollX)
+      setMenuPosition({ top: `${top}px`, left: `${left}px` })
     }
   }, [showMenu])
 
+  // Close on outside click.
+  useEffect(() => {
+    if (!showMenu) return
+    function handle(e: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handle)
+    return () => document.removeEventListener("mousedown", handle)
+  }, [showMenu])
+
+  const itemClass =
+    "flex items-center gap-2 rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+
   return (
-    <div className="relative">
+    <div className={`relative inline-block ${className}`}>
       <button
         ref={buttonRef}
-        onClick={() => setShowMenu(!showMenu)}
+        type="button"
+        onClick={() => setShowMenu((s) => !s)}
         className="label-mono flex items-center gap-1 text-muted-foreground transition-colors hover:text-primary"
-        title="Share this story"
+        aria-haspopup="menu"
+        aria-expanded={showMenu}
+        title="Share this record"
       >
         <Share2 className="h-4 w-4" /> SHARE
       </button>
 
       {showMenu && (
-        <div 
+        <div
           ref={menuRef}
-          className="fixed z-50 flex flex-wrap gap-2 rounded border border-border bg-card p-2 shadow-lg sm:flex-nowrap sm:gap-1"
-          style={{
-            top: menuPosition.top,
-            left: menuPosition.left,
-          }}
+          role="menu"
+          className="fixed z-50 flex w-52 flex-col gap-0.5 rounded border border-border bg-card p-1.5 shadow-lg"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
         >
-          <button
-            onClick={() => openShare("twitter")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on Twitter"
-          >
-            <span className="label-mono text-xs font-bold">X</span>
+          <button type="button" onClick={copyLink} className={itemClass} role="menuitem">
+            {copied ? <Check className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
+            {copied ? "Copied" : "Copy Link"}
           </button>
 
-          <button
-            onClick={() => openShare("facebook")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on Facebook"
-          >
-            <span className="label-mono text-xs font-bold">FB</span>
-          </button>
+          {canNativeShare && (
+            <button type="button" onClick={nativeShare} className={itemClass} role="menuitem">
+              <Share2 className="h-4 w-4" /> Share…
+            </button>
+          )}
 
-          <button
-            onClick={() => openShare("linkedin")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on LinkedIn"
-          >
-            <span className="label-mono text-xs font-bold">LI</span>
+          <button type="button" onClick={() => openShare("twitter")} className={itemClass} role="menuitem">
+            <span className="label-mono w-4 text-center text-xs font-bold">X</span> Share on X
           </button>
-
-          <button
-            onClick={() => openShare("reddit")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on Reddit"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="label-mono text-xs hidden sm:inline">RD</span>
+          <button type="button" onClick={() => openShare("facebook")} className={itemClass} role="menuitem">
+            <span className="label-mono w-4 text-center text-xs font-bold">f</span> Facebook
           </button>
-
-          <button
-            onClick={() => openShare("truthsocial")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on Truth Social"
-          >
-            <span className="label-mono text-xs font-bold">TS</span>
+          <button type="button" onClick={() => openShare("truthsocial")} className={itemClass} role="menuitem">
+            <span className="label-mono w-4 text-center text-xs font-bold">TS</span> Truth Social
           </button>
-
-          <button
-            onClick={() => openShare("telegram")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share on Telegram"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="label-mono text-xs hidden sm:inline">TG</span>
+          <button type="button" onClick={() => openShare("telegram")} className={itemClass} role="menuitem">
+            <MessageCircle className="h-4 w-4" /> Telegram
           </button>
-
-          <button
-            onClick={() => openShare("email")}
-            className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            title="Share via Email"
-          >
-            <Mail className="h-4 w-4" />
-            <span className="label-mono text-xs hidden sm:inline">Email</span>
+          <button type="button" onClick={() => openShare("email")} className={itemClass} role="menuitem">
+            <Mail className="h-4 w-4" /> Email
           </button>
         </div>
       )}

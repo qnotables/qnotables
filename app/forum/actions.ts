@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
+import { parseTags, serializeTags } from "@/lib/forum-utils"
 
 export async function createThread(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const body = String(formData.get("body") ?? "").trim()
+  const category = String(formData.get("category") ?? "").trim() || null
+  const rawTags = String(formData.get("tags") ?? "").trim()
+  const source_url = String(formData.get("source_url") ?? "").trim() || null
+  const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
 
   if (title.length < 4 || body.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
@@ -21,7 +26,7 @@ export async function createThread(formData: FormData) {
 
   const { data, error } = await supabase
     .from("forum_threads")
-    .insert({ title, body, author_id: user.id })
+    .insert({ title, body, author_id: user.id, category, tags, source_url })
     .select("id")
     .single()
 
@@ -35,6 +40,9 @@ export async function updateThread(formData: FormData) {
   const id = String(formData.get("thread_id") ?? "")
   const title = String(formData.get("title") ?? "").trim()
   const body = String(formData.get("body") ?? "").trim()
+  const category = String(formData.get("category") ?? "").trim() || null
+  const rawTags = String(formData.get("tags") ?? "").trim()
+  const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
 
   if (!id) return { error: "Missing thread." }
   if (title.length < 4 || body.length < 4) {
@@ -49,7 +57,7 @@ export async function updateThread(formData: FormData) {
 
   const { error } = await supabase
     .from("forum_threads")
-    .update({ title, body })
+    .update({ title, body, category, tags })
     .eq("id", id)
     .eq("author_id", user.id)
 

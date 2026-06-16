@@ -6,18 +6,35 @@ import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
 import { getPost, formatDate } from "@/lib/blog-posts"
 import { getRelatedPosts } from "@/lib/archives"
+import { ShareButtons } from "@/components/share-buttons"
+import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPost(slug)
-  if (!post) return { title: "Not found — Hot and Fresh" }
+  if (!post) return { title: "Not found — HOT AND FRESH" }
+  const site = getSiteUrl()
+  const canonical = `${site}/archives/${post.slug}`
+  const description = post.subtitle || post.excerpt || "Archived HOT AND FRESH record."
+  const { url: ogImage } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
   return {
-    title: `${post.title} — Hot and Fresh`,
-    description: post.subtitle || post.excerpt,
+    title: `${post.title} — HOT AND FRESH`,
+    description,
+    alternates: { canonical },
     openGraph: {
       title: post.title,
-      description: post.subtitle || post.excerpt,
-      images: post.coverImage ? [{ url: post.coverImage }] : undefined,
+      description,
+      url: canonical,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+      type: "article",
+      publishedTime: post.publishedAt || post.date,
+      modifiedTime: post.updatedAt,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
     },
   }
 }
@@ -81,6 +98,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <article className="mt-8">
           <Markdown content={post.content} />
         </article>
+
+        {/* Share section */}
+        <div className="mt-12 border-t border-border pt-8">
+          <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
+          <ShareButtons
+            title={post.title}
+            url={`${getSiteUrl()}/archives/${post.slug}`}
+            excerpt={post.subtitle || post.excerpt}
+            hashtags={post.tags}
+          />
+        </div>
 
         {/* Related posts */}
         {relatedPosts.length > 0 && (

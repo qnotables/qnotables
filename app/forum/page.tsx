@@ -1,46 +1,13 @@
 import Link from "next/link"
-import { MessageSquare, Plus, Clock } from "lucide-react"
+import { Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { Markdown } from "@/components/markdown"
+import { ForumList, type ThreadListItem } from "@/components/forum-list"
 import { createClient } from "@/lib/supabase/server"
-import { timeAgo } from "@/lib/time"
 
 export const metadata = {
   title: "The Town Hall — Hot and Fresh",
   description: "Open forum for operators. Start a thread, file a reply, argue the claim.",
-}
-
-interface ThreadRow {
-  id: string
-  title: string
-  body: string
-  created_at: string
-  author_id: string
-  profiles: { display_name: string } | null
-  forum_replies: { count: number }[]
-}
-
-// Extract text content from markdown (strip markdown syntax for preview)
-function stripMarkdown(markdown: string): string {
-  return (
-    markdown
-      // Remove markdown link syntax [text](url) → text
-      .replace(/\[([^\]]+)\]\([^\)]*\)/g, "$1")
-      // Remove markdown image syntax ![alt](url) → (image)
-      .replace(/!\[([^\]]*)\]\([^\)]*\)/g, "(image)")
-      // Remove bold/italic markers
-      .replace(/[*_`~]/g, "")
-      // Remove heading markers
-      .replace(/^#+\s/gm, "")
-      // Remove list markers
-      .replace(/^[\s-*+]\s/gm, "")
-      // Remove blockquote markers
-      .replace(/^>\s/gm, "")
-      // Clean up multiple spaces/newlines
-      .replace(/\s+/g, " ")
-      .trim()
-  )
 }
 
 export default async function ForumPage() {
@@ -49,12 +16,31 @@ export default async function ForumPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Fetch threads with author profiles and reply counts
   const { data: threads } = await supabase
     .from("forum_threads")
-    .select("id, title, body, created_at, author_id, profiles(display_name), forum_replies(count)")
+    .select(
+      "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
+    )
+    .eq("is_soft_deleted", false)
+    .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
 
-  const rows = (threads ?? []) as unknown as ThreadRow[]
+  const rows: ThreadListItem[] = (threads ?? []).map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    body: t.body ?? "",
+    category: t.category ?? null,
+    tags: t.tags ?? null,
+    created_at: t.created_at,
+    author_id: t.author_id,
+    authorName: t.profiles?.display_name ?? "operator",
+    replyCount: t.forum_replies?.[0]?.count ?? 0,
+    is_pinned: Boolean(t.is_pinned),
+    is_locked: Boolean(t.is_locked),
+    is_featured: Boolean(t.is_featured),
+    is_soft_deleted: Boolean(t.is_soft_deleted),
+  }))
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -85,52 +71,7 @@ export default async function ForumPage() {
           )}
         </div>
 
-        {rows.length === 0 ? (
-          <div className="corner-frame border border-border bg-card p-10 text-center">
-            <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="stencil mt-4 text-xl text-foreground">No threads yet</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Be the first operator to open the channel.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {rows.map((t) => {
-              const replyCount = t.forum_replies?.[0]?.count ?? 0
-              const bodyPreview = stripMarkdown(t.body)
-              return (
-                <Link
-                  key={t.id}
-                  href={`/forum/${t.id}`}
-                  className="group flex items-start gap-4 border border-border bg-card p-5 transition-colors hover:border-primary"
-                >
-                  <div className="mt-0.5 flex flex-col items-center gap-1 border border-border px-3 py-2 text-center">
-                    <span className="stencil text-lg text-primary">{replyCount}</span>
-                    <span className="label-mono text-[10px] text-muted-foreground">
-                      {replyCount === 1 ? "REPLY" : "REPLIES"}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="stencil text-balance text-lg text-foreground transition-colors group-hover:text-primary">
-                      {t.title}
-                    </h2>
-                    <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                      {bodyPreview}
-                    </p>
-                    <div className="label-mono mt-3 flex items-center gap-3 text-muted-foreground">
-                      <span className="text-foreground">
-                        {t.profiles?.display_name ?? "operator"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" /> {timeAgo(t.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
+        <ForumList threads={rows} isSignedIn={Boolean(user)} />
       </main>
 
       <SiteFooter />

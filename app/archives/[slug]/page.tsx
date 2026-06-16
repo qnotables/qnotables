@@ -1,11 +1,13 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, AlertCircle, ExternalLink, Share2, FileText, Play, Calendar } from "lucide-react"
+import { ArrowLeft, AlertCircle, ExternalLink, FileText, Calendar } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
 import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
+import { ShareButtons } from "@/components/share-buttons"
+import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -15,15 +17,29 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!post) return { title: "Not found — HOT AND FRESH" }
 
+  const site = getSiteUrl()
+  const canonical = `${site}/archives/${post.slug}`
+  const { url: ogImage } = resolveFeedImage(post)
+  const description = post.excerpt || post.subtitle || "Archived HOT AND FRESH record."
+
   return {
     title: `${post.title} — HOT AND FRESH`,
-    description: post.excerpt || post.subtitle,
+    description,
+    alternates: { canonical },
     openGraph: {
       title: post.title,
-      description: post.excerpt || post.subtitle,
-      images: post.cover_image_url ? [{ url: post.cover_image_url }] : undefined,
+      description,
+      url: canonical,
+      images: ogImage ? [{ url: ogImage }] : undefined,
       type: "article",
       publishedTime: post.published_at,
+      modifiedTime: post.updated_at,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
     },
   }
 }
@@ -218,22 +234,12 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           {/* Share section */}
           <div className="mt-12 border-t border-border pt-8">
             <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
-            <div className="flex gap-2">
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://hotandfresh.news/archives/${post.slug}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border border-border bg-background px-3 py-2 transition-colors hover:border-primary hover:text-primary"
-              >
-                <Share2 className="h-4 w-4" />
-              </a>
-              <a
-                href={`mailto:?subject=${encodeURIComponent(post.title)}&body=${encodeURIComponent(`https://hotandfresh.news/archives/${post.slug}`)}`}
-                className="border border-border bg-background px-3 py-2 transition-colors hover:border-primary hover:text-primary"
-              >
-                Email
-              </a>
-            </div>
+            <ShareButtons
+              title={post.title}
+              url={`${getSiteUrl()}/archives/${post.slug}`}
+              excerpt={post.excerpt || post.subtitle}
+              hashtags={post.tags}
+            />
           </div>
         </article>
 

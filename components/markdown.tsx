@@ -3,16 +3,25 @@ import remarkGfm from "remark-gfm"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeExternalLinks from "rehype-external-links"
 import type { Components } from "react-markdown"
+import { isDirectImageUrl, isSocialMediaUrl } from "@/lib/forum-utils"
+import { ForumImage } from "@/components/forum-image"
 
-// Allow img src + standard attrs in the sanitised output, plus iframe for embeds
+// Tightened sanitize schema:
+// - No iframes (user-authored content must not embed arbitrary iframes)
+// - No javascript:/data: in hrefs
+// - Images allowed with src/alt/title only
 const sanitizeSchema = {
   ...defaultSchema,
-  tagNames: [...(defaultSchema.tagNames || []), "iframe"],
+  tagNames: (defaultSchema.tagNames ?? []).filter((t: string) => t !== "iframe"),
   attributes: {
     ...defaultSchema.attributes,
-    img: ["src", "alt", "title", "width", "height"],
+    img: ["src", "alt", "title"],
     code: ["className"],
-    iframe: ["src", "width", "height", "frameborder", "allowfullscreen", "title", "allow"],
+    a: ["href", "title", "target", "rel"],
+  },
+  protocols: {
+    href: ["http", "https", "mailto"],
+    src: ["http", "https"],
   },
 }
 
@@ -29,16 +38,21 @@ const components: Components = {
   p: ({ children }) => (
     <p className="text-pretty leading-relaxed">{children}</p>
   ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      className="break-all text-primary underline-offset-4 hover:underline"
-      target="_blank"
-      rel="noopener noreferrer nofollow"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    // Block unsafe protocols that slipped past rehype-sanitize
+    const safe = href && /^https?:\/\//i.test(href)
+    if (!safe) return <span className="text-muted-foreground">{children}</span>
+    return (
+      <a
+        href={href}
+        className="break-all text-primary underline-offset-4 hover:underline"
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+      >
+        {children}
+      </a>
+    )
+  },
   ul: ({ children }) => (
     <ul className="flex list-disc flex-col gap-2 pl-6 marker:text-primary">{children}</ul>
   ),
@@ -55,7 +69,6 @@ const components: Components = {
     <strong className="font-semibold text-foreground">{children}</strong>
   ),
   em: ({ children }) => <em className="italic">{children}</em>,
-  // inline code
   code: ({ className, children }) => {
     const isBlock = Boolean(className)
     if (isBlock) {
@@ -74,9 +87,19 @@ const components: Components = {
   ),
   img: ({ src, alt }) => {
     const url = typeof src === "string" ? src : ""
-    // Media inserted via ![name](url) may point at a video file. Detect by
-    // extension (ignoring any query string) and render a <video> player.
-    const isVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url)
+
+    // Block images that point at social media pages (not direct image files)
+    if (!url || (!isDirectImageUrl(url) && isSocialMediaUrl(url))) {
+      return null
+    }
+
+    // Block non-http/https src values (data: URIs, javascript:, etc.)
+    if (!/^https?:\/\//i.test(url)) {
+      return null
+    }
+
+    // Video files embedded via img syntax
+    const isVideo = /\.(mp4|webm|ogg|mov|m4v)(\?[^\s]*)?$/i.test(url)
     if (isVideo) {
       return (
         <video
@@ -90,15 +113,8 @@ const components: Components = {
         </video>
       )
     }
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url || "/placeholder.svg"}
-        alt={alt ?? ""}
-        className="my-2 max-w-full rounded border border-border object-contain"
-        loading="lazy"
-      />
-    )
+
+    return <ForumImage src={url} alt={alt ?? ""} />
   },
   hr: () => <hr className="border-border" />,
 }
@@ -110,10 +126,13 @@ export function Markdown({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[
           [rehypeSanitize, sanitizeSchema],
-          [rehypeExternalLinks, {
-            target: "_blank",
-            rel: ["noopener", "noreferrer", "nofollow"],
-          }],
+          [
+            rehypeExternalLinks,
+            {
+              target: "_blank",
+              rel: ["noopener", "noreferrer", "nofollow"],
+            },
+          ],
         ]}
         components={components}
       >

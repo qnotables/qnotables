@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/site-header"
-import { FlashStory } from "@/components/flash-story"
 import { FeaturedStory } from "@/components/featured-story"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
@@ -11,13 +10,79 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
+import { SituationReportCycle } from "@/components/situation-report-cycle"
+import type { SituationForumItem, SituationBlogItem, SituationArchiveItem } from "@/components/situation-report-cycle"
 import { getNews } from "@/lib/rss"
-import { getLatestPost } from "@/lib/blog-posts"
+import { getHottestBlogPost, getHottestArchivePost } from "@/lib/blog-posts"
+import { getHottestForumThread } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 
 export default async function Page() {
-  const { featured, topStories, feed, trending, live } = await getNews()
-  const flashPost = await getLatestPost()
+  const [
+    { featured, topStories, feed, trending, live },
+    hottestThread,
+    hottestBlog,
+    hottestArchive,
+  ] = await Promise.all([
+    getNews(),
+    getHottestForumThread(),
+    getHottestBlogPost(),
+    getHottestArchivePost(),
+  ])
+
+  // Map to typed cycle props
+  const forumItem: SituationForumItem | null = hottestThread
+    ? {
+        type: "forum",
+        id: hottestThread.id,
+        title: hottestThread.title,
+        body: hottestThread.body,
+        authorName: hottestThread.authorName,
+        createdAt: hottestThread.createdAt,
+        replyCount: hottestThread.replyCount,
+        category: hottestThread.category,
+        isFeatured: hottestThread.isFeatured,
+      }
+    : null
+
+  const blogItem: SituationBlogItem | null = hottestBlog
+    ? {
+        type: "blog",
+        id: hottestBlog.id,
+        slug: hottestBlog.slug,
+        title: hottestBlog.title,
+        excerpt: hottestBlog.excerpt,
+        category: hottestBlog.category,
+        tag: hottestBlog.tag,
+        tags: hottestBlog.tags,
+        coverImage: hottestBlog.coverImage,
+        date: hottestBlog.date,
+        readMinutes: hottestBlog.readMinutes,
+        featured: hottestBlog.featured,
+        priority: hottestBlog.priority,
+        postType: hottestBlog.postType,
+        sourceName: hottestBlog.sourceName,
+      }
+    : null
+
+  const archiveItem: SituationArchiveItem | null = hottestArchive
+    ? {
+        type: "archive",
+        id: hottestArchive.id,
+        slug: hottestArchive.slug,
+        title: hottestArchive.title,
+        excerpt: hottestArchive.excerpt,
+        category: hottestArchive.category,
+        tag: hottestArchive.tag,
+        postType: hottestArchive.postType,
+        priority: hottestArchive.priority,
+        featured: hottestArchive.featured,
+        coverImage: hottestArchive.coverImage,
+        sourceName: hottestArchive.sourceName,
+        date: hottestArchive.date,
+        readMinutes: hottestArchive.readMinutes,
+      }
+    : null
   
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
@@ -50,23 +115,15 @@ export default async function Page() {
           {/* primary column */}
           <div className="lg:col-span-2">
             <FeaturedStory story={featured} />
-            
-            {/* Flash Story - Latest Archive */}
-            {flashPost && (
-              <div className="mt-6">
-                <FlashStory
-                  title={flashPost.title}
-                  excerpt={flashPost.excerpt}
-                  category={flashPost.category}
-                  date={flashPost.date}
-                  readMinutes={flashPost.readMinutes}
-                  image={flashPost.coverImage}
-                  slug={flashPost.slug}
-                  source={flashPost.sourceName}
-                  type="archive"
-                />
-              </div>
-            )}
+
+            {/* Situation Report cycle: Forum / Blog / Archive */}
+            <div className="mt-6">
+              <SituationReportCycle
+                forumItem={forumItem}
+                blogItem={blogItem}
+                archiveItem={archiveItem}
+              />
+            </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (

@@ -10,9 +10,44 @@ import {
 } from "@/lib/news-data"
 import { getLatestPost } from "@/lib/blog-posts"
 
-// Single RSS source: Watkins Report
-const RSS_FEED_URL = "https://8ch.net/qresearch/tripcode.xml"
-const DEFAULT_SOURCE = "/qr/"
+/**
+ * RSS Source Configuration
+ * Add new sources here to include them in the feed aggregation
+ */
+export interface RSSSource {
+  id: string
+  name: string
+  url: string
+  enabled: boolean
+}
+
+export const RSS_SOURCES: RSSSource[] = [
+  {
+    id: "watkins",
+    name: "/qr/",
+    url: "https://8ch.net/qresearch/tripcode.xml",
+    enabled: true,
+  },
+  // Add more sources below:
+  {
+    id: "bbc",
+    name: "BBC News",
+    url: "https://feeds.bbci.co.uk/news/rss.xml",
+    enabled: true,
+  },
+  {
+    id: "fox",
+    name: "FOX Politics",
+    url: "https://feeds.foxnews.com/foxnews/politics",
+    enabled: true,
+  },
+  {
+    id: "foxn",
+    name: "FOX National",
+    url: "https://feeds.foxnews.com/foxnews/national",
+    enabled: true,
+  },
+]
 
 type ParsedItem = {
   mediaThumbnail?: { $?: { url?: string } }
@@ -129,9 +164,14 @@ function categorizeArticle(headline: string, summary: string): Category {
   return "OTHER"
 }
 
-async function fetchWatkinsFeed(): Promise<Story[]> {
+/**
+ * Fetch and parse a single RSS source
+ */
+async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
+  if (!source.enabled) return []
+  
   try {
-    const res = await fetch(RSS_FEED_URL, {
+    const res = await fetch(source.url, {
       headers: { "user-agent": "Mozilla/5.0 (compatible; HotAndFreshBot/1.0)" },
       next: { revalidate: 300 },
     })
@@ -152,10 +192,10 @@ async function fetchWatkinsFeed(): Promise<Story[]> {
       const reports = hashReports(headline)
 
       return {
-        id: item.guid || item.link || `watkins-${i}`,
+        id: `${source.id}-${item.guid || item.link || i}`,
         headline,
         summary: summary || "Follow the link for the full report.",
-        source: DEFAULT_SOURCE,
+        source: source.name,
         category: categorizeArticle(headline, summary),
         minutesAgo,
         readMinutes: estimateReadMinutes(summary),
@@ -166,9 +206,41 @@ async function fetchWatkinsFeed(): Promise<Story[]> {
       }
     })
   } catch (err) {
-    console.error("[v0] Failed to fetch Watkins Report:", err)
+    console.error(`[v0] Failed to fetch RSS source "${source.name}":`, err)
     return []
   }
+}
+
+/**
+ * Fetch stories from all enabled RSS sources
+ */
+async function fetchAllRSSSources(): Promise<Story[]> {
+  const enabledSources = RSS_SOURCES.filter((s) => s.enabled)
+  
+  if (enabledSources.length === 0) {
+    console.warn("[v0] No RSS sources enabled")
+    return []
+  }
+
+  // Fetch all sources in parallel
+  const results = await Promise.allSettled(
+    enabledSources.map((source) => fetchRSSSource(source))
+  )
+
+  // Combine results, filtering out failures
+  const allStories: Story[] = []
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      allStories.push(...result.value)
+    } else {
+      console.error(
+        `[v0] Failed to fetch RSS source "${enabledSources[index]?.name}":`,
+        result.reason
+      )
+    }
+  })
+
+  return allStories
 }
 
 export type NewsBundle = {
@@ -184,7 +256,7 @@ export async function getNews(): Promise<NewsBundle> {
   const latestBlogPost = await getLatestPost()
   const blogPostStory = blogPostToStory(latestBlogPost)
   
-  const stories = await fetchWatkinsFeed()
+  const stories = await fetchAllRSSSources()
 
   // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
   if (blogPostStory && blogPostStory.image) {

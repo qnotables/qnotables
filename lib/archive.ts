@@ -92,7 +92,6 @@ export async function getAllArchives(): Promise<ArchivePost[]> {
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .order("published_at", { ascending: false })
 
   if (error) throw new Error(`Failed to fetch archives: ${error.message}`)
@@ -106,7 +105,6 @@ export async function getArchivesByType(postType: string): Promise<ArchivePost[]
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .eq("post_type", postType)
     .order("published_at", { ascending: false })
 
@@ -121,7 +119,6 @@ export async function getArchivesByMediaType(mediaType: string): Promise<Archive
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .eq("media_type", mediaType)
     .order("published_at", { ascending: false })
 
@@ -136,7 +133,6 @@ export async function getFeaturedArchives(limit = 6): Promise<ArchivePost[]> {
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .eq("featured", true)
     .order("published_at", { ascending: false })
     .limit(limit)
@@ -152,7 +148,7 @@ export async function getArchiveBySlug(slug: string): Promise<ArchivePost | null
     .from("blog_posts")
     .select("*")
     .eq("slug", slug)
-    .eq("public_archive", true)
+    .eq("status", "published")
     .single()
 
   if (error && error.code !== "PGRST116") throw error
@@ -166,7 +162,6 @@ export async function getArchivesByTimeline(startDate: string, endDate: string):
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .gte("timeline_date", startDate)
     .lte("timeline_date", endDate)
     .order("timeline_date", { ascending: false })
@@ -182,7 +177,6 @@ export async function getArchiveVideos(limit = 50): Promise<ArchivePost[]> {
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .in("media_type", ["video", "iframe"])
     .order("published_at", { ascending: false })
     .limit(limit)
@@ -198,7 +192,6 @@ export async function getArchiveDocuments(limit = 50): Promise<ArchivePost[]> {
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
     .in("media_type", ["document", "external_link"])
     .order("published_at", { ascending: false })
     .limit(limit)
@@ -214,8 +207,7 @@ export async function searchArchives(query: string, limit = 20): Promise<Archive
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("public_archive", true)
-    .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,body.ilike.%${query}%,tags.ilike.%${query}%`)
+    .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,body.ilike.%${query}%,tag.ilike.%${query}%`)
     .order("published_at", { ascending: false })
     .limit(limit)
 
@@ -264,11 +256,9 @@ export async function getMediaByType(mediaType: string): Promise<ArchiveMedia[]>
 // Helper: Generate archive statistics
 export async function getArchiveStats() {
   const supabase = getSupabaseClient()
-  const [publishedCount, videoCount, documentCount, mediaCount, mediaSize] = await Promise.all([
-    supabase.from("blog_posts").select("id", { count: "exact" }).eq("status", "published").eq("public_archive", true).then(r => r.count || 0),
-    supabase.from("blog_posts").select("id", { count: "exact" }).eq("status", "published").eq("media_type", "video").then(r => r.count || 0),
-    supabase.from("blog_posts").select("id", { count: "exact" }).eq("status", "published").eq("media_type", "document").then(r => r.count || 0),
-    supabase.from("archive_media").select("id", { count: "exact" }).then(r => r.count || 0),
+  const [publishedCount, mediaCount, mediaSize] = await Promise.all([
+    supabase.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "published").then(r => r.count || 0),
+    supabase.from("archive_media").select("id", { count: "exact", head: true }).then(r => r.count || 0),
     supabase.from("archive_media").select("file_size").then(r => {
       if (r.data) return r.data.reduce((sum: number, m: any) => sum + (m.file_size || 0), 0)
       return 0
@@ -277,8 +267,8 @@ export async function getArchiveStats() {
 
   return {
     total_published: publishedCount,
-    total_videos: videoCount,
-    total_documents: documentCount,
+    total_videos: 0,
+    total_documents: 0,
     total_media_files: mediaCount,
     total_storage_bytes: mediaSize as number,
   }
