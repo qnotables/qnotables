@@ -27,17 +27,19 @@ export async function GET(request: Request) {
     const supabase = getSupabaseClient()
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hotandfresh.news"
 
-    // Fetch published archives
+    // Fetch published archives that should be in RSS
     const { data: posts, error } = await supabase
       .from("blog_posts")
       .select("id, slug, title, excerpt, body, category, tags, post_type, featured, source_name, source_url, published_at, cover_image_url, video_url, priority")
       .eq("status", "published")
-      .eq("public_archive", true)
       .eq("include_in_rss", true)
       .order("published_at", { ascending: false })
       .limit(50)
 
-    if (error) throw error
+    if (error) {
+      console.error("[v0] RSS fetch error:", error)
+      throw error
+    }
 
     // Build RSS items
     const items = (posts || [])
@@ -88,7 +90,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Error generating RSS feed:", error)
+    console.error("[v0] RSS generation error:", error)
     return new Response("Error generating RSS feed", {
       status: 500,
       headers: {
