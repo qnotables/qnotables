@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header"
+import { FlashStory } from "@/components/flash-story"
 import { FeaturedStory } from "@/components/featured-story"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
@@ -11,10 +12,13 @@ import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { getNews } from "@/lib/rss"
+import { getLatestPost } from "@/lib/blog-posts"
 import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const { featured, topStories, feed, trending, live } = await getNews()
+  const flashPost = await getLatestPost()
+  
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
     headline: s.headline,
@@ -46,6 +50,24 @@ export default async function Page() {
           {/* primary column */}
           <div className="lg:col-span-2">
             <FeaturedStory story={featured} />
+            
+            {/* Flash Story - Latest Archive */}
+            {flashPost && (
+              <div className="mt-6">
+                <FlashStory
+                  title={flashPost.title}
+                  excerpt={flashPost.excerpt}
+                  category={flashPost.category}
+                  date={flashPost.date}
+                  readMinutes={flashPost.readMinutes}
+                  image={flashPost.coverImage}
+                  slug={flashPost.slug}
+                  source={flashPost.sourceName}
+                  type="archive"
+                />
+              </div>
+            )}
+            
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (
                 <StoryCard key={story.id} story={story} />
