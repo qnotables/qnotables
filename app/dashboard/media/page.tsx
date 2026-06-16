@@ -4,6 +4,8 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 import { MediaLibrary, type MediaRow } from "@/components/dashboard/media-library"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Media Library — Admin Dashboard",
   description: "Upload and manage images and videos.",

@@ -5,6 +5,8 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { FileText, CheckCircle2, FileEdit, Star } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Posts Analytics — Admin Dashboard",
   description: "View post statistics and analytics.",

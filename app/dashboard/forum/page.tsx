@@ -5,6 +5,8 @@ import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { ForumTable, type ForumThreadRow } from "@/components/dashboard/forum-table"
 import { MessageSquare, Pin, Lock } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Forum Management — Admin Dashboard",
   description: "Moderate forum discussions and topics.",
