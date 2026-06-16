@@ -2,6 +2,7 @@ import { ArrowUpRight, Clock, FileText } from "lucide-react"
 import { type Story, formatAgo } from "@/lib/news-data"
 import { PriorityTag } from "@/components/priority-tag"
 import { ShareButtons } from "@/components/share-buttons"
+import { CardImage } from "@/components/card-image"
 
 export function FeaturedStory({ story }: { story: Story }) {
   const s = story
@@ -11,10 +12,12 @@ export function FeaturedStory({ story }: { story: Story }) {
   return (
     <article className="corner-frame group relative overflow-hidden border border-border bg-card">
       <div className="relative aspect-[16/10] w-full overflow-hidden md:aspect-[16/9]">
-        <img
-          src={s.image || "/placeholder.svg"}
-          alt=""
-          className="h-full w-full object-cover opacity-90 grayscale-[35%] transition duration-500 group-hover:scale-[1.02] group-hover:grayscale-0"
+        <CardImage
+          src={s.image}
+          alt={s.headline}
+          variant="cover"
+          aspectRatio="video"
+          className="opacity-90 grayscale-[35%] transition duration-500 group-hover:scale-[1.02] group-hover:grayscale-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
         <div className="absolute left-0 top-0 flex items-center gap-2 p-3">
