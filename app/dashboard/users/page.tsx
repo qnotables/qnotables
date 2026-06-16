@@ -5,6 +5,8 @@ import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { UsersTable, type UserRow } from "@/components/dashboard/users-table"
 import { Users, ShieldCheck, UserX } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "User Management — Admin Dashboard",
   description: "Manage user roles and account status.",
