@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/site-header"
-import { NewsTicker } from "@/components/news-ticker"
 import { FeaturedStory } from "@/components/featured-story"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
@@ -24,7 +23,6 @@ export default async function Page() {
     url: s.url,
   }))
 
-  const tickerItems = wireStories.map((s) => ({ headline: s.headline, url: s.url }))
   const desks = categories
     .map((cat) => ({ cat, stories: feed.filter((s) => s.category === cat) }))
     .filter((d) => d.stories.length > 0)
@@ -33,7 +31,6 @@ export default async function Page() {
     <DeskFilterProvider>
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader wireStories={wireStories} />
-      <NewsTicker items={tickerItems} />
       <TopAd />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
