@@ -1,23 +1,35 @@
 "use client"
 
-import { useTransition } from "react"
 import { X } from "lucide-react"
+import { useTransition } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 interface TeamFiltersProps {
   groups: string[]
   selectedGroup: string | null
-  onFilterChange: (group: string | null) => void
 }
 
-export function TeamFilters({ groups, selectedGroup, onFilterChange }: TeamFiltersProps) {
+export function TeamFilters({ groups, selectedGroup }: TeamFiltersProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [pending] = useTransition()
+
+  const handleFilterChange = (group: string | null) => {
+    const params = new URLSearchParams(searchParams)
+    if (group) {
+      params.set("group", group)
+    } else {
+      params.delete("group")
+    }
+    router.push(`/team?${params.toString()}`)
+  }
 
   if (groups.length === 0) return null
 
   return (
     <div className="flex flex-wrap gap-2">
       <button
-        onClick={() => onFilterChange(null)}
+        onClick={() => handleFilterChange(null)}
         disabled={pending}
         className={`label-mono inline-flex items-center gap-2 px-3 py-1 border transition-colors disabled:opacity-50 ${
           selectedGroup === null
@@ -31,7 +43,7 @@ export function TeamFilters({ groups, selectedGroup, onFilterChange }: TeamFilte
       {groups.map((group) => (
         <button
           key={group}
-          onClick={() => onFilterChange(selectedGroup === group ? null : group)}
+          onClick={() => handleFilterChange(selectedGroup === group ? null : group)}
           disabled={pending}
           className={`label-mono inline-flex items-center gap-2 px-3 py-1 border transition-colors disabled:opacity-50 ${
             selectedGroup === group
