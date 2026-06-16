@@ -123,6 +123,12 @@ export function rowToPost(row: BlogRow): BlogPost {
 
 async function getDbPosts(): Promise<BlogPost[]> {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn("[v0] Supabase not configured, skipping database posts")
+      return []
+    }
+
     // Use admin client so this works both in RSC (with cookies) and in
     // contexts where the cookie store isn't available (generateStaticParams, etc.)
     const admin = createAdminClient()
