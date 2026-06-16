@@ -11,13 +11,17 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
+import { BlogPostCard } from "@/components/blog-post-card"
+import { ForumThreadCard } from "@/components/forum-thread-card"
 import { getNews } from "@/lib/rss"
 import { getLatestPost } from "@/lib/blog-posts"
+import { getHottestForumThread } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const { featured, topStories, feed, trending, live } = await getNews()
   const flashPost = await getLatestPost()
+  const hottestThread = await getHottestForumThread()
   
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
@@ -67,6 +71,29 @@ export default async function Page() {
                 />
               </div>
             )}
+            
+            {/* Blog and Forum Section */}
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {flashPost && (
+                <BlogPostCard
+                  title={flashPost.title}
+                  excerpt={flashPost.excerpt}
+                  date={flashPost.date}
+                  readMinutes={flashPost.readMinutes}
+                  slug={flashPost.slug}
+                />
+              )}
+              {hottestThread && (
+                <ForumThreadCard
+                  id={hottestThread.id}
+                  title={hottestThread.title}
+                  body={hottestThread.body}
+                  authorName={hottestThread.authorName}
+                  createdAt={hottestThread.createdAt}
+                  replyCount={hottestThread.replyCount}
+                />
+              )}
+            </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (
