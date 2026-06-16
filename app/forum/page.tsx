@@ -25,15 +25,19 @@ interface ThreadRow {
 function stripMarkdown(markdown: string): string {
   return (
     markdown
-      // Remove markdown link syntax
-      .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
-      // Remove markdown image syntax
-      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, "")
+      // Remove markdown link syntax [text](url) → text
+      .replace(/\[([^\]]+)\]\([^\)]*\)/g, "$1")
+      // Remove markdown image syntax ![alt](url) → (image)
+      .replace(/!\[([^\]]*)\]\([^\)]*\)/g, "(image)")
       // Remove bold/italic markers
-      .replace(/[*_]/g, "")
-      // Remove code markers
-      .replace(/`/g, "")
-      // Clean up multiple spaces
+      .replace(/[*_`~]/g, "")
+      // Remove heading markers
+      .replace(/^#+\s/gm, "")
+      // Remove list markers
+      .replace(/^[\s-*+]\s/gm, "")
+      // Remove blockquote markers
+      .replace(/^>\s/gm, "")
+      // Clean up multiple spaces/newlines
       .replace(/\s+/g, " ")
       .trim()
   )
