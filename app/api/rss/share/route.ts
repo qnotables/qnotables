@@ -3,6 +3,7 @@ import {
   getSiteUrl,
   createShareUrl,
   isValidUrl,
+  getFeedItems,
   type SharePlatform,
 } from "@/lib/rss-utils"
 
@@ -37,12 +38,28 @@ export async function GET(request: Request) {
 
     const slug = (searchParams.get("slug") || "").trim()
     const explicitUrl = (searchParams.get("url") || "").trim()
-    const title = (searchParams.get("title") || "").trim() || undefined
-    const excerpt = (searchParams.get("excerpt") || "").trim() || undefined
-    const hashtags = (searchParams.get("hashtags") || "")
+    let title = (searchParams.get("title") || "").trim() || undefined
+    let excerpt = (searchParams.get("excerpt") || "").trim() || undefined
+    let hashtags = (searchParams.get("hashtags") || "")
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean)
+
+    // If only a slug was provided, enrich title/excerpt/hashtags from the
+    // published record so callers don't have to pass everything explicitly.
+    if (slug && (!title || !excerpt || hashtags.length === 0)) {
+      try {
+        const items = await getFeedItems(200)
+        const match = items.find((i) => i.slug === slug)
+        if (match) {
+          title = title || match.title
+          excerpt = excerpt || match.description
+          if (hashtags.length === 0) hashtags = match.tags
+        }
+      } catch (err) {
+        console.error("[v0] /api/rss/share: record lookup failed:", err)
+      }
+    }
 
     // Resolve canonical URL. Reject anything that isn't a public site URL.
     let canonical = `${site}/archives`

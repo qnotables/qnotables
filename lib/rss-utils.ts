@@ -14,7 +14,7 @@
 export const FEED_TITLE = "HOT AND FRESH"
 export const FEED_DESCRIPTION = "Fresh drops. Hot leads. Organized for the record."
 export const FEED_LANGUAGE = "en-us"
-export const DEFAULT_FEED_IMAGE = "/images/hot-and-fresh-default-feed.jpg"
+export const DEFAULT_FEED_IMAGE = "/images/hot-and-fresh-default-feed.png"
 
 /* Field fallbacks */
 export const FALLBACK_TITLE = "Untitled Archive Record"
@@ -94,6 +94,23 @@ export function isValidUrl(value?: string | null): boolean {
 }
 
 const UNSAFE_PROTOCOLS = ["javascript:", "data:", "file:", "vbscript:", "blob:"]
+
+/**
+ * True only for well-formed ABSOLUTE http(s) URLs (must include "://").
+ * Used for external source attribution where relative/garbage values
+ * like "n/a" or "https:example.com" must be rejected.
+ */
+export function isAbsoluteExternalUrl(value?: string | null): boolean {
+  if (!value || typeof value !== "string") return false
+  const trimmed = value.trim()
+  if (!/^https?:\/\//i.test(trimmed)) return false
+  try {
+    const url = new URL(trimmed)
+    return (url.protocol === "http:" || url.protocol === "https:") && Boolean(url.hostname)
+  } catch {
+    return false
+  }
+}
 
 /**
  * Validate an image URL for safe inclusion in the feed.
@@ -269,11 +286,11 @@ export interface RssDbRow {
   media_image_url?: string | null
   author_name?: string
   published_at?: string
-  imported_at?: string
   created_at?: string
   updated_at?: string
   include_in_rss?: boolean
   public_archive?: boolean
+  tag?: string | null
   blog_post_tags?: Array<{ tag: string }>
 }
 
@@ -327,12 +344,13 @@ export function rowToFeedItem(row: RssDbRow): FeedItem {
 
   const category = (row.category || row.post_type || "").trim() || FALLBACK_CATEGORY
 
-  const tags = Array.isArray(row.blog_post_tags)
-    ? row.blog_post_tags.map((t) => t.tag).filter(Boolean)
-    : []
+  const tags = [
+    ...(typeof row.tag === "string" && row.tag.trim() ? [row.tag.trim()] : []),
+    ...(Array.isArray(row.blog_post_tags) ? row.blog_post_tags.map((t) => t.tag).filter(Boolean) : []),
+  ].filter((t, i, arr) => arr.indexOf(t) === i)
 
   const sourceName = (row.source_name || "").trim() || FEED_TITLE
-  const sourceUrl = isValidUrl(row.source_url) ? (row.source_url as string) : undefined
+  const sourceUrl = isAbsoluteExternalUrl(row.source_url) ? (row.source_url as string).trim() : undefined
   const author = (row.author_name || row.source_name || "").trim() || FALLBACK_AUTHOR
 
   const resolved = resolveFeedImage(row)
@@ -376,7 +394,7 @@ async function getSupabase() {
 }
 
 const SELECT_COLUMNS =
-  "id, slug, title, subtitle, excerpt, body, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, author_name, published_at, imported_at, created_at, updated_at, blog_post_tags(tag)"
+  "id, slug, title, subtitle, excerpt, body, tag, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, author_name, published_at, created_at, updated_at, blog_post_tags(tag)"
 
 /**
  * Fetch published, RSS-eligible records and map them into FeedItems.
