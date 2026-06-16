@@ -1,4 +1,5 @@
 import { AdBanner } from "@/components/ad-banner"
+import { AdCarousel } from "@/components/ad-carousel"
 import { SignalToolsCard } from "@/components/signal-tools-card"
 import { getAdsByPlacement } from "@/lib/ads"
 
@@ -20,17 +21,18 @@ export async function TopAd() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
-      <div className="grid grid-cols-1 md:grid-cols-3">
-        {/* Top Ad - larger left column */}
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+        {/* Top Ad Carousel - larger left column */}
         <div className="md:col-span-2">
           <div className="w-fit">
-            <AdBanner
-              ad={{
-                ...ads[0],
-                imageUrl: ads[0].image_url,
-                buttonText: ads[0].button_text,
-                buttonLink: ads[0].button_link,
-              }}
+            <AdCarousel
+              ads={ads.map((ad) => ({
+                ...ad,
+                imageUrl: ad.image_url,
+                buttonText: ad.button_text,
+                buttonLink: ad.button_link,
+              }))}
+              interval={10000}
             />
           </div>
         </div>
@@ -50,14 +52,15 @@ export async function SidebarAd() {
   if (ads.length === 0) return null
 
   return (
-    <AdBanner
-      ad={{
-        ...ads[0],
-        imageUrl: ads[0].image_url,
-        buttonText: ads[0].button_text,
-        buttonLink: ads[0].button_link,
-      }}
+    <AdCarousel
+      ads={ads.map((ad) => ({
+        ...ad,
+        imageUrl: ad.image_url,
+        buttonText: ad.button_text,
+        buttonLink: ad.button_link,
+      }))}
       className="sticky top-6 w-full max-w-xs"
+      interval={10000}
     />
   )
 }
@@ -69,13 +72,14 @@ export async function BottomAd() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
-      <AdBanner
-        ad={{
-          ...ads[0],
-          imageUrl: ads[0].image_url,
-          buttonText: ads[0].button_text,
-          buttonLink: ads[0].button_link,
-        }}
+      <AdCarousel
+        ads={ads.map((ad) => ({
+          ...ad,
+          imageUrl: ad.image_url,
+          buttonText: ad.button_text,
+          buttonLink: ad.button_link,
+        }))}
+        interval={10000}
       />
     </div>
   )
