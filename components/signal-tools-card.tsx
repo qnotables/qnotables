@@ -42,7 +42,7 @@ const SIGNAL_TOOLS = [
 
 export function SignalToolsCard() {
   return (
-    <div className="border border-border bg-background p-4 md:p-5 max-h-[150px] overflow-hidden">
+    <div className="border border-border bg-background p-4 md:p-5 h-[150px] overflow-hidden">
       <div className="mb-4">
         <h2 className="stencil text-sm font-bold text-foreground">SIGNAL TOOLS</h2>
       </div>
