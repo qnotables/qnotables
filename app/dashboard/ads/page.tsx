@@ -5,6 +5,8 @@ import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { AdsManager } from "@/components/dashboard/ads-manager"
 import { Megaphone, Power } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Ads Management — Admin Dashboard",
   description: "Manage advertisements and promotions.",
