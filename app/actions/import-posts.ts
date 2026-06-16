@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
 import { generateSlug, deduplicateSlug } from "@/lib/import-utils"
+import { ImportedPost, validatePosts } from "@/lib/import-parsers"
 
 export interface ImportPostInput {
   title: string
@@ -171,4 +172,137 @@ export async function updatePost(
 
   if (error) return { success: false, error: error.message }
   return { success: true }
+}
+
+/**
+ * New batch import with extended schema support
+ */
+export interface BatchImportResult {
+  success: number
+  failed: number
+  errors: Array<{ index: number; title: string; error: string }>
+  createdIds: string[]
+}
+
+export async function batchImportPosts(posts: ImportedPost[]): Promise<BatchImportResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Not authenticated")
+  }
+
+  if (!isAdminEmail(user.email)) {
+    throw new Error("Unauthorized: admin only")
+  }
+
+  try {
+    // Validate posts
+    const { valid: validPosts, errors: validationErrors } = validatePosts(posts)
+
+    if (validPosts.length === 0) {
+      return {
+        success: 0,
+        failed: posts.length,
+        errors: validationErrors,
+        createdIds: [],
+      }
+    }
+
+    // Check for duplicate slugs in database
+    const admin = createAdminClient()
+    const { data: existingPosts } = await admin
+      .from("blog_posts")
+      .select("slug")
+
+    const existingSlugs = new Set((existingPosts || []).map((p: any) => p.slug))
+
+    // Deduplicate slugs
+    const deduplicatedSlugs = validPosts.map((post) => {
+      let slug = post.slug || generateSlug(post.title)
+      let counter = 2
+
+      while (existingSlugs.has(slug)) {
+        slug = `${post.slug || generateSlug(post.title)}-${counter}`
+        counter++
+      }
+
+      existingSlugs.add(slug)
+      return slug
+    })
+
+    // Prepare records for insertion
+    const records = validPosts.map((post, index) => ({
+      title: post.title,
+      slug: deduplicatedSlugs[index],
+      excerpt: post.excerpt || "",
+      body: post.body,
+      category: post.category || "General",
+      post_type: post.post_type || "News Brief",
+      status: post.status || "draft",
+      featured: post.featured || false,
+      priority: post.priority || 0,
+      published_at: post.published_at,
+      original_created_at: post.original_created_at,
+      source_url: post.source_url,
+      source_name: post.source_name,
+      original_source_url: post.original_source_url,
+      cover_image: post.cover_image_url,
+      author_name: post.author_name || "HOT AND FRESH",
+      imported_at: new Date().toISOString(),
+      read_minutes: Math.ceil(post.body.split(/\s+/).length / 200),
+    }))
+
+    // Batch insert
+    const { data, error } = await admin
+      .from("blog_posts")
+      .insert(records)
+      .select("id")
+
+    if (error) {
+      // If batch fails, try one by one to identify which ones failed
+      const errors: Array<{ index: number; title: string; error: string }> = validationErrors
+      const createdIds: string[] = []
+
+      for (let i = 0; i < records.length; i++) {
+        const { data: result, error: itemError } = await admin
+          .from("blog_posts")
+          .insert([records[i]])
+          .select("id")
+
+        if (itemError) {
+          errors.push({
+            index: i,
+            title: validPosts[i].title,
+            error: itemError.message,
+          })
+        } else if (result && result[0]) {
+          createdIds.push(result[0].id)
+        }
+      }
+
+      return {
+        success: createdIds.length,
+        failed: validPosts.length - createdIds.length,
+        errors,
+        createdIds,
+      }
+    }
+
+    return {
+      success: (data || []).length,
+      failed: validationErrors.length + (validPosts.length - (data || []).length),
+      errors: validationErrors.concat(
+        validPosts.slice((data || []).length).map((post, index) => ({
+          index: index + (data || []).length,
+          title: post.title,
+          error: "Failed to insert",
+        }))
+      ),
+      createdIds: (data || []).map((item: any) => item.id),
+    }
+  } catch (error) {
+    console.error("Batch import error:", error)
+    throw error
+  }
 }
