@@ -1,7 +1,13 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard } from "lucide-react"
 
 const SIGNAL_TOOLS = [
+  {
+    label: "Dashboard",
+    description: "View the desk",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
   {
     label: "Archives",
     description: "Search the record",
