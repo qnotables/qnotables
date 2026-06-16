@@ -145,6 +145,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
         {/* section links to other parts of the site */}
         <span className="my-1 hidden h-4 w-px bg-border md:mx-2 md:inline-block" aria-hidden="true" />
         {[
+          { label: "ABOUT", href: "/about" },
           { label: "ARCHIVES", href: "/archives" },
           { label: "TOWN HALL", href: "/forum" },
         ].map((link) => (

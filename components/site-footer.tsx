@@ -24,6 +24,7 @@ const columns = [
   {
     title: "Access",
     links: [
+      { label: "About", href: "/about" },
       { label: "Daily Briefing", href: "#" },
       { label: "Shop", href: "/shop" },
       { label: "RSS Feeds", href: "#" },
