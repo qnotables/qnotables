@@ -28,6 +28,7 @@ export interface BlogPost {
   publishedAt?: string
   updatedAt?: string
   published?: boolean // legacy
+  media_type?: "none" | "image" | "video" | "iframe" | "document" | "audio" | "external_link"
   source: "db" | "mdx"
 }
 
@@ -88,6 +89,7 @@ export interface BlogRow {
   created_at: string
   published_at?: string
   updated_at?: string
+  media_type?: "none" | "image" | "video" | "iframe" | "document" | "audio" | "external_link"
   blog_post_tags?: Array<{ tag: string }>
 }
 
@@ -117,6 +119,7 @@ export function rowToPost(row: BlogRow): BlogPost {
     seoDescription: row.seo_description,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
+    media_type: row.media_type,
     source: "db",
   }
 }
@@ -135,7 +138,7 @@ async function getDbPosts(): Promise<BlogPost[]> {
     const { data, error } = await admin
       .from("blog_posts")
       .select(
-        "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
+        "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, created_at, published_at, updated_at, media_type, blog_post_tags(tag)",
       )
       .eq("status", "published")
       .order("published_at", { ascending: false, nullsFirst: false })
