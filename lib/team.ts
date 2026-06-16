@@ -11,6 +11,7 @@ export interface TeamMember {
   team_sort_order: number
   website_url: string | null
   twitter_url: string | null
+  truth_social_url: string | null
   github_url: string | null
   linkedin_url: string | null
   youtube_url: string | null
@@ -24,7 +25,7 @@ export async function getTeamMembers(groupFilter?: string): Promise<TeamMember[]
   let query = supabase
     .from("profiles")
     .select(
-      "id, username, display_name, avatar_url, bio, title, team_group, team_sort_order, website_url, twitter_url, github_url, linkedin_url, youtube_url, public_email, show_email_publicly"
+      "id, username, display_name, avatar_url, bio, title, team_group, team_sort_order, website_url, twitter_url, truth_social_url, github_url, linkedin_url, youtube_url, public_email, show_email_publicly"
     )
     .eq("show_on_team_page", true)
     .order("team_sort_order", { ascending: true })

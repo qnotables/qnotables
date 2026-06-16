@@ -39,12 +39,12 @@ export function TeamMemberCard({ member }: { member: TeamMember }) {
             <Globe className="h-4 w-4" />
           </a>
         )}
-        {(member.twitter_url || member.youtube_url) && (
+        {(member.twitter_url || member.truth_social_url || member.youtube_url) && (
           <a
-            href={member.twitter_url || member.youtube_url || "#"}
+            href={member.twitter_url || member.truth_social_url || member.youtube_url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            title={member.twitter_url ? "Twitter/X" : "YouTube"}
+            title={member.twitter_url ? "Twitter/X" : member.truth_social_url ? "Truth Social" : "YouTube"}
             className="text-muted-foreground hover:text-primary transition-colors"
           >
             <ExternalLink className="h-4 w-4" />
