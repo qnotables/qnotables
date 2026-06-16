@@ -35,7 +35,7 @@ export function ForumThreadCard({
   replyCount,
 }: ForumThreadCardProps) {
   const bodyPreview = stripMarkdown(body).slice(0, 100)
-  const timeAgoText = timeAgo(new Date(createdAt))
+  const timeAgoText = timeAgo(createdAt)
 
   return (
     <Link

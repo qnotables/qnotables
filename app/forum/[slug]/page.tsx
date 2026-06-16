@@ -1,14 +1,17 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Clock, CornerDownRight } from "lucide-react"
+import { ArrowLeft, Clock, CornerDownRight, Pin, Lock, Star } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
 import { Markdown } from "@/components/markdown"
 import { ReplyVotes } from "@/components/reply-votes"
+import { ReplyModControls } from "@/components/reply-mod-controls"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
+import { normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
+import { checkAdminAccess } from "@/lib/admin"
 
 interface Thread {
   id: string
@@ -18,7 +21,10 @@ interface Thread {
   author_id: string
   is_locked: boolean
   is_pinned: boolean
+  is_featured: boolean
   is_soft_deleted: boolean
+  category: string | null
+  tags: string | null
   profiles: { display_name: string } | null
 }
 
@@ -31,6 +37,29 @@ interface Reply {
   profiles: { display_name: string } | null
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("forum_threads")
+    .select("title, body, category")
+    .eq("id", slug)
+    .maybeSingle()
+
+  if (!data) return { title: "Thread — Hot and Fresh" }
+
+  const cat = normalizeCategoryName(data.category)
+  return {
+    title: `${data.title} — Hot and Fresh`,
+    description: data.body?.slice(0, 160).replace(/\s+/g, " ") ?? "",
+    openGraph: {
+      title: data.title,
+      description: data.body?.slice(0, 160).replace(/\s+/g, " ") ?? "",
+      siteName: "HOT AND FRESH",
+    },
+  }
+}
+
 export default async function ThreadPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
@@ -39,9 +68,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     data: { user },
   } = await supabase.auth.getUser()
 
+  const isAdmin = user ? await checkAdminAccess() : false
+
   const { data: thread } = await supabase
     .from("forum_threads")
-    .select("id, title, body, created_at, author_id, is_locked, is_pinned, is_soft_deleted, profiles(display_name)")
+    .select(
+      "id, title, body, created_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, category, tags, profiles(display_name)",
+    )
     .eq("id", slug)
     .maybeSingle()
 
@@ -56,19 +89,24 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const replies = (replyData ?? []) as unknown as Reply[]
 
-  // Fetch votes for all replies
+  // Votes
   const { data: allVotes } = await supabase
     .from("reply_votes")
     .select("reply_id, vote_type")
-    .in("reply_id", replies.map((r) => r.id))
+    .in(
+      "reply_id",
+      replies.map((r) => r.id),
+    )
 
-  // Fetch current user's votes
   const { data: userVotes } = user
     ? await supabase
         .from("reply_votes")
         .select("reply_id, vote_type")
         .eq("user_id", user.id)
-        .in("reply_id", replies.map((r) => r.id))
+        .in(
+          "reply_id",
+          replies.map((r) => r.id),
+        )
     : { data: [] }
 
   const voteMap = new Map<string, string[]>()
@@ -79,30 +117,40 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     votes.push(vote.vote_type)
     voteMap.set(vote.reply_id, votes)
   }
-
   for (const vote of userVotes ?? []) {
     userVoteMap.set(vote.reply_id, vote.vote_type)
   }
 
-  // Build a nested reply tree: replies without parents are top-level,
-  // replies with parents are nested under them
   const topLevelReplies = replies.filter((r) => !r.parent_reply_id)
   const nestedReplies = (parent: Reply) =>
     replies.filter((r) => r.parent_reply_id === parent.id)
+
+  const categoryName = normalizeCategoryName(t.category)
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
       <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-        <Link
-          href="/forum"
-          className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> The Town Hall
-        </Link>
+        {/* Back link */}
+        <div className="mb-6 flex items-center gap-3">
+          <Link
+            href="/forum"
+            className="label-mono inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
+          >
+            <ArrowLeft className="h-4 w-4" /> The Town Hall
+          </Link>
+          {categoryName && (
+            <>
+              <span className="text-muted-foreground">/</span>
+              <span className="label-mono border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                {categoryName.toUpperCase()}
+              </span>
+            </>
+          )}
+        </div>
 
-        {/* original post */}
+        {/* Original post */}
         <ThreadArticle
           id={t.id}
           title={t.title}
@@ -111,9 +159,16 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           authorId={t.author_id}
           authorName={t.profiles?.display_name ?? "operator"}
           isOwner={user?.id === t.author_id}
+          isAdmin={isAdmin}
+          category={t.category}
+          tags={t.tags}
+          is_pinned={Boolean(t.is_pinned)}
+          is_locked={Boolean(t.is_locked)}
+          is_featured={Boolean(t.is_featured)}
+          is_soft_deleted={Boolean(t.is_soft_deleted)}
         />
 
-        {/* replies */}
+        {/* Replies header */}
         <div className="mb-4 mt-10 flex items-center gap-3">
           <CornerDownRight className="h-4 w-4 text-primary" />
           <h2 className="stencil text-lg text-foreground">
@@ -122,10 +177,10 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           <span className="ml-auto h-px flex-1 bg-border" />
         </div>
 
+        {/* Reply list */}
         <div className="flex flex-col gap-3">
           {topLevelReplies.map((r) => (
             <div key={r.id}>
-              {/* top-level reply */}
               <div className="border border-border bg-card p-5">
                 <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground">
                   <div className="flex items-center gap-3">
@@ -139,19 +194,22 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                       <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
                     </span>
                   </div>
-                  <ReplyVotes
-                    replyId={r.id}
-                    initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
-                    initialDownVotes={voteMap.get(r.id)?.filter((v) => v === "down").length ?? 0}
-                    userVote={userVoteMap.get(r.id) as "up" | "down" | undefined}
-                  />
+                  <div className="flex items-center gap-2">
+                    {isAdmin && <ReplyModControls replyId={r.id} />}
+                    <ReplyVotes
+                      replyId={r.id}
+                      initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
+                      initialDownVotes={voteMap.get(r.id)?.filter((v) => v === "down").length ?? 0}
+                      userVote={userVoteMap.get(r.id) as "up" | "down" | undefined}
+                    />
+                  </div>
                 </div>
                 <div className="mt-2">
-                  <Markdown content={r.body} />
+                  <Markdown content={preprocessBody(r.body)} />
                 </div>
               </div>
 
-              {/* nested replies (replies to this reply) */}
+              {/* Nested replies */}
               {nestedReplies(r).length > 0 && (
                 <div className="ml-4 flex flex-col gap-3 border-l-2 border-border py-3">
                   {nestedReplies(r).map((nested) => (
@@ -168,15 +226,22 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                             <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
                           </span>
                         </div>
-                        <ReplyVotes
-                          replyId={nested.id}
-                          initialUpVotes={voteMap.get(nested.id)?.filter((v) => v === "up").length ?? 0}
-                          initialDownVotes={voteMap.get(nested.id)?.filter((v) => v === "down").length ?? 0}
-                          userVote={userVoteMap.get(nested.id) as "up" | "down" | undefined}
-                        />
+                        <div className="flex items-center gap-2">
+                          {isAdmin && <ReplyModControls replyId={nested.id} />}
+                          <ReplyVotes
+                            replyId={nested.id}
+                            initialUpVotes={
+                              voteMap.get(nested.id)?.filter((v) => v === "up").length ?? 0
+                            }
+                            initialDownVotes={
+                              voteMap.get(nested.id)?.filter((v) => v === "down").length ?? 0
+                            }
+                            userVote={userVoteMap.get(nested.id) as "up" | "down" | undefined}
+                          />
+                        </div>
                       </div>
                       <div className="mt-2 text-sm">
-                        <Markdown content={nested.body} />
+                        <Markdown content={preprocessBody(nested.body)} />
                       </div>
                     </div>
                   ))}
@@ -186,10 +251,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           ))}
         </div>
 
-        {/* reply box */}
+        {/* Reply box */}
         <div className="mt-8 border-t border-border pt-8">
           {t.is_locked ? (
             <div className="border border-border bg-muted/20 p-6 text-center">
+              <Lock className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
               <p className="label-mono text-muted-foreground">
                 This thread is locked. No new replies can be posted.
               </p>
@@ -199,7 +265,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           ) : (
             <div className="border border-border bg-card p-6 text-center">
               <p className="text-muted-foreground">
-                {"You must be signed in to reply. "}
+                Sign in to reply.{" "}
                 <Link
                   href={`/auth/login?next=/forum/${t.id}`}
                   className="text-primary underline-offset-4 hover:underline"
