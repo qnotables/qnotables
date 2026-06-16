@@ -71,20 +71,6 @@ export default async function Page() {
               </div>
             )}
             
-            {/* Blog and Forum Section */}
-            {hottestThread && (
-              <div className="mt-6">
-                <ForumThreadCard
-                  id={hottestThread.id}
-                  title={hottestThread.title}
-                  body={hottestThread.body}
-                  authorName={hottestThread.authorName}
-                  createdAt={hottestThread.createdAt}
-                  replyCount={hottestThread.replyCount}
-                />
-              </div>
-            )}
-            
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (
                 <StoryCard key={story.id} story={story} />
