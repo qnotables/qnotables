@@ -4,13 +4,15 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeExternalLinks from "rehype-external-links"
 import type { Components } from "react-markdown"
 
-// Allow img src + standard attrs in the sanitised output
+// Allow img src + standard attrs in the sanitised output, plus iframe for embeds
 const sanitizeSchema = {
   ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames || []), "iframe"],
   attributes: {
     ...defaultSchema.attributes,
     img: ["src", "alt", "title", "width", "height"],
     code: ["className"],
+    iframe: ["src", "width", "height", "frameborder", "allowfullscreen", "title", "allow"],
   },
 }
 

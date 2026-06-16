@@ -57,33 +57,6 @@ function isApprovedDomain(url: string): boolean {
   }
 }
 
-function sanitizeIframeCode(code: string): string {
-  // Ensure it's actually an iframe tag
-  if (!code.includes("<iframe")) {
-    return ""
-  }
-
-  // Extract iframe attributes safely
-  const iframeRegex = /<iframe([^>]*)>/i
-  const match = code.match(iframeRegex)
-  if (!match) return ""
-
-  const attrsString = match[1]
-  
-  // Extract src attribute
-  const srcRegex = /src=["']([^"']+)["']/i
-  const srcMatch = attrsString.match(srcRegex)
-  const src = srcMatch ? srcMatch[1] : ""
-
-  // Verify src domain is approved
-  if (!src || !isApprovedDomain(src)) {
-    return ""
-  }
-
-  // Rebuild iframe with safe attributes
-  return `<iframe src="${src}" loading="lazy" referrerPolicy="no-referrer-when-downgrade" sandbox="allow-presentation allow-same-origin allow-scripts" allowFullScreen style="width: 100%; max-width: 100%; aspect-ratio: 16/9; border: none; border-radius: 4px;"></iframe>`
-}
-
 export function SafeEmbed({
   provider,
   url,
@@ -97,19 +70,55 @@ export function SafeEmbed({
 
   // Handle direct iframe code
   if (iframeCode && type === "iframe") {
-    const sanitized = sanitizeIframeCode(iframeCode)
-    if (sanitized) {
+    // Ensure it's actually an iframe tag
+    if (!iframeCode.includes("<iframe")) {
       return (
-        <div style={{ maxWidth, margin: "1rem 0" }}>
-          <div dangerouslySetInnerHTML={{ __html: sanitized }} />
+        <div style={{ maxWidth, margin: "1rem 0", padding: "1rem", background: "#2a2a2a", borderRadius: "4px", color: "#ff9900" }}>
+          <p style={{ fontSize: "0.875rem", margin: 0 }}>
+            Warning: Invalid iframe code
+          </p>
         </div>
       )
     }
+
+    // Extract src attribute safely
+    const srcRegex = /src=["']([^"']+)["']/i
+    const srcMatch = iframeCode.match(srcRegex)
+    const src = srcMatch ? srcMatch[1] : ""
+
+    // Verify src domain is approved
+    if (!src || !isApprovedDomain(src)) {
+      return (
+        <div style={{ maxWidth, margin: "1rem 0", padding: "1rem", background: "#2a2a2a", borderRadius: "4px", color: "#ff9900" }}>
+          <p style={{ fontSize: "0.875rem", margin: 0 }}>
+            Warning: This iframe domain is not approved for embedding.
+          </p>
+        </div>
+      )
+    }
+
+    // Render the iframe with sandbox restrictions
     return (
-      <div style={{ maxWidth, margin: "1rem 0", padding: "1rem", background: "#2a2a2a", borderRadius: "4px", color: "#ff9900" }}>
-        <p style={{ fontSize: "0.875rem", margin: 0 }}>
-          Warning: This iframe domain is not approved for embedding.
-        </p>
+      <div style={{ maxWidth, margin: "1rem 0" }}>
+        <div style={{ position: "relative", paddingBottom: aspectRatioValue }}>
+          <iframe
+            src={src}
+            title={title}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            sandbox="allow-presentation allow-same-origin allow-scripts"
+            allowFullScreen
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              border: "none",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
       </div>
     )
   }
@@ -264,3 +273,4 @@ export function SafeEmbed({
     </div>
   )
 }
+

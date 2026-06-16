@@ -133,7 +133,10 @@ export function MarkdownEditor({
     { icon: <ListOrdered className="h-3.5 w-3.5" />, label: "Numbered list", run: () => applyEdit((v, s) => prefixLine(v, s, "1. ")) },
     { icon: <Quote className="h-3.5 w-3.5" />, label: "Blockquote", run: () => applyEdit((v, s) => prefixLine(v, s, "> ")) },
     { icon: <Code className="h-3.5 w-3.5" />, label: "Inline code", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "`", "`", "code")) },
-    { icon: <Link2 className="h-3.5 w-3.5" />, label: "Link", run: () => applyEdit((v, s, e) => wrapText(v, s, e, "[", "](https://)", "link title")) },
+    { icon: <Link2 className="h-3.5 w-3.5" />, label: "Link", run: () => {
+      const url = prompt("Link URL (e.g. https://example.com):")
+      if (url) applyEdit((v, s, e) => wrapText(v, s, e, "[", `](${url})`, "link text"))
+    } },
     {
       icon: <Image className="h-3.5 w-3.5" />,
       label: "Image URL",
@@ -148,15 +151,34 @@ export function MarkdownEditor({
     setUploadError(null)
     setUploading(true)
     try {
+      // Check file type
+      const isImage = file.type.startsWith("image/")
+      const isVideo = file.type.startsWith("video/")
+      
+      if (!isImage && !isVideo) {
+        throw new Error("Only image and video files are supported")
+      }
+
+      // Check file size
+      const maxBytes = isVideo ? 50 * 1024 * 1024 : 8 * 1024 * 1024
+      if (file.size > maxBytes) {
+        const limitLabel = isVideo ? "50 MB" : "8 MB"
+        throw new Error(`${isVideo ? "Video" : "Image"} must be under ${limitLabel}`)
+      }
+
       const fd = new FormData()
       fd.append("file", file)
       fd.append("folder", uploadFolder)
       const res = await fetch("/api/upload", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error ?? "Upload failed")
+      
+      // Use file extension-based detection for consistency with markdown renderer
+      const isVideoFile = /\.(mp4|webm|ogg|mov|m4v)$/i.test(file.name)
       insertAtCaret(`![${file.name}](${json.url})`)
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Upload failed")
+      console.error("[v0] Upload error:", err)
     } finally {
       setUploading(false)
     }
