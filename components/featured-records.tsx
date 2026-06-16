@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
+import { CardImage } from "@/components/card-image"
 
 interface FeaturedRecordsProps {
   records: ArchiveRecord[]
@@ -39,11 +40,13 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
           <article key={record.id} className="group border border-border rounded overflow-hidden hover:border-primary/50 transition-colors">
             {/* Cover image */}
             {record.cover_image && (
-              <div className="aspect-video bg-muted overflow-hidden">
-                <img
+              <div className="aspect-video bg-muted overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                <CardImage
                   src={record.cover_image}
                   alt={record.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  variant="cover"
+                  mediaType={record.media_type}
+                  aspectRatio="video"
                 />
               </div>
             )}
