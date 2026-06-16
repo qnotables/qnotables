@@ -19,14 +19,16 @@ export async function TopAd() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
-      <AdBanner
-        ad={{
-          ...ads[0],
-          imageUrl: ads[0].image_url,
-          buttonText: ads[0].button_text,
-          buttonLink: ads[0].button_link,
-        }}
-      />
+      <div className="w-fit">
+        <AdBanner
+          ad={{
+            ...ads[0],
+            imageUrl: ads[0].image_url,
+            buttonText: ads[0].button_text,
+            buttonLink: ads[0].button_link,
+          }}
+        />
+      </div>
     </div>
   )
 }
