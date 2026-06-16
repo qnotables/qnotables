@@ -56,7 +56,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
             <span className="label-mono font-semibold">BREAKING</span>
           </div>
           <div className="group relative flex-1 overflow-hidden">
-            <div className="flex w-max animate-[ticker_130s_linear_infinite] items-center gap-8 py-2 pl-4 group-hover:[animation-play-state:paused]">
+            <div className="flex w-max animate-[ticker_60s_linear_infinite] items-center gap-8 py-2 pl-4 group-hover:[animation-play-state:paused]">
               {tickerLoop.map((item, i) => (
                 <span
                   key={i}
