@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, Pencil, Trash2, Loader2, X, Power } from "lucide-react"
+import { Plus, Pencil, Trash2, Loader2, X, Power, Upload } from "lucide-react"
 import { saveAd, toggleAdActive, deleteAdAction } from "@/app/dashboard/actions"
 import { EmptyState, PrimaryButton } from "@/components/dashboard/ui"
 import type { Ad } from "@/lib/ads"
@@ -12,7 +12,42 @@ const TYPES = ["internal", "sponsor", "partner"] as const
 function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(ad?.image_url || "")
   const inputClass = "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary w-full"
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.currentTarget.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "ads")
+
+      const res = await fetch("/api/dashboard/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Upload failed")
+      }
+
+      const data = await res.json()
+      setPreviewUrl(data.url)
+      // Store the URL in a hidden input that will be sent with the form
+      const input = document.querySelector('input[name="image_url"]') as HTMLInputElement
+      if (input) input.value = data.url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   function onSubmit(formData: FormData) {
     setError(null)
@@ -38,13 +73,49 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
             <label className="label-mono text-muted-foreground">Title</label>
             <input name="title" required defaultValue={ad?.title} className={inputClass} />
           </div>
+
+          {/* Image Upload Section */}
+          <div className="flex flex-col gap-2">
+            <label className="label-mono text-muted-foreground">Ad Image</label>
+            
+            {previewUrl && (
+              <div className="relative border border-border bg-muted/30 p-2">
+                <img src={previewUrl} alt="Preview" className="h-32 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewUrl("")
+                    const input = document.querySelector('input[name="image_url"]') as HTMLInputElement
+                    if (input) input.value = ""
+                  }}
+                  className="absolute right-1 top-1 bg-destructive/90 p-1 text-white hover:bg-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-border bg-muted/30 px-4 py-4 cursor-pointer transition-colors hover:border-primary hover:bg-muted/50">
+                <Upload className="h-4 w-4" />
+                <span className="label-mono text-sm font-semibold">{uploading ? "Uploading..." : "Upload Image"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <input type="hidden" name="image_url" defaultValue={ad?.image_url ?? ""} />
+            {error && <p className="label-mono text-xs text-destructive">{error}</p>}
+          </div>
+
           <div className="flex flex-col gap-1">
             <label className="label-mono text-muted-foreground">Description</label>
             <textarea name="description" rows={2} defaultValue={ad?.description} className={`${inputClass} resize-y`} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="label-mono text-muted-foreground">Image URL</label>
-            <input name="image_url" defaultValue={ad?.image_url ?? ""} placeholder="https://…" className={inputClass} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
@@ -88,7 +159,7 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || uploading}
               className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -133,7 +204,6 @@ export function AdsManager({ ads }: { ads: Ad[] }) {
   function refresh() {
     setEditing(null)
     setCreating(false)
-    // Server revalidates; reload to reflect latest
     window.location.reload()
   }
 
@@ -152,6 +222,7 @@ export function AdsManager({ ads }: { ads: Ad[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30 text-left">
+                <th className="px-4 py-3 font-semibold">Image</th>
                 <th className="px-4 py-3 font-semibold">Title</th>
                 <th className="px-4 py-3 font-semibold">Placement</th>
                 <th className="px-4 py-3 font-semibold">Type</th>
@@ -163,6 +234,13 @@ export function AdsManager({ ads }: { ads: Ad[] }) {
             <tbody>
               {rows.map((ad) => (
                 <tr key={ad.id} className="border-b border-border hover:bg-muted/20">
+                  <td className="px-4 py-3">
+                    {ad.image_url ? (
+                      <img src={ad.image_url} alt={ad.title} className="h-12 w-16 object-cover border border-border" />
+                    ) : (
+                      <div className="h-12 w-16 bg-muted border border-border flex items-center justify-center text-xs text-muted-foreground">No image</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-foreground">{ad.title}</p>
                     <p className="label-mono text-xs text-muted-foreground">{ad.description}</p>
