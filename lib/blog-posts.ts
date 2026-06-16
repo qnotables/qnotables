@@ -216,6 +216,50 @@ export async function getLatestPost(): Promise<BlogPost | undefined> {
   return posts[0] // Already sorted newest first
 }
 
+/**
+ * Returns the "hottest" blog post: featured > high priority > most recent.
+ * Excludes Field Note / Archive post types (those go to getHottestArchivePost).
+ */
+export async function getHottestBlogPost(): Promise<BlogPost | undefined> {
+  const posts = await getAllPosts()
+  const blogPosts = posts.filter(
+    (p) => !p.postType || !["Field Note", "Archive Record", "Source Record"].includes(p.postType)
+  )
+  if (blogPosts.length === 0) return posts[0] // fallback to any published post
+
+  const scored = blogPosts.map((p) => ({
+    post: p,
+    score:
+      (p.featured ? 100 : 0) +
+      (p.priority === "critical" ? 50 : p.priority === "high" ? 30 : p.priority === "medium" ? 10 : 0) +
+      Math.max(0, 30 - Math.floor((Date.now() - new Date(p.date).getTime()) / 86400000)),
+  }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.post
+}
+
+/**
+ * Returns the "hottest" archive / field note post: featured > critical priority > recent.
+ * Targets Field Note, Archive Record, Source Record post types (or any post if none found).
+ */
+export async function getHottestArchivePost(): Promise<BlogPost | undefined> {
+  const posts = await getAllPosts()
+  const archivePosts = posts.filter(
+    (p) => p.postType && ["Field Note", "Archive Record", "Source Record"].includes(p.postType)
+  )
+  const pool = archivePosts.length > 0 ? archivePosts : posts
+
+  const scored = pool.map((p) => ({
+    post: p,
+    score:
+      (p.featured ? 100 : 0) +
+      (p.priority === "critical" ? 50 : p.priority === "high" ? 30 : p.priority === "medium" ? 10 : 0) +
+      Math.max(0, 30 - Math.floor((Date.now() - new Date(p.date).getTime()) / 86400000)),
+  }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.post
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
