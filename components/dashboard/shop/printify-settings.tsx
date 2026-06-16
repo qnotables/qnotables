@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AlertCircle, CheckCircle, RefreshCw, Trash2 } from "lucide-react"
 
 export function PrintifySettings() {
@@ -11,6 +11,36 @@ export function PrintifySettings() {
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+
+  // Load credentials from environment on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        // Try to fetch existing settings from the database
+        const response = await fetch("/api/shop/printify/settings", {
+          method: "GET",
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.printify_api_key) {
+            setApiKey(data.printify_api_key)
+            setShopId(data.printify_shop_id)
+            setAutoSync(data.auto_sync_enabled || false)
+            setSyncInterval(data.sync_interval_hours || 24)
+            setIsConfigured(true)
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error)
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+
+    loadSettings()
+  }, [])
 
   const handleTestConnection = async () => {
     if (!apiKey || !shopId) {
@@ -57,6 +87,7 @@ export function PrintifySettings() {
 
       if (response.ok) {
         setStatus({ type: "success", message: "Settings saved successfully" })
+        setIsConfigured(true)
       } else {
         setStatus({ type: "error", message: "Failed to save settings" })
       }
@@ -86,7 +117,7 @@ export function PrintifySettings() {
       if (response.ok) {
         setStatus({
           type: "success",
-          message: `Sync complete: ${data.products_synced} products processed`,
+          message: `Sync complete: ${data.products_synced || 0} products processed`,
         })
       } else {
         setStatus({ type: "error", message: data.error || "Sync failed" })
@@ -122,6 +153,16 @@ export function PrintifySettings() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isInitializing) {
+    return (
+      <div className="space-y-8 px-6 py-8">
+        <div className="border border-border bg-background p-6 text-center">
+          <p className="label-mono text-muted-foreground">Loading Printify settings...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -3,7 +3,20 @@ import { testPrintifyConnection } from "@/lib/shop/printify"
 
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey, shopId } = await request.json()
+    let apiKey = ""
+    let shopId = ""
+
+    try {
+      const body = await request.json()
+      apiKey = body.apiKey || ""
+      shopId = body.shopId || ""
+    } catch {
+      // Body is optional, will use env vars
+    }
+
+    // Use environment variables as fallback
+    apiKey = apiKey || process.env.PRINTIFY_API_KEY || ""
+    shopId = shopId || process.env.PRINTIFY_SHOP_ID || ""
 
     if (!apiKey || !shopId) {
       return NextResponse.json({ error: "Missing API key or Shop ID" }, { status: 400 })
