@@ -1,4 +1,5 @@
 import { AdBanner } from "@/components/ad-banner"
+import { SignalToolsCard } from "@/components/signal-tools-card"
 import { getAdsByPlacement } from "@/lib/ads"
 
 interface Ad {
@@ -19,15 +20,25 @@ export async function TopAd() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
-      <div className="w-fit">
-        <AdBanner
-          ad={{
-            ...ads[0],
-            imageUrl: ads[0].image_url,
-            buttonText: ads[0].button_text,
-            buttonLink: ads[0].button_link,
-          }}
-        />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* Top Ad - larger left column */}
+        <div className="md:col-span-2">
+          <div className="w-fit">
+            <AdBanner
+              ad={{
+                ...ads[0],
+                imageUrl: ads[0].image_url,
+                buttonText: ads[0].button_text,
+                buttonLink: ads[0].button_link,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Signal Tools - narrower right column */}
+        <div className="md:col-span-1">
+          <SignalToolsCard />
+        </div>
       </div>
     </div>
   )
