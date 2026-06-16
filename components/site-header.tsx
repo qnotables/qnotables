@@ -78,7 +78,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
           >
             <Menu className="h-4 w-4" />
           </button>
-          <a href="#top" className="flex items-baseline gap-2">
+          <a href="/" className="flex items-baseline gap-2">
             <Image
               src="/us-flag.png"
               alt="American flag"

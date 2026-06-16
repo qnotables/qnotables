@@ -25,7 +25,7 @@ export function AdBanner({ ad, className = "" }: { ad: Ad; className?: string })
       <img
         src={ad.imageUrl}
         alt={ad.title}
-        className="w-full h-[100px] object-scale-down"
+        className="w-full h-[150px] object-scale-down"
       />
     </Link>
   )

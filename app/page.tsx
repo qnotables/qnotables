@@ -9,6 +9,7 @@ import { WireFeed } from "@/components/wire-feed"
 import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
+import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { getNews } from "@/lib/rss"
 import { categories } from "@/lib/news-data"
@@ -57,6 +58,7 @@ export default async function Page() {
 
           {/* sidebar */}
           <aside className="flex flex-col gap-6">
+            <IconLinksCard />
             <TrendingPanel items={trending} />
             <SidebarAd />
             <BriefSignup />
