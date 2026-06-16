@@ -44,10 +44,10 @@ export function AdCarousel({ ads, className = "", interval = 10000 }: AdCarousel
   const currentAd = ads[currentIndex]
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative border border-border bg-background overflow-hidden ${className}`}>
       <Link
         href={currentAd.buttonLink}
-        className="block border border-border overflow-hidden hover:opacity-90 transition-opacity"
+        className="block overflow-hidden hover:opacity-90 transition-opacity"
       >
         <img
           src={currentAd.imageUrl}
