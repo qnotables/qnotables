@@ -8,6 +8,8 @@ import { PostPreviewPanel } from "@/components/post-preview-panel"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "New Post — Blog Admin",
 }

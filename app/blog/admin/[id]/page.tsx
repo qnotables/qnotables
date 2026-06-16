@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
 import { getPostByIdAdmin } from "@/lib/blog-posts"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Edit Post — Blog Admin",
 }

@@ -3,6 +3,8 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 import { DashboardBlogForm } from "@/components/dashboard/dashboard-blog-form"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "New Post — Admin Dashboard",
 }

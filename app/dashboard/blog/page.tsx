@@ -5,6 +5,8 @@ import { getAllPostsAdmin } from "@/lib/blog-posts"
 import { PageHeader, PrimaryButton } from "@/components/dashboard/ui"
 import { BlogTable } from "@/components/dashboard/blog-table"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Blog — Control Room",
   description: "Create, edit, and manage blog posts.",
