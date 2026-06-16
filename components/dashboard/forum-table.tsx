@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import { Pin, Lock, Star, Trash2, Search, Loader2, MessageSquare, EyeOff, Eye } from "lucide-react"
+import { Pin, Lock, Star, Trash2, Search, Loader2, MessageSquare, EyeOff, Eye, Image as ImageIcon } from "lucide-react"
 import { moderateThread, deleteThreadAdmin } from "@/app/dashboard/actions"
 import { EmptyState } from "@/components/dashboard/ui"
 import Link from "next/link"
@@ -10,6 +10,7 @@ import { normalizeCategoryName } from "@/lib/forum-utils"
 export interface ForumThreadRow {
   id: string
   title: string
+  body: string
   author: string
   category: string | null
   replies: number
@@ -32,7 +33,12 @@ function fmt(iso: string) {
   }
 }
 
-type Filter = "all" | "pinned" | "locked" | "featured" | "hidden"
+type Filter = "all" | "pinned" | "locked" | "featured" | "hidden" | "images"
+
+/** Count markdown images in a body string. */
+function countImages(body: string): number {
+  return (body.match(/!\[[^\]]*\]\(https?:\/\/[^\)]+\)/g) ?? []).length
+}
 
 export function ForumTable({ threads }: { threads: ForumThreadRow[] }) {
   const [query, setQuery] = useState("")
@@ -55,7 +61,8 @@ export function ForumTable({ threads }: { threads: ForumThreadRow[] }) {
         (filter === "pinned" && t.isPinned) ||
         (filter === "locked" && t.isLocked) ||
         (filter === "featured" && t.isFeatured) ||
-        (filter === "hidden" && t.isHidden)
+        (filter === "hidden" && t.isHidden) ||
+        (filter === "images" && countImages(t.body) > 0)
 
       return matchSearch && matchFilter
     })
@@ -113,6 +120,7 @@ export function ForumTable({ threads }: { threads: ForumThreadRow[] }) {
     { value: "locked", label: "Locked" },
     { value: "featured", label: "Featured" },
     { value: "hidden", label: "Hidden" },
+    { value: "images", label: "Has Images" },
   ]
 
   return (
@@ -156,6 +164,7 @@ export function ForumTable({ threads }: { threads: ForumThreadRow[] }) {
               <th className="px-4 py-3 font-semibold">Thread</th>
               <th className="px-4 py-3 font-semibold">Author</th>
               <th className="px-4 py-3 font-semibold">Replies</th>
+              <th className="px-4 py-3 font-semibold">Images</th>
               <th className="px-4 py-3 font-semibold">Created</th>
               <th className="px-4 py-3 text-right font-semibold">Actions</th>
             </tr>
@@ -205,6 +214,18 @@ export function ForumTable({ threads }: { threads: ForumThreadRow[] }) {
                   <span className="inline-flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" /> {t.replies}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {(() => {
+                    const n = countImages(t.body)
+                    return n > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <ImageIcon className="h-3 w-3" /> {n}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )
+                  })()}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{fmt(t.createdAt)}</td>
                 <td className="px-4 py-3">

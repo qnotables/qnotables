@@ -22,7 +22,7 @@ export default async function ForumPage() {
   const { data: threadsData } = await admin
     .from("forum_threads")
     .select(
-      "id, title, author_id, category, created_at, is_pinned, is_locked, is_featured, is_soft_deleted",
+      "id, title, body, author_id, category, created_at, is_pinned, is_locked, is_featured, is_soft_deleted",
     )
     .order("created_at", { ascending: false })
 
@@ -53,6 +53,7 @@ export default async function ForumPage() {
   const threads: ForumThreadRow[] = threadsRaw.map((t: any) => ({
     id: t.id,
     title: t.title,
+    body: t.body ?? "",
     author: authorMap.get(t.author_id) ?? "Anonymous",
     category: t.category,
     replies: replyCounts.get(t.id) ?? 0,

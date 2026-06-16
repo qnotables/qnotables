@@ -8,10 +8,12 @@ export function ReplyForm({
   threadId,
   parentReplyId,
   onCancel,
+  isSignedIn = true,
 }: {
   threadId: string
   parentReplyId?: string
   onCancel?: () => void
+  isSignedIn?: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -48,6 +50,7 @@ export function ReplyForm({
         id="reply-body"
         required
         rows={parentReplyId ? 3 : 5}
+        isSignedIn={isSignedIn}
         placeholder="Argue the claim, not the operator. Paste an image to embed it."
       />
       {error ? (

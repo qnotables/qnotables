@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { MessageSquare, MessageCircle, Clock } from "lucide-react"
+import { MessageSquare, MessageCircle, Clock, Image as ImageIcon } from "lucide-react"
 import { timeAgo } from "@/lib/time"
 
 interface ForumThreadCardProps {
@@ -11,12 +11,12 @@ interface ForumThreadCardProps {
   replyCount: number
 }
 
-// Strip markdown from text
+// Strip markdown syntax cleanly — no (image) placeholder
 function stripMarkdown(markdown: string): string {
   return (
     markdown
+      .replace(/!\[[^\]]*\]\([^\)]*\)/g, "") // remove images entirely
       .replace(/\[([^\]]+)\]\([^\)]*\)/g, "$1")
-      .replace(/!\[([^\]]*)\]\([^\)]*\)/g, "(image)")
       .replace(/[*_`~]/g, "")
       .replace(/^#+\s/gm, "")
       .replace(/^[\s-*+]\s/gm, "")
@@ -24,6 +24,11 @@ function stripMarkdown(markdown: string): string {
       .replace(/\s+/g, " ")
       .trim()
   )
+}
+
+// Count embedded markdown images
+function countImages(body: string): number {
+  return (body.match(/!\[[^\]]*\]\(https?:\/\/[^\)]+\)/g) ?? []).length
 }
 
 export function ForumThreadCard({
@@ -36,6 +41,7 @@ export function ForumThreadCard({
 }: ForumThreadCardProps) {
   const bodyPreview = stripMarkdown(body).slice(0, 100)
   const timeAgoText = timeAgo(createdAt)
+  const imageCount = countImages(body)
 
   return (
     <Link
@@ -59,6 +65,12 @@ export function ForumThreadCard({
               <MessageCircle className="h-3 w-3" />
               <span>{replyCount} {replyCount === 1 ? "reply" : "replies"}</span>
             </div>
+            {imageCount > 0 && (
+              <div className="flex items-center gap-1 label-mono border border-border px-1.5 py-0.5">
+                <ImageIcon className="h-3 w-3" />
+                <span>{imageCount} {imageCount === 1 ? "image" : "images"}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

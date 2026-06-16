@@ -261,7 +261,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
               </p>
             </div>
           ) : user ? (
-            <ReplyForm threadId={t.id} />
+            <ReplyForm threadId={t.id} isSignedIn />
           ) : (
             <div className="border border-border bg-card p-6 text-center">
               <p className="text-muted-foreground">

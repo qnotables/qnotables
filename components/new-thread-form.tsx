@@ -107,6 +107,7 @@ export function NewThreadForm() {
           id="body"
           required
           rows={10}
+          isSignedIn
           placeholder={
             "Lay out the claim. Bring a source if you have one.\n\nTip: paste an image directly into this box to upload it."
           }

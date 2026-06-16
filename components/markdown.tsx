@@ -4,6 +4,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeExternalLinks from "rehype-external-links"
 import type { Components } from "react-markdown"
 import { isDirectImageUrl, isSocialMediaUrl } from "@/lib/forum-utils"
+import { ForumImage } from "@/components/forum-image"
 
 // Tightened sanitize schema:
 // - No iframes (user-authored content must not embed arbitrary iframes)
@@ -113,15 +114,7 @@ const components: Components = {
       )
     }
 
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt={alt ?? ""}
-        className="my-2 max-h-[600px] max-w-full rounded border border-border object-contain"
-        loading="lazy"
-      />
-    )
+    return <ForumImage src={url} alt={alt ?? ""} />
   },
   hr: () => <hr className="border-border" />,
 }
