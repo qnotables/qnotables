@@ -1,9 +1,10 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getProductBySlug, getProductVariants } from "@/lib/shop/products"
-import { formatPrice } from "@/lib/shop/products"
+import { ExternalLink } from "lucide-react"
+import { getProductBySlug, getProductVariants, formatPrice } from "@/lib/shop/products"
 import { ProductBuyForm } from "@/components/shop/product-buy-form"
+import { shopifyStoreUrl, SHOP_ORIGIN } from "@/lib/shop/shopify-url"
 
 async function ProductDetails({ slug }: { slug: string }) {
   const product = await getProductBySlug(slug)
@@ -16,10 +17,21 @@ async function ProductDetails({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="border-b border-border px-6 py-6">
-        <Link href="/shop" className="label-mono text-primary hover:underline">
+      <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+        <Link href="/shop" className="label-mono text-primary hover:underline text-sm">
           ← Back to Shop
         </Link>
+        {SHOP_ORIGIN && (
+          <a
+            href={shopifyStoreUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label-mono flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Visit Full Storefront
+          </a>
+        )}
       </div>
 
       <div className="grid gap-12 px-6 py-12 lg:grid-cols-2">
@@ -27,11 +39,7 @@ async function ProductDetails({ slug }: { slug: string }) {
         <div className="space-y-4">
           {product.image_url ? (
             <div className="border border-border bg-muted">
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
+              <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
             </div>
           ) : (
             <div className="border border-border bg-muted p-12 text-center">
@@ -85,9 +93,7 @@ async function ProductDetails({ slug }: { slug: string }) {
           {product.description && (
             <div className="space-y-4 border-t border-border pt-8">
               <h3 className="label-mono font-semibold text-foreground">DETAILS</h3>
-              <div className="prose prose-sm max-w-none text-muted-foreground">
-                {product.description}
-              </div>
+              <div className="prose prose-sm max-w-none text-muted-foreground">{product.description}</div>
             </div>
           )}
 

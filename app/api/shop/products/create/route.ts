@@ -37,9 +37,16 @@ export async function POST(request: NextRequest) {
     const status = (formData.get("status") as string) || "draft"
     const featured = formData.get("featured") === "true"
     const image_url = formData.get("image_url") as string
-    const tags = formData.get("tags") ? (formData.get("tags") as string).split(",").map((t) => t.trim()).filter(t => t) : []
+    const tags = formData.get("tags")
+      ? (formData.get("tags") as string).split(",").map((t) => t.trim()).filter((t) => t)
+      : []
     const seo_title = formData.get("seo_title") as string
     const seo_description = formData.get("seo_description") as string
+    const shopify_product_id = (formData.get("shopify_product_id") as string) || null
+    const shopify_variant_id = (formData.get("shopify_variant_id") as string) || null
+    const shopify_product_url = (formData.get("shopify_product_url") as string) || null
+    const external_checkout_url = (formData.get("external_checkout_url") as string) || null
+    const purchase_button_label = (formData.get("purchase_button_label") as string) || null
 
     const { data, error } = await supabase
       .from("products")
@@ -60,6 +67,11 @@ export async function POST(request: NextRequest) {
           tags,
           seo_title,
           seo_description,
+          shopify_product_id,
+          shopify_variant_id,
+          shopify_product_url,
+          external_checkout_url,
+          purchase_button_label,
         },
       ])
       .select()
@@ -73,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create product" },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
