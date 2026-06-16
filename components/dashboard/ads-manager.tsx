@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef } from "react"
 import { Plus, Pencil, Trash2, Loader2, X, Power, Upload } from "lucide-react"
 import { saveAd, toggleAdActive, deleteAdAction } from "@/app/dashboard/actions"
 import { EmptyState, PrimaryButton } from "@/components/dashboard/ui"
@@ -14,6 +14,8 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(ad?.image_url || "")
+  const imageUrlRef = useRef<string>(ad?.image_url || "")
+  const formRef = useRef<HTMLFormElement>(null)
   const inputClass = "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary w-full"
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -38,10 +40,12 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
       }
 
       const data = await res.json()
+      imageUrlRef.current = data.url
       setPreviewUrl(data.url)
-      // Store the URL in a hidden input that will be sent with the form
-      const input = document.querySelector('input[name="image_url"]') as HTMLInputElement
-      if (input) input.value = data.url
+      if (formRef.current) {
+        const input = formRef.current.querySelector('input[name="image_url"]') as HTMLInputElement
+        if (input) input.value = data.url
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -50,6 +54,10 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
   }
 
   function onSubmit(formData: FormData) {
+    if (imageUrlRef.current) {
+      formData.set("image_url", imageUrlRef.current)
+    }
+    
     setError(null)
     startTransition(async () => {
       const res = await saveAd(formData)
@@ -67,7 +75,7 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <form action={onSubmit} className="flex flex-col gap-4">
+        <form ref={formRef} action={onSubmit} className="flex flex-col gap-4">
           {ad ? <input type="hidden" name="id" value={ad.id} /> : null}
           <div className="flex flex-col gap-1">
             <label className="label-mono text-muted-foreground">Title</label>
@@ -85,8 +93,11 @@ function AdForm({ ad, onClose }: { ad?: Ad; onClose: () => void }) {
                   type="button"
                   onClick={() => {
                     setPreviewUrl("")
-                    const input = document.querySelector('input[name="image_url"]') as HTMLInputElement
-                    if (input) input.value = ""
+                    imageUrlRef.current = ""
+                    if (formRef.current) {
+                      const input = formRef.current.querySelector('input[name="image_url"]') as HTMLInputElement
+                      if (input) input.value = ""
+                    }
                   }}
                   className="absolute right-1 top-1 bg-destructive/90 p-1 text-white hover:bg-destructive"
                 >
