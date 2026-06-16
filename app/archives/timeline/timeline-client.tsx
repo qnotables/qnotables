@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 import { ArchiveHero } from "@/components/archive-hero"
 import { TimelineHero } from "@/components/timeline-hero"
 import { TimelineFilterBar } from "@/components/timeline-filter-bar"
@@ -102,6 +104,7 @@ export default function TimelinePageClient({ posts }: TimelinePageProps) {
 
   return (
     <div className="min-h-screen tactical-grid">
+      <SiteHeader />
       <ArchiveHero currentPage="timeline" />
 
       <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
@@ -197,6 +200,7 @@ export default function TimelinePageClient({ posts }: TimelinePageProps) {
           />
         </div>
       </main>
+      <SiteFooter />
     </div>
   )
 }

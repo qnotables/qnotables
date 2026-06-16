@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ArrowLeft, FileText, Calendar } from "lucide-react"
+import { SiteHeader } from "@/components/site-header"
 import { ArchiveHero } from "@/components/archive-hero"
 import { SiteFooter } from "@/components/site-footer"
 import { getArchiveDocuments } from "@/lib/archive"
@@ -45,6 +46,7 @@ export default async function DocumentsPage() {
 
   return (
     <div className="min-h-screen tactical-grid flex flex-col">
+      <SiteHeader />
       <main className="flex-1">
         <ArchiveHero currentPage="documents" />
 
