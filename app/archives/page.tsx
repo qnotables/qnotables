@@ -6,8 +6,19 @@ import { ArchiveSearchBar } from "@/components/archive-search-bar"
 import { FeaturedRecords } from "@/components/featured-records"
 import { LatestDispatches } from "@/components/latest-dispatches"
 import { ArchiveSidebar } from "@/components/archive-sidebar"
-import { getCategories, getTags, getAvailableMonths } from "@/lib/archives"
-import { getAllPosts, formatDate } from "@/lib/blog-posts"
+import { getAllPosts } from "@/lib/blog-posts"
+import {
+  transformBlogPostToArchive,
+  extractCategories,
+  extractTags,
+  extractSources,
+  extractPostTypes,
+  extractMediaTypes,
+  extractYears,
+  extractMonths,
+  getFeaturedRecords,
+  getAllArchiveRecords,
+} from "@/lib/archives-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -17,85 +28,53 @@ export const metadata = {
 }
 
 export default async function ArchivesPage() {
-  const [categories, tags, allPosts, months] = await Promise.all([
-    getCategories(),
-    getTags(),
-    getAllPosts(),
-    getAvailableMonths(),
-  ])
+  // Fetch posts from database (with MDX fallback)
+  const allPosts = await getAllPosts()
 
-  // Get years that actually have posts
-  const years = Array.from(
-    new Set(allPosts.map((p) => new Date(p.published_at || p.date).getFullYear())),
-  ).sort((a, b) => b - a)
-
-  // Get unique sources
-  const sources = Array.from(
-    new Set(allPosts
-      .filter((p) => p.source_name)
-      .map((p) => p.source_name))
-  ).sort() as string[]
-
-  // Get post types
-  const postTypes = Array.from(
-    new Set(allPosts.filter((p) => p.post_type).map((p) => p.post_type))
-  ).sort() as string[]
-
-  // Get media types
-  const mediaTypes = Array.from(
-    new Set(allPosts.filter((p) => p.media_type).map((p) => p.media_type))
-  ).filter((m) => m) as string[]
-
-  // Featured records (featured=true, sorted by priority)
-  const featuredRecords = allPosts
-    .filter((p) => p.featured)
-    .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-    .map((p) => ({
-      id: p.id || p.slug,
-      slug: p.slug,
-      title: p.title,
-      excerpt: p.excerpt || p.subtitle || "",
-      category: p.category || "General",
-      post_type: p.post_type || "News Brief",
-      published_at: p.published_at || p.date,
-      source_name: p.source_name,
-      priority: p.priority || 0,
-      cover_image: p.cover_image,
-      readMinutes: p.readMinutes || p.read_minutes,
-      media_type: p.media_type,
-      featured: p.featured,
-    }))
-
-  // All posts for latest dispatches
-  const dispatchRecords = allPosts
-    .sort((a, b) => new Date(b.published_at || b.date).getTime() - new Date(a.published_at || a.date).getTime())
-    .map((p) => ({
-      id: p.id || p.slug,
-      slug: p.slug,
-      title: p.title,
-      excerpt: p.excerpt || "",
-      subtitle: p.subtitle,
-      category: p.category || "General",
-      post_type: p.post_type || "News Brief",
-      tags: p.tags || (p.tag ? [p.tag] : []),
-      published_at: p.published_at || p.date,
-      source_name: p.source_name,
-      readMinutes: p.readMinutes || p.read_minutes,
-      media_type: p.media_type,
-      featured: p.featured,
-      author: p.author_name || "HOT AND FRESH",
-    }))
-
-  // Stats
-  const stats = {
-    totalRecords: allPosts.length,
-    featured: featuredRecords.length,
-    videos: allPosts.filter((p) => p.media_type === "video").length,
-    documents: allPosts.filter((p) => p.media_type === "document").length,
+  // If no posts, show empty state
+  if (!allPosts || allPosts.length === 0) {
+    return (
+      <div className="min-h-screen tactical-grid">
+        <SiteHeader />
+        <main className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6 lg:py-16">
+          <div className="rounded border border-dashed border-border p-12 text-center">
+            <p className="label-mono text-muted-foreground">No records available yet. Check back soon.</p>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    )
   }
 
-  // Last update date
-  const lastUpdate = new Date(Math.max(...allPosts.map((p) => new Date(p.published_at || p.date).getTime())))
+  // Extract metadata from posts
+  const categories = extractCategories(allPosts)
+  const tags = extractTags(allPosts)
+  const sources = extractSources(allPosts)
+  const postTypes = extractPostTypes(allPosts)
+  const mediaTypes = extractMediaTypes(allPosts)
+  const years = extractYears(allPosts)
+  const months = extractMonths(allPosts)
+
+  // Get featured records
+  const featuredRecords = getFeaturedRecords(allPosts)
+
+  // Get all records for latest dispatches
+  const dispatchRecords = getAllArchiveRecords(allPosts)
+
+  // Calculate stats
+  const stats = {
+    totalRecords: allPosts.length,
+    featured: allPosts.filter((p) => p.featured).length,
+    videos: allPosts.filter((p) => p.media_type === "video" || p.media_type === "iframe").length,
+    documents: allPosts.filter((p) => p.media_type === "document" || p.media_type === "external_link").length,
+  }
+
+  // Get last update date
+  const lastUpdate = allPosts
+    .reduce((latest, post) => {
+      const postDate = new Date(post.publishedAt || post.date)
+      return postDate > latest ? postDate : latest
+    }, new Date(0))
     .toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
   return (
@@ -123,8 +102,7 @@ export default async function ArchivesPage() {
           sources={sources}
           tags={tags}
           onFiltersChange={(filters) => {
-            // Client-side filtering will be handled by the component wrapper
-            // For now, this is a placeholder for future interactivity
+            // Client-side filtering handled by component wrapper
           }}
         />
 

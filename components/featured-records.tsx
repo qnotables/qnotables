@@ -2,25 +2,10 @@
 
 import Link from "next/link"
 import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink } from "lucide-react"
-
-interface FeaturedRecord {
-  id: string
-  slug: string
-  title: string
-  excerpt: string
-  category: string
-  post_type: string
-  published_at: string
-  source_name?: string
-  priority: number
-  cover_image?: string
-  readMinutes?: number
-  media_type?: string
-  featured: boolean
-}
+import { ArchiveRecord } from "@/lib/archives-utils"
 
 interface FeaturedRecordsProps {
-  records: FeaturedRecord[]
+  records: ArchiveRecord[]
 }
 
 function getMediaIcon(mediaType?: string) {

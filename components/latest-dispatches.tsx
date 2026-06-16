@@ -2,26 +2,10 @@
 
 import Link from "next/link"
 import { Clock, Tag, Video, FileText, ExternalLink, Star, BookMarked } from "lucide-react"
-
-interface DispatchRecord {
-  id: string
-  slug: string
-  title: string
-  excerpt: string
-  subtitle?: string
-  category: string
-  post_type: string
-  tags?: string[]
-  published_at: string
-  source_name?: string
-  readMinutes?: number
-  media_type?: string
-  featured?: boolean
-  author?: string
-}
+import { ArchiveRecord } from "@/lib/archives-utils"
 
 interface LatestDispatchesProps {
-  records: DispatchRecord[]
+  records: ArchiveRecord[]
   isLoading?: boolean
 }
 
