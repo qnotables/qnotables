@@ -19,13 +19,6 @@ export function TeamMemberCard({ member }: { member: TeamMember }) {
         <p className="label-mono mt-1 text-sm text-primary">{member.title}</p>
       )}
 
-      {/* Bio */}
-      {member.bio && (
-        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-          {member.bio}
-        </p>
-      )}
-
       {/* Social links */}
       <div className="mt-4 flex gap-2">
         {member.website_url && (
@@ -39,12 +32,12 @@ export function TeamMemberCard({ member }: { member: TeamMember }) {
             <Globe className="h-4 w-4" />
           </a>
         )}
-        {(member.twitter_url || member.truth_social_url || member.youtube_url) && (
+        {(member.twitter_url || member.truth_social_url) && (
           <a
-            href={member.twitter_url || member.truth_social_url || member.youtube_url || "#"}
+            href={member.twitter_url || member.truth_social_url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            title={member.twitter_url ? "Twitter/X" : member.truth_social_url ? "Truth Social" : "YouTube"}
+            title={member.twitter_url ? "Twitter/X" : "Truth Social"}
             className="text-muted-foreground hover:text-primary transition-colors"
           >
             <ExternalLink className="h-4 w-4" />

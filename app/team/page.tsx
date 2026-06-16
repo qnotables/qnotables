@@ -22,7 +22,7 @@ async function TeamContent({ group }: { group?: string }) {
     <>
       {/* Filters */}
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-        <TeamFilters groups={groups} selectedGroup={group || null} onFilterChange={() => {}} />
+        <TeamFilters groups={groups} selectedGroup={group || null} />
       </div>
 
       {/* Grid */}
