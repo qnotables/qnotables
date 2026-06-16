@@ -11,7 +11,6 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
-import { BlogPostCard } from "@/components/blog-post-card"
 import { ForumThreadCard } from "@/components/forum-thread-card"
 import { getNews } from "@/lib/rss"
 import { getLatestPost } from "@/lib/blog-posts"
@@ -73,17 +72,8 @@ export default async function Page() {
             )}
             
             {/* Blog and Forum Section */}
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {flashPost && (
-                <BlogPostCard
-                  title={flashPost.title}
-                  excerpt={flashPost.excerpt}
-                  date={flashPost.date}
-                  readMinutes={flashPost.readMinutes}
-                  slug={flashPost.slug}
-                />
-              )}
-              {hottestThread && (
+            {hottestThread && (
+              <div className="mt-6">
                 <ForumThreadCard
                   id={hottestThread.id}
                   title={hottestThread.title}
@@ -92,8 +82,8 @@ export default async function Page() {
                   createdAt={hottestThread.createdAt}
                   replyCount={hottestThread.replyCount}
                 />
-              )}
-            </div>
+              </div>
+            )}
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (
