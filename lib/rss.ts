@@ -37,15 +37,15 @@ export const RSS_SOURCES: RSSSource[] = [
      enabled: true,
    },
    {
-     id: "example",
-     name: "Example Source",
-     url: "https://example.com/feed.xml",
+     id: "FOX",
+     name: "FOX Politics",
+     url: "https://feeds.foxnews.com/foxnews/politics",
      enabled: true,
    },
    {
-     id: "example",
-     name: "Example Source",
-     url: "https://example.com/feed.xml",
+     id: "FoxN",
+     name: "FOX National",
+     url: "https://feeds.foxnews.com/foxnews/national",
      enabled: true,
    },
 ]
