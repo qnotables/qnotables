@@ -29,25 +29,24 @@ export const RSS_SOURCES: RSSSource[] = [
     enabled: true,
   },
   // Add more sources below:
-   {
-     id: "BBC",
-     name: "BBC",
-     url: "https://feeds.bbci.co.uk/news/rss.xml
-",
-     enabled: true,
-   },
-   {
-     id: "FOX",
-     name: "FOX Politics",
-     url: "https://feeds.foxnews.com/foxnews/politics",
-     enabled: true,
-   },
-   {
-     id: "FoxN",
-     name: "FOX National",
-     url: "https://feeds.foxnews.com/foxnews/national",
-     enabled: true,
-   },
+  {
+    id: "bbc",
+    name: "BBC News",
+    url: "https://feeds.bbci.co.uk/news/rss.xml",
+    enabled: true,
+  },
+  {
+    id: "fox",
+    name: "FOX Politics",
+    url: "https://feeds.foxnews.com/foxnews/politics",
+    enabled: true,
+  },
+  {
+    id: "foxn",
+    name: "FOX National",
+    url: "https://feeds.foxnews.com/foxnews/national",
+    enabled: true,
+  },
 ]
 
 type ParsedItem = {
