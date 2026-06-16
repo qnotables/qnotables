@@ -79,6 +79,60 @@ function stripMarkdown(md: string): string {
     .trim()
 }
 
+/** Extract the first https image URL from markdown body text. */
+function firstImageInBody(body: string): string | null {
+  // Markdown image: ![alt](url)
+  const mdMatch = body.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/)
+  if (mdMatch) return mdMatch[1]
+  // Plain URL ending in common image extension
+  const plainMatch = body.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i)
+  if (plainMatch) return plainMatch[0]
+  return null
+}
+
+// ─── Shared thumbnail component ───────────────────────────────────────────────
+
+interface ThumbnailProps {
+  src?: string | null
+  alt: string
+  label?: string
+  badge?: React.ReactNode
+}
+
+function Thumbnail({ src, alt, label, badge }: ThumbnailProps) {
+  return (
+    <div
+      className="relative w-full overflow-hidden bg-muted/60 border-b border-border"
+      style={{ aspectRatio: "16/7" }}
+    >
+      {src ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-cover opacity-90 transition-opacity duration-300"
+          sizes="(max-width: 768px) 100vw, 640px"
+        />
+      ) : (
+        /* Fallback: textured dark plate with category label */
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
+          {label && (
+            <span className="label-mono text-[11px] font-semibold text-muted-foreground tracking-widest uppercase opacity-50">
+              {label}
+            </span>
+          )}
+        </div>
+      )}
+      {/* Gradient overlay so badges are readable over any image */}
+      {src && (
+        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none" />
+      )}
+      {/* Optional badge slot (e.g. FEATURED) */}
+      {badge && <div className="absolute left-2 top-2">{badge}</div>}
+    </div>
+  )
+}
+
 // ─── Priority badge ──────────────────────────────────────────────────────────
 
 function PriorityBadge({ priority }: { priority?: string }) {
@@ -99,19 +153,29 @@ function PriorityBadge({ priority }: { priority?: string }) {
 
 function ForumHotCard({ item }: { item: SituationForumItem }) {
   const preview = stripMarkdown(item.body).slice(0, 140)
+  const thumbSrc = firstImageInBody(item.body)
+
   return (
     <div className="flex flex-col gap-3 h-full">
+      <Thumbnail
+        src={thumbSrc}
+        alt={item.title}
+        label={item.category ?? "FORUM"}
+        badge={
+          item.isFeatured ? (
+            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+              FEATURED
+            </span>
+          ) : undefined
+        }
+      />
+
       {/* Label row */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-4 pt-1">
         <span className="flex items-center gap-1.5 label-mono text-[11px] font-semibold text-primary">
           <Users className="h-3 w-3" />
           HOTTEST FORUM THREAD
         </span>
-        {item.isFeatured && (
-          <span className="label-mono px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/30">
-            FEATURED
-          </span>
-        )}
         {item.category && (
           <span className="label-mono px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground border border-border">
             {item.category.toUpperCase()}
@@ -120,17 +184,17 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3">
+      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
         {item.title}
       </h3>
 
       {/* Body preview */}
       {preview && (
-        <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{preview}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2 flex-1 px-4">{preview}</p>
       )}
 
       {/* Meta row */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground label-mono mt-auto">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground label-mono mt-auto px-4">
         <span>{item.authorName}</span>
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
@@ -147,7 +211,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
       {/* CTA */}
       <Link
         href={`/forum/${item.id}`}
-        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <MessageSquare className="h-3.5 w-3.5" />
         JOIN DISCUSSION →
@@ -166,26 +230,21 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Cover image */}
-      {item.coverImage && (
-        <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: "16/7" }}>
-          <Image
-            src={item.coverImage}
-            alt={item.title}
-            fill
-            className="object-cover opacity-90"
-            sizes="(max-width: 768px) 100vw, 640px"
-          />
-          {item.featured && (
-            <span className="absolute left-2 top-2 label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+      <Thumbnail
+        src={item.coverImage}
+        alt={item.title}
+        label={item.postType ?? item.category ?? "DISPATCH"}
+        badge={
+          item.featured ? (
+            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
               FEATURED
             </span>
-          )}
-        </div>
-      )}
+          ) : undefined
+        }
+      />
 
       {/* Label row */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap px-4 pt-1">
         <span className="flex items-center gap-1.5 label-mono text-[11px] font-semibold text-primary">
           <BookOpen className="h-3 w-3" />
           HOTTEST BLOG DISPATCH
@@ -199,18 +258,18 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3">
+      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
         {item.title}
       </h3>
 
       {/* Excerpt */}
       {item.excerpt && (
-        <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{item.excerpt}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2 flex-1 px-4">{item.excerpt}</p>
       )}
 
       {/* Tags */}
       {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1">
+        <div className="flex flex-wrap gap-1 mt-1 px-4">
           {allTags.map((t) => (
             <span
               key={t}
@@ -223,7 +282,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       )}
 
       {/* Meta */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground label-mono mt-auto">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground label-mono mt-auto px-4">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           <span>
@@ -251,7 +310,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       {/* CTA */}
       <Link
         href={`/blog/${item.slug}`}
-        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <BookOpen className="h-3.5 w-3.5" />
         READ DISPATCH →
@@ -269,26 +328,21 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Cover image */}
-      {item.coverImage && (
-        <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: "16/7" }}>
-          <Image
-            src={item.coverImage}
-            alt={item.title}
-            fill
-            className="object-cover opacity-90"
-            sizes="(max-width: 768px) 100vw, 640px"
-          />
-          {item.featured && (
-            <span className="absolute left-2 top-2 label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+      <Thumbnail
+        src={item.coverImage}
+        alt={item.title}
+        label={item.postType ?? item.category ?? "ARCHIVE"}
+        badge={
+          item.featured ? (
+            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
               FEATURED
             </span>
-          )}
-        </div>
-      )}
+          ) : undefined
+        }
+      />
 
       {/* Label row */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap px-4 pt-1">
         <span className="flex items-center gap-1.5 label-mono text-[11px] font-semibold text-primary">
           <Icon className="h-3 w-3" />
           {label}
@@ -302,17 +356,17 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3">
+      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
         {item.title}
       </h3>
 
       {/* Excerpt */}
       {item.excerpt && (
-        <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{item.excerpt}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2 flex-1 px-4">{item.excerpt}</p>
       )}
 
       {/* Meta */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground label-mono mt-auto">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground label-mono mt-auto px-4">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           <span>
@@ -340,7 +394,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
       {/* CTA */}
       <Link
         href={`/archives/${item.slug}`}
-        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <Archive className="h-3.5 w-3.5" />
         OPEN RECORD →
@@ -353,7 +407,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 h-full py-8 text-muted-foreground">
+    <div className="flex flex-col items-center justify-center gap-3 h-full py-12 px-4 text-muted-foreground">
       <Icon className="h-8 w-8 opacity-30" />
       <p className="label-mono text-xs text-center opacity-60">NO {label} AVAILABLE</p>
     </div>
@@ -513,7 +567,7 @@ export function SituationReportCycle({
       </div>
 
       {/* Card content */}
-      <div className="p-4 md:p-6 min-h-[260px]">{renderCard()}</div>
+      <div className="min-h-[320px]">{renderCard()}</div>
 
       {/* Progress bar (auto-cycle indicator) */}
       {!reducedMotion && !isPaused && (
