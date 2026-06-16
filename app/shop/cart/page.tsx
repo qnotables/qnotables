@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trash2, ArrowRight, X } from "lucide-react"
+import { Trash2, ArrowRight, X, ExternalLink } from "lucide-react"
 import { useCart } from "@/lib/shop/cart-context"
 import { formatPrice } from "@/lib/shop/products"
 import { CartCheckout } from "@/components/cart-checkout"
+import { shopifyStoreUrl, SHOP_ORIGIN } from "@/lib/shop/shopify-url"
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, total, clear } = useCart()
@@ -23,10 +24,7 @@ export default function CartPage() {
         <div className="px-6 py-12">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">CHECKOUT</h1>
-            <button
-              onClick={() => setShowCheckout(false)}
-              className="p-2 hover:bg-muted"
-            >
+            <button onClick={() => setShowCheckout(false)} className="p-2 hover:bg-muted">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -74,7 +72,11 @@ export default function CartPage() {
                               min="1"
                               value={item.quantity}
                               onChange={(e) =>
-                                updateQuantity(item.productId, Math.max(1, parseInt(e.target.value) || 1), item.variantId)
+                                updateQuantity(
+                                  item.productId,
+                                  Math.max(1, parseInt(e.target.value) || 1),
+                                  item.variantId,
+                                )
                               }
                               className="w-12 border-0 bg-background text-center font-semibold text-foreground outline-none"
                             />
@@ -108,7 +110,7 @@ export default function CartPage() {
           {/* Order Summary */}
           {items.length > 0 && (
             <div className="space-y-4 lg:h-fit lg:sticky lg:top-6">
-              <div className="border border-border bg-background p-6 space-y-4">
+              <div className="space-y-4 border border-border bg-background p-6">
                 <h2 className="label-mono font-semibold text-foreground">ORDER SUMMARY</h2>
 
                 <div className="space-y-2 border-t border-border pt-4">
@@ -133,6 +135,24 @@ export default function CartPage() {
                   PROCEED TO CHECKOUT
                   <ArrowRight className="h-4 w-4" />
                 </button>
+
+                {SHOP_ORIGIN && (
+                  <div className="space-y-2 border border-border bg-muted/30 p-4">
+                    <p className="label-mono text-xs font-semibold text-foreground">PREFER SHOPIFY?</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Browse and purchase directly on our Shopify storefront for more payment options.
+                    </p>
+                    <a
+                      href={shopifyStoreUrl()}
+                      target={typeof window !== "undefined" && window.self !== window.top ? "_blank" : "_self"}
+                      rel="noopener noreferrer"
+                      className="label-mono mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      VISIT SHOPIFY STORE
+                    </a>
+                  </div>
+                )}
 
                 <button
                   onClick={clear}

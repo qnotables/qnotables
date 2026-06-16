@@ -40,6 +40,12 @@ export interface Product {
   seo_description?: string
   og_image_url?: string
   last_printify_sync_at?: string
+  // Shopify integration
+  shopify_product_id?: string
+  shopify_variant_id?: string
+  shopify_product_url?: string
+  external_checkout_url?: string
+  purchase_button_label?: string
   created_at: string
   updated_at: string
 }

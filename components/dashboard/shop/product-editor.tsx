@@ -34,6 +34,12 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
     tags: product?.tags?.join(", ") || "",
     seo_title: product?.seo_title || "",
     seo_description: product?.seo_description || "",
+    // Shopify integration
+    shopify_product_id: product?.shopify_product_id || "",
+    shopify_variant_id: product?.shopify_variant_id || "",
+    shopify_product_url: product?.shopify_product_url || "",
+    external_checkout_url: product?.external_checkout_url || "",
+    purchase_button_label: product?.purchase_button_label || "",
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -78,6 +84,11 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
       formDataObj.append("tags", formData.tags)
       formDataObj.append("seo_title", formData.seo_title)
       formDataObj.append("seo_description", formData.seo_description)
+      if (formData.shopify_product_id) formDataObj.append("shopify_product_id", formData.shopify_product_id)
+      if (formData.shopify_variant_id) formDataObj.append("shopify_variant_id", formData.shopify_variant_id)
+      if (formData.shopify_product_url) formDataObj.append("shopify_product_url", formData.shopify_product_url)
+      if (formData.external_checkout_url) formDataObj.append("external_checkout_url", formData.external_checkout_url)
+      if (formData.purchase_button_label) formDataObj.append("purchase_button_label", formData.purchase_button_label)
 
       const endpoint = isNew ? "/api/shop/products/create" : `/api/shop/products/${product?.id}/update`
       const response = await fetch(endpoint, {
@@ -351,6 +362,81 @@ export function ProductEditor({ product, isNew = true }: ProductEditorProps) {
             placeholder="Separate with commas"
             className="w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
           />
+        </div>
+
+        {/* Shopify Integration */}
+        <div className="space-y-4 border-t border-border pt-6">
+          <h2 className="label-mono font-semibold text-foreground">SHOPIFY INTEGRATION</h2>
+          <p className="text-xs text-muted-foreground">
+            Link this product to your external Shopify store. When a Shopify URL is set, the storefront shows a
+            &quot;Buy on Shopify&quot; button instead of the local cart.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Shopify Product ID</label>
+              <input
+                type="text"
+                value={formData.shopify_product_id}
+                onChange={(e) => handleFieldChange("shopify_product_id", e.target.value)}
+                placeholder="gid://shopify/Product/..."
+                className="mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Default Variant ID</label>
+              <input
+                type="text"
+                value={formData.shopify_variant_id}
+                onChange={(e) => handleFieldChange("shopify_variant_id", e.target.value)}
+                placeholder="gid://shopify/ProductVariant/..."
+                className="mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label-mono block text-sm font-semibold text-foreground">
+              Shopify Product URL
+              <span className="ml-2 font-normal text-muted-foreground">(handle, path, or full URL)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.shopify_product_url}
+              onChange={(e) => handleFieldChange("shopify_product_url", e.target.value)}
+              placeholder="field-tee  OR  /products/field-tee  OR  https://..."
+              className="mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="label-mono block text-sm font-semibold text-foreground">
+              Override Checkout URL
+              <span className="ml-2 font-normal text-muted-foreground">(leave blank to use Shopify product URL)</span>
+            </label>
+            <input
+              type="url"
+              value={formData.external_checkout_url}
+              onChange={(e) => handleFieldChange("external_checkout_url", e.target.value)}
+              placeholder="https://shop.qnotables.ai/cart/..."
+              className="mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="label-mono block text-sm font-semibold text-foreground">
+              Button Label Override
+              <span className="ml-2 font-normal text-muted-foreground">(defaults to &quot;Buy on Shopify&quot;)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.purchase_button_label}
+              onChange={(e) => handleFieldChange("purchase_button_label", e.target.value)}
+              placeholder="Buy on Shopify"
+              maxLength={80}
+              className="mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+            />
+          </div>
         </div>
       </form>
 
