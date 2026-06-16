@@ -42,30 +42,22 @@ const SIGNAL_TOOLS = [
 
 export function SignalToolsCard() {
   return (
-    <div className="border border-border bg-background p-4 md:p-5">
+    <div className="border border-border bg-background p-4 md:p-5 max-h-[150px] overflow-hidden">
       <div className="mb-4">
         <h2 className="stencil text-sm font-bold text-foreground">SIGNAL TOOLS</h2>
-        <p className="label-mono mt-1 text-xs text-muted-foreground">Quick access for the desk.</p>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex gap-3">
         {SIGNAL_TOOLS.map((tool) => {
           const Icon = tool.icon
           return (
             <Link
               key={tool.label}
               href={tool.href}
-              className="group flex items-start gap-3 rounded px-2 py-2 transition-colors hover:bg-primary/10"
+              title={tool.label}
+              className="flex-shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             >
-              <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary transition-colors group-hover:text-primary" aria-hidden="true" />
-              <div className="flex-1 min-w-0">
-                <div className="label-mono text-xs font-semibold text-foreground transition-colors group-hover:text-primary">
-                  {tool.label}
-                </div>
-                <div className="label-mono mt-0.5 text-xs text-muted-foreground transition-colors group-hover:text-muted-foreground">
-                  {tool.description}
-                </div>
-              </div>
+              <Icon className="h-6 w-6" aria-hidden="true" />
             </Link>
           )
         })}
