@@ -4,6 +4,8 @@ import { ArchivesTable } from "@/components/archives-table"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Archives Management — Admin Dashboard",
   description: "View, edit, and manage all posts in the archive.",

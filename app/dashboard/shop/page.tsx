@@ -1,268 +1,224 @@
-import { redirect } from "next/navigation"
-import { Package, DollarSign, ShoppingCart } from "lucide-react"
-import { validateDashboardAccess } from "@/lib/dashboard-auth"
-import { PageHeader } from "@/components/dashboard/ui"
-import { PRODUCTS } from "@/lib/products"
+import { Suspense } from "react"
+import Link from "next/link"
+import { Plus, Package, ShoppingCart, BarChart3, Settings, Zap } from "lucide-react"
+import { getShopStats, getAllProducts, getOrders } from "@/lib/shop/products"
+import { formatPrice } from "@/lib/shop/products"
 
-export const metadata = {
-  title: "Shop Management — Admin Dashboard",
-  description: "Manage shop products, orders, and subscriptions.",
-}
+export const dynamic = "force-dynamic"
 
-// Mock order data for demonstration
-const MOCK_ORDERS = [
-  {
-    id: "ORDER-001",
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    customer: "Alex Chen",
-    items: "Field Tee (L), Recon Cap (One Size)",
-    total: 60,
-    status: "shipped",
-  },
-  {
-    id: "ORDER-002",
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    customer: "Jordan Smith",
-    items: "Morale Patch (Velcro), Field Mug (Olive)",
-    total: 30,
-    status: "processing",
-  },
-  {
-    id: "ORDER-003",
-    date: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    customer: "Sam Patel",
-    items: "Sticker Pack (Classic)",
-    total: 8,
-    status: "pending",
-  },
-  {
-    id: "ORDER-004",
-    date: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    customer: "Riley Kim",
-    items: "Sourced Notebook (Hardcover)",
-    total: 28,
-    status: "pending",
-  },
-]
-
-const SUBSCRIPTION_USERS = [
-  { id: "SUB-001", email: "operator@email.com", plan: "Intel", renewalDate: "2025-01-15" },
-  { id: "SUB-002", email: "admin@example.com", plan: "Command", renewalDate: "2025-01-20" },
-  { id: "SUB-003", email: "subscriber@example.com", plan: "Command", renewalDate: "2025-02-01" },
-  { id: "SUB-004", email: "vip@example.com", plan: "Intel", renewalDate: "2025-01-28" },
-]
-
-export default async function ShopDashboardPage() {
-  const hasAccess = await validateDashboardAccess()
-  if (!hasAccess) {
-    redirect("/dashboard/login")
-  }
-
-  const goods = PRODUCTS.filter((p) => p.type === "good")
-  const subscriptions = PRODUCTS.filter((p) => p.type === "subscription")
+async function ShopStatsCards() {
+  const stats = await getShopStats()
 
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeader
-        title="Shop Management"
-        description="Manage shop products, orders, and subscriptions."
-        breadcrumbs={[{ label: "Shop" }]}
-      />
-
-      <div>
-          {/* KPI cards */}
-          <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="border border-border bg-card p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <span className="label-mono text-muted-foreground">Revenue (30d)</span>
-              </div>
-              <p className="stencil text-2xl text-foreground">$1,240</p>
-              <p className="label-mono text-xs text-muted-foreground mt-2">4 orders, 4 subscriptions</p>
-            </div>
-
-            <div className="border border-border bg-card p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <ShoppingCart className="h-5 w-5 text-primary" />
-                <span className="label-mono text-muted-foreground">Active Orders</span>
-              </div>
-              <p className="stencil text-2xl text-foreground">2</p>
-              <p className="label-mono text-xs text-muted-foreground mt-2">1 pending, 1 processing</p>
-            </div>
-
-            <div className="border border-border bg-card p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Package className="h-5 w-5 text-primary" />
-                <span className="label-mono text-muted-foreground">Products</span>
-              </div>
-              <p className="stencil text-2xl text-foreground">{PRODUCTS.length}</p>
-              <p className="label-mono text-xs text-muted-foreground mt-2">
-                {goods.length} goods, {subscriptions.length} subscriptions
-              </p>
-            </div>
-          </div>
-
-          {/* Products inventory */}
-          <div className="mb-12 border-b border-border pb-12">
-            <h2 className="stencil mb-6 text-2xl text-foreground">Product Catalog</h2>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="label-mono mb-3 font-semibold text-foreground">Subscriptions</h3>
-                <div className="space-y-2">
-                  {subscriptions.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between border border-border bg-muted/20 p-3"
-                    >
-                      <div>
-                        <p className="font-semibold text-foreground">{product.name}</p>
-                        <p className="label-mono text-sm text-muted-foreground">
-                          {product.description}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="stencil text-primary">
-                          ${(product.monthlyInCents / 100).toFixed(0)}/mo
-                        </p>
-                        <p className="label-mono text-xs text-muted-foreground">
-                          or ${(product.annualInCents / 100).toFixed(0)}/yr
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="label-mono mb-3 font-semibold text-foreground">Branded Goods</h3>
-                <div className="space-y-2">
-                  {goods.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between border border-border bg-muted/20 p-3"
-                    >
-                      <div>
-                        <p className="font-semibold text-foreground">{product.name}</p>
-                        <p className="label-mono text-sm text-muted-foreground">
-                          {product.description}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="stencil text-primary">
-                          ${(product.priceInCents / 100).toFixed(2)}
-                        </p>
-                        <p className="label-mono text-xs text-muted-foreground">ships 3-5 days</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent orders */}
-          <div className="mb-12 border-b border-border pb-12">
-            <h2 className="stencil mb-6 text-2xl text-foreground">Recent Orders</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-border">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Order
-                    </th>
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Customer
-                    </th>
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Items
-                    </th>
-                    <th className="border border-border px-4 py-3 text-center font-semibold text-foreground">
-                      Total
-                    </th>
-                    <th className="border border-border px-4 py-3 text-center font-semibold text-foreground">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MOCK_ORDERS.map((order) => (
-                    <tr key={order.id} className="border-t border-border hover:bg-muted/20">
-                      <td className="border border-border px-4 py-3">
-                        <p className="label-mono font-semibold text-primary">{order.id}</p>
-                        <p className="label-mono text-xs text-muted-foreground">
-                          {order.date.toLocaleDateString()}
-                        </p>
-                      </td>
-                      <td className="border border-border px-4 py-3 text-foreground">
-                        {order.customer}
-                      </td>
-                      <td className="border border-border px-4 py-3 text-foreground">
-                        {order.items}
-                      </td>
-                      <td className="border border-border px-4 py-3 text-center font-semibold text-foreground">
-                        ${order.total}
-                      </td>
-                      <td className="border border-border px-4 py-3 text-center">
-                        <span
-                          className={`label-mono inline-block px-2.5 py-1 text-xs font-semibold ${
-                            order.status === "shipped"
-                              ? "bg-green-500/20 text-green-700"
-                              : order.status === "processing"
-                                ? "bg-blue-500/20 text-blue-700"
-                                : "bg-amber-500/20 text-amber-700"
-                          }`}
-                        >
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Active subscriptions */}
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="border border-border bg-background p-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="stencil mb-6 text-2xl text-foreground">Active Subscriptions</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-border">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Subscriber
-                    </th>
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Plan
-                    </th>
-                    <th className="border border-border px-4 py-3 text-left font-semibold text-foreground">
-                      Renewal Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SUBSCRIPTION_USERS.map((sub) => (
-                    <tr key={sub.id} className="border-t border-border hover:bg-muted/20">
-                      <td className="border border-border px-4 py-3">
-                        <p className="font-semibold text-foreground">{sub.email}</p>
-                        <p className="label-mono text-xs text-muted-foreground">{sub.id}</p>
-                      </td>
-                      <td className="border border-border px-4 py-3">
-                        <span className="label-mono inline-block bg-primary/20 px-2.5 py-1 font-semibold text-primary">
-                          {sub.plan}
-                        </span>
-                      </td>
-                      <td className="border border-border px-4 py-3 text-foreground">
-                        {new Date(sub.renewalDate).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p className="label-mono text-xs font-semibold uppercase text-muted-foreground">TOTAL PRODUCTS</p>
+            <p className="text-3xl font-bold text-foreground">{stats.total_products}</p>
+            <p className="label-mono text-xs text-muted-foreground">{stats.active_products} Active</p>
           </div>
+          <Package className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+      </div>
+
+      <div className="border border-border bg-background p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="label-mono text-xs font-semibold uppercase text-muted-foreground">TOTAL ORDERS</p>
+            <p className="text-3xl font-bold text-foreground">{stats.total_orders}</p>
+            <p className="label-mono text-xs text-muted-foreground">{formatPrice(stats.total_revenue)} Revenue</p>
+          </div>
+          <ShoppingCart className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+      </div>
+
+      <div className="border border-border bg-background p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="label-mono text-xs font-semibold uppercase text-muted-foreground">FEATURED</p>
+            <p className="text-3xl font-bold text-foreground">{stats.featured_products}</p>
+            <p className="label-mono text-xs text-muted-foreground">Products</p>
+          </div>
+          <Zap className="h-8 w-8 text-primary/50" />
+        </div>
       </div>
     </div>
+  )
+}
+
+async function ProductsList() {
+  const products = await getAllProducts()
+
+  const byStatus = {
+    draft: products.filter((p) => p.status === "draft"),
+    active: products.filter((p) => p.status === "active"),
+    hidden: products.filter((p) => p.status === "hidden"),
+    archived: products.filter((p) => p.status === "archived"),
+  }
+
+  return (
+    <div className="space-y-6">
+      {Object.entries(byStatus).map(
+        ([status, statusProducts]) =>
+          statusProducts.length > 0 && (
+            <div key={status} className="border border-border bg-background p-6">
+              <h3 className="label-mono mb-4 text-sm font-semibold uppercase text-foreground">
+                {status} ({statusProducts.length})
+              </h3>
+              <div className="space-y-2">
+                {statusProducts.slice(0, 5).map((product) => (
+                  <Link
+                    key={product.id}
+                    href={`/dashboard/shop/products/${product.id}`}
+                    className="flex items-center justify-between rounded border border-border/50 bg-muted/30 p-3 transition-colors hover:border-border hover:bg-muted/50"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">{product.name}</p>
+                      {product.price && (
+                        <p className="label-mono text-xs text-muted-foreground">{formatPrice(product.price)}</p>
+                      )}
+                    </div>
+                    {product.featured && (
+                      <Zap className="h-4 w-4 text-primary" />
+                    )}
+                  </Link>
+                ))}
+                {statusProducts.length > 5 && (
+                  <p className="label-mono text-xs text-muted-foreground">+{statusProducts.length - 5} more</p>
+                )}
+              </div>
+            </div>
+          ),
+      )}
+    </div>
+  )
+}
+
+async function RecentOrders() {
+  const orders = await getOrders()
+
+  return (
+    <div className="border border-border bg-background p-6">
+      <h3 className="label-mono mb-4 text-sm font-semibold uppercase text-foreground">RECENT ORDERS</h3>
+      <div className="space-y-2">
+        {orders.slice(0, 5).map((order) => (
+          <Link
+            key={order.id}
+            href={`/dashboard/shop/orders/${order.id}`}
+            className="flex items-center justify-between rounded border border-border/50 bg-muted/30 p-3 transition-colors hover:border-border hover:bg-muted/50"
+          >
+            <div className="flex-1">
+              <p className="font-medium text-foreground">{order.order_number}</p>
+              <p className="label-mono text-xs text-muted-foreground">{order.customer_email}</p>
+            </div>
+            <div className="text-right">
+              <p className="label-mono text-xs font-semibold uppercase text-foreground">{order.status}</p>
+              {order.total_cents && (
+                <p className="label-mono text-xs text-muted-foreground">{formatPrice(order.total_cents)}</p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function ShopDashboard() {
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="border-b border-border px-6 py-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">SHOP CONTROL CENTER</h1>
+            <p className="label-mono mt-1 text-sm text-muted-foreground">Manage products, orders, and fulfillment</p>
+          </div>
+          <Link
+            href="/dashboard/shop/products/new"
+            className="inline-flex items-center gap-2 bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            NEW PRODUCT
+          </Link>
+        </div>
+      </div>
+
+      <div className="space-y-8 px-6 py-8">
+        {/* Stats Cards */}
+        <Suspense fallback={<div className="h-32 animate-pulse bg-muted" />}>
+          <ShopStatsCards />
+        </Suspense>
+
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Products by Status */}
+          <div className="lg:col-span-2">
+            <Suspense fallback={<div className="h-96 animate-pulse bg-muted" />}>
+              <ProductsList />
+            </Suspense>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <Link
+              href="/dashboard/shop/products"
+              className="flex items-center justify-between border border-border bg-background p-4 transition-colors hover:border-primary hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Products</p>
+                  <p className="label-mono text-xs text-muted-foreground">Manage all products</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/shop/orders"
+              className="flex items-center justify-between border border-border bg-background p-4 transition-colors hover:border-primary hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Orders</p>
+                  <p className="label-mono text-xs text-muted-foreground">Track & fulfill</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/shop/printify"
+              className="flex items-center justify-between border border-border bg-background p-4 transition-colors hover:border-primary hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Printify</p>
+                  <p className="label-mono text-xs text-muted-foreground">Print-on-demand</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/shop/settings"
+              className="flex items-center justify-between border border-border bg-background p-4 transition-colors hover:border-primary hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <Settings className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Settings</p>
+                  <p className="label-mono text-xs text-muted-foreground">Configure shop</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent Orders */}
+        <Suspense fallback={<div className="h-32 animate-pulse bg-muted" />}>
+          <RecentOrders />
+        </Suspense>
+      </div>
+    </main>
   )
 }
