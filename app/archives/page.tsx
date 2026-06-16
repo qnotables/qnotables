@@ -101,9 +101,6 @@ export default async function ArchivesPage() {
           months={months}
           sources={sources}
           tags={tags}
-          onFiltersChange={(filters) => {
-            // Client-side filtering handled by component wrapper
-          }}
         />
 
         {/* Featured Records */}
