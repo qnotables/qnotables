@@ -254,3 +254,136 @@ export function searchArchiveRecords(posts: BlogPost[], query: string): ArchiveR
     .sort((a, b) => new Date(b.publishedAt || b.date).getTime() - new Date(a.publishedAt || a.date).getTime())
     .map(transformBlogPostToArchive)
 }
+
+/**
+ * Timeline grouping structure
+ */
+export interface TimelineGroup {
+  year: number
+  month: number
+  monthLabel: string
+  records: ArchiveRecord[]
+}
+
+/**
+ * Group records by year and month for timeline display
+ */
+export function groupRecordsByYearMonth(records: ArchiveRecord[]): TimelineGroup[] {
+  const groups = new Map<string, { year: number; month: number; records: ArchiveRecord[] }>()
+
+  for (const record of records) {
+    const date = new Date(record.published_at)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const key = `${year}-${String(month).padStart(2, "0")}`
+
+    if (!groups.has(key)) {
+      groups.set(key, { year, month, records: [] })
+    }
+
+    groups.get(key)!.records.push(record)
+  }
+
+  return Array.from(groups.values())
+    .map((g) => ({
+      ...g,
+      monthLabel: new Date(g.year, g.month - 1).toLocaleString("default", { month: "long", year: "numeric" }),
+    }))
+    .sort((a, b) => b.year - a.year || b.month - a.month)
+}
+
+/**
+ * Apply multiple filters to timeline records
+ */
+export interface TimelineFilters {
+  year?: number
+  month?: number
+  category?: string
+  tag?: string
+  source?: string
+  mediaType?: string
+  priority?: string
+  search?: string
+}
+
+export function filterTimelineRecords(records: ArchiveRecord[], filters: TimelineFilters): ArchiveRecord[] {
+  return records.filter((record) => {
+    // Year filter
+    if (filters.year) {
+      const year = new Date(record.published_at).getFullYear()
+      if (year !== filters.year) return false
+    }
+
+    // Month filter (requires year)
+    if (filters.month && filters.year) {
+      const date = new Date(record.published_at)
+      if (date.getFullYear() !== filters.year || date.getMonth() + 1 !== filters.month) return false
+    }
+
+    // Category filter
+    if (filters.category && record.category !== filters.category) return false
+
+    // Tag filter
+    if (filters.tag && !record.tags.includes(filters.tag)) return false
+
+    // Source filter
+    if (filters.source && record.source_name !== filters.source) return false
+
+    // Media type filter
+    if (filters.mediaType && record.media_type !== filters.mediaType) return false
+
+    // Priority filter
+    if (filters.priority) {
+      // Priority would need to be added to ArchiveRecord schema - for now skip
+    }
+
+    // Search filter
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      if (
+        !record.title.toLowerCase().includes(q) &&
+        !record.excerpt.toLowerCase().includes(q) &&
+        !(record.tags || []).some((t) => t.toLowerCase().includes(q))
+      ) {
+        return false
+      }
+    }
+
+    return true
+  })
+}
+
+/**
+ * Get timeline statistics
+ */
+export interface TimelineStats {
+  totalRecords: number
+  yearRange: [number, number]
+  categories: number
+  tags: number
+  sources: number
+  mediaTypes: number
+}
+
+export function getTimelineStats(records: ArchiveRecord[]): TimelineStats {
+  const years = records.map((r) => new Date(r.published_at).getFullYear())
+  const categories = new Set(records.map((r) => r.category))
+  const tags = new Set<string>()
+  const sources = new Set(records.map((r) => r.source_name).filter(Boolean))
+  const mediaTypes = new Set(records.map((r) => r.media_type).filter(Boolean))
+
+  for (const record of records) {
+    record.tags.forEach((t) => tags.add(t))
+  }
+
+  const yearRange: [number, number] = [Math.min(...years), Math.max(...years)]
+
+  return {
+    totalRecords: records.length,
+    yearRange,
+    categories: categories.size,
+    tags: tags.size,
+    sources: sources.size,
+    mediaTypes: mediaTypes.size,
+  }
+}
