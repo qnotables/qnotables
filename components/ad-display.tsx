@@ -20,7 +20,7 @@ export async function TopAd() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-3">
         {/* Top Ad - larger left column */}
         <div className="md:col-span-2">
           <div className="w-fit">
