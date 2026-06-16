@@ -6,7 +6,7 @@ import {
   Mail,
   MessageCircle,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 interface ShareButtonsProps {
   headline: string
@@ -16,6 +16,9 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ headline, url, source }: ShareButtonsProps) {
   const [showMenu, setShowMenu] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ top: string; left: string }>({ top: "0", left: "0" })
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   // The story URL — if not provided, link back to qnotables.ai
   const storyUrl = url || "https://qnotables.ai"
@@ -42,9 +45,27 @@ export function ShareButtons({ headline, url, source }: ShareButtonsProps) {
     }
   }
 
+  // Calculate position when menu shows
+  useEffect(() => {
+    if (showMenu && buttonRef.current && menuRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const menuHeight = menuRef.current.offsetHeight || 50
+      
+      // Position menu below button, adjusted so it doesn't go off-screen
+      const top = rect.top + rect.height + window.scrollY + 8
+      const left = Math.max(8, rect.right - 200 + window.scrollX)
+      
+      setMenuPosition({
+        top: `${top}px`,
+        left: `${left}px`,
+      })
+    }
+  }, [showMenu])
+
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setShowMenu(!showMenu)}
         className="label-mono flex items-center gap-1 text-muted-foreground transition-colors hover:text-primary"
         title="Share this story"
@@ -53,7 +74,14 @@ export function ShareButtons({ headline, url, source }: ShareButtonsProps) {
       </button>
 
       {showMenu && (
-        <div className="absolute right-0 top-full z-50 mt-2 flex flex-wrap gap-2 rounded border border-border bg-card p-2 shadow-lg sm:flex-nowrap sm:gap-1">
+        <div 
+          ref={menuRef}
+          className="fixed z-50 flex flex-wrap gap-2 rounded border border-border bg-card p-2 shadow-lg sm:flex-nowrap sm:gap-1"
+          style={{
+            top: menuPosition.top,
+            left: menuPosition.left,
+          }}
+        >
           <button
             onClick={() => openShare("twitter")}
             className="flex items-center justify-center gap-1 rounded p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
