@@ -29,12 +29,25 @@ export const RSS_SOURCES: RSSSource[] = [
     enabled: true,
   },
   // Add more sources below:
-  // {
-  //   id: "example",
-  //   name: "Example Source",
-  //   url: "https://example.com/feed.xml",
-  //   enabled: true,
-  // },
+   {
+     id: "BBC",
+     name: "BBC",
+     url: "https://feeds.bbci.co.uk/news/rss.xml
+",
+     enabled: true,
+   },
+   {
+     id: "example",
+     name: "Example Source",
+     url: "https://example.com/feed.xml",
+     enabled: true,
+   },
+   {
+     id: "example",
+     name: "Example Source",
+     url: "https://example.com/feed.xml",
+     enabled: true,
+   },
 ]
 
 type ParsedItem = {
