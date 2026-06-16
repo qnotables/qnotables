@@ -3,6 +3,8 @@ import { ImportForm } from "@/components/import-form"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Import Posts — Admin Dashboard",
   description: "Import posts from CSV, JSON, Markdown, or RSS feeds.",
