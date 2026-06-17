@@ -79,6 +79,7 @@ export async function BottomAd() {
           buttonLink: ad.button_link,
         }))}
         interval={10000}
+        className="h-[150px] w-full"
       />
     </div>
   )
