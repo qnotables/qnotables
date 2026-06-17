@@ -31,13 +31,13 @@ export function FlashStory({
     <div className="border border-border bg-card overflow-hidden hover:border-primary/60 transition-colors">
       {/* Image section */}
       {image && (
-        <div className="relative aspect-video w-full overflow-hidden bg-muted">
+        <div className="relative aspect-video w-full overflow-hidden bg-background border-b border-border">
           <CardImage
             src={image}
             alt={title}
-            variant="cover"
+            variant="contain"
             aspectRatio="video"
-            className="opacity-90 transition duration-300 hover:scale-[1.02]"
+            className="transition duration-300 hover:scale-[1.02]"
           />
           <div className="absolute left-0 top-0 flex items-center gap-2 p-3">
             <div className="flex items-center gap-2 bg-background/80 px-2 py-1 rounded backdrop-blur label-mono text-xs font-semibold text-primary">
