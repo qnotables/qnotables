@@ -24,17 +24,16 @@ export async function TopAd() {
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
         {/* Top Ad Carousel - larger left column */}
         <div className="md:col-span-2">
-          <div className="w-fit">
-            <AdCarousel
-              ads={ads.map((ad) => ({
-                ...ad,
-                imageUrl: ad.image_url,
-                buttonText: ad.button_text,
-                buttonLink: ad.button_link,
-              }))}
-              interval={10000}
-            />
-          </div>
+          <AdCarousel
+            ads={ads.map((ad) => ({
+              ...ad,
+              imageUrl: ad.image_url,
+              buttonText: ad.button_text,
+              buttonLink: ad.button_link,
+            }))}
+            interval={10000}
+            className="h-[150px] w-full"
+          />
         </div>
 
         {/* Signal Tools - narrower right column */}

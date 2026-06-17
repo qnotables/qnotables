@@ -21,7 +21,7 @@ const links = [
     description: "Meet the team",
   },
   {
-    href: "/archive",
+    href: "/archives",
     icon: Archive,
     label: "Archive",
     description: "Historical records",
