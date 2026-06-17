@@ -112,17 +112,47 @@ export async function getArchivesByType(postType: string): Promise<ArchivePost[]
   return (data || []) as ArchivePost[]
 }
 
-// Get archives by media type
+// Get archives by media type (maps to post_type in DB)
 export async function getArchivesByMediaType(mediaType: string): Promise<ArchivePost[]> {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
     .eq("status", "published")
-    .eq("media_type", mediaType)
+    .eq("post_type", mediaType)
     .order("published_at", { ascending: false })
 
   if (error) throw new Error(`Failed to fetch archives by media: ${error.message}`)
+  return (data || []) as ArchivePost[]
+}
+
+// Get all videos
+export async function getArchiveVideos(limit = 50): Promise<ArchivePost[]> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("status", "published")
+    .in("post_type", ["Video Archive", "Media Clip", "Show Notes"])
+    .order("published_at", { ascending: false })
+    .limit(limit)
+
+  if (error) throw new Error(`Failed to fetch videos: ${error.message}`)
+  return (data || []) as ArchivePost[]
+}
+
+// Get all documents
+export async function getArchiveDocuments(limit = 50): Promise<ArchivePost[]> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("status", "published")
+    .in("post_type", ["Document Drop", "Public Record", "Source Archive", "External Link"])
+    .order("published_at", { ascending: false })
+    .limit(limit)
+
+  if (error) throw new Error(`Failed to fetch documents: ${error.message}`)
   return (data || []) as ArchivePost[]
 }
 
@@ -167,36 +197,6 @@ export async function getArchivesByTimeline(startDate: string, endDate: string):
     .order("timeline_date", { ascending: false })
 
   if (error) throw new Error(`Failed to fetch timeline archives: ${error.message}`)
-  return (data || []) as ArchivePost[]
-}
-
-// Get all videos
-export async function getArchiveVideos(limit = 50): Promise<ArchivePost[]> {
-  const supabase = getSupabaseClient()
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select("*")
-    .eq("status", "published")
-    .in("media_type", ["video", "iframe"])
-    .order("published_at", { ascending: false })
-    .limit(limit)
-
-  if (error) throw new Error(`Failed to fetch videos: ${error.message}`)
-  return (data || []) as ArchivePost[]
-}
-
-// Get all documents
-export async function getArchiveDocuments(limit = 50): Promise<ArchivePost[]> {
-  const supabase = getSupabaseClient()
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select("*")
-    .eq("status", "published")
-    .in("media_type", ["document", "external_link"])
-    .order("published_at", { ascending: false })
-    .limit(limit)
-
-  if (error) throw new Error(`Failed to fetch documents: ${error.message}`)
   return (data || []) as ArchivePost[]
 }
 

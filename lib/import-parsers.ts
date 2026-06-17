@@ -13,8 +13,8 @@ export interface ImportedPost {
   status?: 'draft' | 'published' | 'scheduled'
   featured?: boolean
   priority?: number
-  published_at?: Date
-  original_created_at?: Date
+  published_at?: Date | null
+  original_created_at?: Date | null
   source_url?: string
   source_name?: string
   original_source_url?: string
@@ -99,7 +99,7 @@ export async function parseCSV(csvText: string): Promise<ImportedPost[]> {
           reject(error)
         }
       },
-      error: (error) => reject(error),
+      error: (error: Error) => reject(error),
     })
   })
 }
@@ -147,23 +147,23 @@ export async function parseMarkdown(markdownText: string): Promise<ImportedPost[
     const sections = markdownText.split(/^---\n/m).filter(Boolean)
 
     for (let i = 0; i < sections.length; i += 2) {
-      let frontmatter = {}
-      let content = ''
+          let frontmatter: Record<string, string> = {}
+          let content = ''
 
-      if (i + 1 < sections.length) {
-        // Has frontmatter
-        try {
-          frontmatter = JSON.parse(sections[i])
-        } catch {
-          // Try YAML-like parsing as fallback
-          const lines = sections[i].split('\n')
-          for (const line of lines) {
-            const [key, ...value] = line.split(':')
-            if (key) {
-              frontmatter[key.trim()] = value.join(':').trim()
+          if (i + 1 < sections.length) {
+            // Has frontmatter
+            try {
+              frontmatter = JSON.parse(sections[i])
+            } catch {
+              // Try YAML-like parsing as fallback
+              const lines = sections[i].split('\n')
+              for (const line of lines) {
+                const [key, ...value] = line.split(':')
+                if (key) {
+                  frontmatter[key.trim()] = value.join(':').trim()
+                }
+              }
             }
-          }
-        }
         content = sections[i + 1]
       } else {
         // No frontmatter, just content

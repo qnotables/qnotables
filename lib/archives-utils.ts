@@ -36,7 +36,7 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     source_name: post.sourceName,
     source_url: post.sourceUrl,
     readMinutes: post.readMinutes,
-    media_type: post.media_type,
+    media_type: post.postType,
     featured: post.featured || false,
     author: post.author || "HOT AND FRESH",
     cover_image: post.coverImage,
@@ -50,7 +50,7 @@ export function extractCategories(posts: BlogPost[]): string[] {
   const categories = new Set(
     posts
       .filter((p) => p.category)
-      .map((p) => p.category)
+      .map((p) => p.category as string)
   )
   return Array.from(categories).sort()
 }
@@ -100,9 +100,8 @@ export function extractPostTypes(posts: BlogPost[]): string[] {
 export function extractMediaTypes(posts: BlogPost[]): string[] {
   const types = new Set(
     posts
-      .filter((p) => p.media_type)
-      .map((p) => p.media_type)
-      .filter((t) => t)
+      .filter((p) => p.postType)
+      .map((p) => p.postType as string)
   )
   return Array.from(types).sort()
 }
@@ -124,8 +123,7 @@ export function getFeaturedRecords(posts: BlogPost[]): ArchiveRecord[] {
   return posts
     .filter((p) => p.featured)
     .sort((a, b) => {
-      // Sort by priority first, then by date
-      const aPriority = p.priority === "critical" ? 4 : p.priority === "high" ? 3 : p.priority === "medium" ? 2 : 1
+      const aPriority = a.priority === "critical" ? 4 : a.priority === "high" ? 3 : a.priority === "medium" ? 2 : 1
       const bPriority = b.priority === "critical" ? 4 : b.priority === "high" ? 3 : b.priority === "medium" ? 2 : 1
       if (aPriority !== bPriority) return bPriority - aPriority
       return new Date(b.publishedAt || b.date).getTime() - new Date(a.publishedAt || a.date).getTime()
@@ -216,7 +214,7 @@ export function getPostsBySource(posts: BlogPost[], source: string): ArchiveReco
  */
 export function getPostsByMediaType(posts: BlogPost[], mediaType: string): ArchiveRecord[] {
   return posts
-    .filter((p) => p.media_type === mediaType)
+    .filter((p) => p.postType === mediaType)
     .sort((a, b) => new Date(b.publishedAt || b.date).getTime() - new Date(a.publishedAt || a.date).getTime())
     .map(transformBlogPostToArchive)
 }

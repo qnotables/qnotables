@@ -123,25 +123,26 @@ function priorityFor(minutesAgo: number, reports: number): Story["priority"] {
 }
 
 function imageFrom(item: ParsedItem): string | undefined {
+  const i = item as any
   // Try media namespace first (most common)
-  if (item.mediaThumbnail?.$?.url) return item.mediaThumbnail.$url
-  if (item.mediaContent?.$?.url) return item.mediaContent.$url
-  
+  if (i.mediaThumbnail?.$?.url) return i.mediaThumbnail.$url
+  if (i.mediaContent?.$?.url) return i.mediaContent.$url
+
   // Try image field (some RSS feeds)
-  if (item.image?.url) return item.image.url
-  
+  if (i.image?.url) return i.image.url
+
   // Try enclosure (podcasts, media feeds)
-  if (Array.isArray(item.enclosure)) {
-    const mediaEnclosure = item.enclosure.find((e: any) => 
+  if (Array.isArray(i.enclosure)) {
+    const mediaEnclosure = i.enclosure.find((e: any) =>
       e.$?.type?.startsWith("image/")
     )
     if (mediaEnclosure?.$?.url) return mediaEnclosure.$url
-  } else if (item.enclosure?.$?.type?.startsWith("image/")) {
-    return item.enclosure.$url
+  } else if (i.enclosure?.$?.type?.startsWith("image/")) {
+    return i.enclosure.$url
   }
-  
+
   // Try description for img tag (last resort)
-  const desc = item.description || item.content
+  const desc = i.description || i.content
   if (desc) {
     const imgMatch = desc.match(/<img[^>]+src=["']([^"']+)["']/i)
     if (imgMatch?.[1]) return imgMatch[1]

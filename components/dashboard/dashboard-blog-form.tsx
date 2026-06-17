@@ -160,19 +160,19 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
       body: post?.content ?? "",
       category: post?.category ?? "",
       post_type: post?.postType ?? "",
-      author_name: post?.authorName ?? "Editorial Desk",
+      author_name: post?.author ?? "Editorial Desk",
       tag: post?.tag ?? "Field Notes",
       featured: post?.featured ?? false,
       priority: post?.priority ?? "medium",
       status: post?.status ?? "draft",
-      show_title: post?.showTitle ?? true,
-      episode_date: post?.episodeDate ?? "",
+      show_title: true,
+      episode_date: "",
       source_name: post?.sourceName ?? "",
       source_url: post?.sourceUrl ?? "",
       seo_title: post?.seoTitle ?? "",
       seo_description: post?.seoDescription ?? "",
       cover_image: post?.coverImage ?? "",
-      og_image_url: post?.ogImageUrl ?? "",
+      og_image_url: "",
     }
   })
 
@@ -182,7 +182,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     isEdit ? updatePostDashboard : createPostDashboard,
     { error: null },
   )
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout>()
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const formRef = useRef<HTMLFormElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -261,7 +261,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     setIsSubmitting(true)
 
     const fd = new FormData()
-    if (isEdit) fd.append("id", post!.id)
+    if (isEdit && post?.id) fd.append("id", post.id)
     fd.append("title", formData.title)
     fd.append("subtitle", formData.subtitle)
     fd.append("excerpt", formData.excerpt)

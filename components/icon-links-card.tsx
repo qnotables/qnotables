@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BookOpen, FileText, Users, Settings, Archive, Info } from "lucide-react"
+import { FileText, Users, Settings, Archive, Info } from "lucide-react"
 
 const links = [
   {
@@ -10,21 +10,15 @@ const links = [
   },
   {
     href: "/archives",
-    icon: BookOpen,
-    label: "Resources",
-    description: "Research materials",
+    icon: Archive,
+    label: "Archive",
+    description: "Historical records",
   },
   {
     href: "/dashboard/team",
     icon: Users,
     label: "Team",
     description: "Meet the team",
-  },
-  {
-    href: "/archives",
-    icon: Archive,
-    label: "Archive",
-    description: "Historical records",
   },
   {
     href: "/archives/documents",
@@ -47,7 +41,7 @@ export function IconLinksCard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
         {links.map(({ href, icon: Icon, label, description }) => (
           <Link
-            key={href}
+            key={label}
             href={href}
             className="group flex flex-col items-center gap-2 rounded border border-border/50 p-4 text-center transition-all hover:border-primary hover:bg-muted/30"
           >

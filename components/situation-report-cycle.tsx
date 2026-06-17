@@ -198,7 +198,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         <span>{item.authorName}</span>
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          <span>{timeAgo(new Date(item.createdAt))}</span>
+          <span>{timeAgo(item.createdAt)}</span>
         </div>
         <div className="flex items-center gap-1">
           <MessageCircle className="h-3 w-3" />
