@@ -33,7 +33,7 @@ const links = [
     description: "Important files",
   },
   {
-    href: "/settings",
+    href: "/dashboard/settings",
     icon: Settings,
     label: "Settings",
     description: "User settings",
