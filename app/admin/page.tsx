@@ -121,7 +121,7 @@ export default async function AdminPage() {
 
               {/* Archives Management */}
               <Link
-                href="/archives/admin"
+                href="/dashboard/archives"
                 className="group border border-border bg-card p-6 transition-colors hover:border-primary"
               >
                 <div className="flex items-start justify-between">
