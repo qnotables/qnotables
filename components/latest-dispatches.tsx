@@ -38,7 +38,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
       <section className="mb-16">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
           <BookMarked className="h-4 w-4 text-primary" />
-          <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST DISPATCHES</h2>
+          <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST NOTABLES</h2>
         </div>
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
@@ -58,7 +58,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
       <section className="mb-16">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
           <BookMarked className="h-4 w-4 text-primary" />
-          <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST DISPATCHES</h2>
+          <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST NOTABLES</h2>
         </div>
         <div className="border border-dashed border-border rounded p-12 text-center">
           <p className="label-mono text-muted-foreground">No records found for this search. Clear filters or check another archive category.</p>
@@ -71,26 +71,26 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
     <section className="mb-16">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
         <BookMarked className="h-4 w-4 text-primary" />
-        <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST DISPATCHES</h2>
+        <h2 className="stencil text-2xl md:text-3xl text-foreground">LATEST NOTABLES</h2>
         <span className="ml-auto label-mono text-xs text-muted-foreground">{records.length} RECORDS</span>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
         {records.map((record) => {
           const mediaInfo = getMediaIcon(record.media_type)
-          const hasGraphImage = record.cover_image && isGraphImage(record.media_type)
+          const hasThumbnail = Boolean(record.cover_image)
 
           return (
             <article
               key={record.id}
               className={`group border border-border rounded hover:border-primary/50 hover:bg-card/50 transition-all ${
-                hasGraphImage ? "flex gap-4 p-4" : "p-4"
+                hasThumbnail ? "flex gap-4 p-4" : "p-4"
               }`}
             >
-              {/* Graph image preview (if applicable) */}
-              {hasGraphImage && record.cover_image && (
+              {/* Thumbnail preview for any post with a cover image */}
+              {hasThumbnail && record.cover_image && (
                 <div className="shrink-0 hidden sm:block">
-                  <div className="w-32 h-32 rounded border border-border/50 overflow-hidden bg-muted">
+                  <div className="w-24 h-24 rounded border border-border/50 overflow-hidden bg-muted">
                     <CardImage
                       src={record.cover_image}
                       alt={record.title}
