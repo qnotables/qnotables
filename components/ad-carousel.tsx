@@ -50,7 +50,7 @@ export function AdCarousel({ ads, className = "", interval = 10000 }: AdCarousel
         className="block w-full h-full overflow-hidden hover:opacity-90 transition-opacity flex items-center justify-center"
       >
         <img
-          src={currentAd.imageUrl}
+          src={currentAd.imageUrl ?? undefined}
           alt={currentAd.title}
           className="w-full h-full object-contain"
         />

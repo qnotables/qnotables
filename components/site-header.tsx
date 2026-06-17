@@ -39,7 +39,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
   const tickerItems = wireStories
     ? wireStories.map((s) => ({ headline: s.headline, url: s.url }))
     : []
-  const displayTickerItems = tickerItems.length ? tickerItems : [{ headline: "Awaiting live wire feed…" }]
+  const displayTickerItems: { headline: string; url?: string }[] = tickerItems.length ? tickerItems : [{ headline: "Awaiting live wire feed…" }]
   const tickerLoop = [...displayTickerItems, ...displayTickerItems]
 
   return (

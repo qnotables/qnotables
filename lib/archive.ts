@@ -155,6 +155,9 @@ export async function getArchiveDocuments(limit = 50): Promise<ArchivePost[]> {
   if (error) throw new Error(`Failed to fetch documents: ${error.message}`)
   return (data || []) as ArchivePost[]
 }
+
+// Get featured archives
+export async function getFeaturedArchives(limit = 6): Promise<ArchivePost[]> {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from("blog_posts")

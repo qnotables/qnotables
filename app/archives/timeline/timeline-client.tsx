@@ -153,7 +153,7 @@ export default function TimelinePageClient({ posts }: TimelinePageProps) {
                       className="group relative aspect-square overflow-hidden rounded border border-border hover:border-primary transition-colors"
                     >
                       <img
-                        src={record.cover_image}
+                        src={record.cover_image ?? undefined}
                         alt={record.title}
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

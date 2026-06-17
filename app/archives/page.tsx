@@ -65,8 +65,8 @@ export default async function ArchivesPage() {
   const stats = {
     totalRecords: allPosts.length,
     featured: allPosts.filter((p) => p.featured).length,
-    videos: allPosts.filter((p) => p.media_type === "video" || p.media_type === "iframe").length,
-    documents: allPosts.filter((p) => p.media_type === "document" || p.media_type === "external_link").length,
+    videos: allPosts.filter((p) => p.postType === "Video Archive" || p.postType === "Media Clip").length,
+    documents: allPosts.filter((p) => p.postType === "Document Drop" || p.postType === "Public Record" || p.postType === "Source Archive").length,
   }
 
   // Get last update date

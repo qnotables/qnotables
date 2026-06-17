@@ -22,7 +22,7 @@ export async function createCartCheckoutSession(items: CartItem[]) {
   }))
 
   const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded',
+    ui_mode: 'embedded_page' as const,
     redirect_on_completion: 'never',
     line_items,
     mode: 'payment',

@@ -171,7 +171,7 @@ export async function archiveOldPosts(olderThanDays: number = 365): Promise<{ ar
       .neq("public_archive", false)
 
     if (error) throw error
-    return { archived: data?.length || 0 }
+    return { archived: (data as unknown[] | null)?.length || 0 }
   } catch (err) {
     console.error("Error archiving old posts:", err)
     return { archived: 0 }

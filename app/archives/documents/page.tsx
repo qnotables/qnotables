@@ -24,14 +24,14 @@ export default async function DocumentsPage() {
     totalRecords: allRecords.length,
     documents: documents.length,
     featured: allRecords.filter((r) => r.featured).length,
-    videos: allRecords.filter((r) => r.media_type === "video").length,
+    videos: allRecords.filter((r) => r.media_type === "Video Archive" || r.media_type === "Media Clip").length,
     sources: new Set(allRecords.map((r) => r.source_name).filter(Boolean)).size,
   }
 
   // Group documents by category or date
   const documentsByMonth = documents.reduce(
     (acc, doc) => {
-      const date = new Date(doc.published_at)
+      const date = new Date(doc.published_at ?? doc.created_at ?? Date.now())
       const key = date.toLocaleString("default", { month: "long", year: "numeric" })
       if (!acc[key]) acc[key] = []
       acc[key].push(doc)

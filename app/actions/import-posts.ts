@@ -180,7 +180,7 @@ export async function updatePost(
 export interface BatchImportResult {
   success: number
   failed: number
-  errors: Array<{ index: number; title: string; error: string }>
+  errors: Array<{ index: number; title?: string; error: string }>
   createdIds: string[]
 }
 
@@ -261,7 +261,7 @@ export async function batchImportPosts(posts: ImportedPost[]): Promise<BatchImpo
 
     if (error) {
       // If batch fails, try one by one to identify which ones failed
-      const errors: Array<{ index: number; title: string; error: string }> = validationErrors
+      const errors: Array<{ index: number; title?: string; error: string }> = [...validationErrors]
       const createdIds: string[] = []
 
       for (let i = 0; i < records.length; i++) {
