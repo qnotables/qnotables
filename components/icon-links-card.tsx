@@ -9,13 +9,13 @@ const links = [
     description: "Learn about our mission",
   },
   {
-    href: "/resources",
+    href: "/archives",
     icon: BookOpen,
     label: "Resources",
     description: "Research materials",
   },
   {
-    href: "/team",
+    href: "/dashboard/team",
     icon: Users,
     label: "Team",
     description: "Meet the team",
@@ -27,7 +27,7 @@ const links = [
     description: "Historical records",
   },
   {
-    href: "/documents",
+    href: "/archives/documents",
     icon: FileText,
     label: "Documents",
     description: "Important files",
