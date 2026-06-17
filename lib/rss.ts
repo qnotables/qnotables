@@ -47,6 +47,12 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://feeds.foxnews.com/foxnews/national",
     enabled: true,
   },
+    {
+    id: "foxn",
+    name: "FOX National",
+    url: "https://qnotables.com/blog-feed.xml",
+    enabled: true,
+  },
 ]
 
 type ParsedItem = {
