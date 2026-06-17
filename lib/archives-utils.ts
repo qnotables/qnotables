@@ -36,7 +36,7 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     source_name: post.sourceName,
     source_url: post.sourceUrl,
     readMinutes: post.readMinutes,
-    media_type: post.media_type,
+    media_type: post.postType,
     featured: post.featured || false,
     author: post.author || "HOT AND FRESH",
     cover_image: post.coverImage,
