@@ -97,6 +97,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                       variant="contain"
                       mediaType={record.media_type}
                       aspectRatio="square"
+                      objectPosition="top"
                     />
                   </div>
                 </div>

@@ -47,6 +47,7 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
                   variant="cover"
                   mediaType={record.media_type}
                   aspectRatio="video"
+                  objectPosition="top"
                 />
               </div>
             )}
