@@ -52,7 +52,7 @@ const videos = [
     date: "2025-06-01",
     category: "Investigation",
     watchUrl: "#",
-    embedUrl: "",
+    embedUrl: "https://rumble.com/embed/vznuke/?pub=25xjr",
   },
 ]
 
