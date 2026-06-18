@@ -35,7 +35,7 @@ export function FlashStory({
           <CardImage
             src={image}
             alt={title}
-            variant="contain"
+            variant="cover"
             aspectRatio="video"
             objectPosition="top"
             className="transition duration-300 hover:scale-[1.02]"
