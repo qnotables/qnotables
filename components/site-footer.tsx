@@ -26,7 +26,7 @@ const columns = [
     links: [
       { label: "About", href: "/about" },
       { label: "Daily Briefing", href: "#" },
-      { label: "Shop", href: "/shop" },
+      { label: "Shop", href: "https://shop.qnotables.ai" },
       { label: "RSS Feeds", href: "#" },
       { label: "Contact", href: "#" },
     ],

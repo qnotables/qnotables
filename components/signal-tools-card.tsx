@@ -36,7 +36,7 @@ const SIGNAL_TOOLS = [
     label: "Shop",
     description: "Support the desk",
     icon: ShoppingBag,
-    href: "/shop",
+    href: "https://shop.qnotables.ai",
   },
   {
     label: "Timeline",
