@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const folderRaw = String(formData.get("folder") ?? "media")
-    const folder = ["blog", "media", "ads", "videos", "video-thumbnails"].includes(folderRaw) ? folderRaw : "media"
+    const folder = ["blog", "blog-videos", "media", "ads", "videos", "video-thumbnails"].includes(folderRaw) ? folderRaw : "media"
 
     const ext = file.name.split(".").pop() ?? "bin"
     const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`

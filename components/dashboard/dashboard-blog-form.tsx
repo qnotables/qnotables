@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ImagePlus, Loader2, Save, X, AlertCircle, Check } from "lucide-react"
 import { TextStats } from "@/components/text-stats"
 import { Markdown } from "@/components/markdown"
+import { MediaInserter } from "@/components/dashboard/media-inserter"
 import { createPostDashboard, updatePostDashboard } from "@/app/dashboard/blog/blog-form-actions"
 import type { BlogPost } from "@/lib/blog-posts"
 
@@ -400,11 +401,24 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                 <label className="label-mono text-sm font-semibold text-foreground">Body *</label>
                 <TextStats text={formData.body} showTime />
               </div>
+              <div className="flex items-center gap-2 border border-border bg-background/50 px-2 py-2">
+                <span className="label-mono text-xs text-muted-foreground">Insert:</span>
+                <MediaInserter
+                  onInsertImage={(url, alt) => {
+                    const newBody = formData.body + `\n![${alt}](${url})\n`
+                    handleFieldChange("body", newBody)
+                  }}
+                  onInsertVideo={(url) => {
+                    const newBody = formData.body + `\n<video controls width="100%"><source src="${url}" type="video/mp4"></video>\n`
+                    handleFieldChange("body", newBody)
+                  }}
+                />
+              </div>
               <textarea
                 value={formData.body}
                 onChange={(e) => handleFieldChange("body", e.target.value)}
                 required
-                placeholder="Write your post in Markdown. Supports **bold**, *italic*, [links](url), etc."
+                placeholder="Write your post in Markdown. Supports **bold**, *italic*, [links](url), etc. Use the insert buttons above to embed images and videos."
                 className="label-mono w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary font-mono text-sm"
                 rows={24}
               />
