@@ -15,7 +15,7 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="border-b border-border px-6 py-6">
-        <Link href="/shop" className="label-mono text-primary hover:underline">
+        <Link href="https://shop.qnotables.ai" className="label-mono text-primary hover:underline">
           ← Back to Shop
         </Link>
       </div>
@@ -41,7 +41,7 @@ export default function CartPage() {
             {items.length === 0 ? (
               <div className="border border-border bg-muted/30 p-12 text-center">
                 <p className="label-mono text-muted-foreground">Your cart is empty</p>
-                <Link href="/shop" className="label-mono mt-4 inline-block text-primary hover:underline">
+                <Link href="https://shop.qnotables.ai" className="label-mono mt-4 inline-block text-primary hover:underline">
                   Continue Shopping →
                 </Link>
               </div>

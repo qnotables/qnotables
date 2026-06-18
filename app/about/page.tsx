@@ -265,7 +265,7 @@ export default function AboutPage() {
               />
               <DeskCard
                 title="Shop"
-                href="/shop"
+                href="https://shop.qnotables.ai"
                 icon={<LinkIcon className="h-6 w-6" aria-hidden="true" />}
                 description="Support the mission"
               />

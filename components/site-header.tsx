@@ -143,7 +143,7 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
             <span className="label-mono hidden md:inline">Search</span>
           </button>
           <Link
-            href="/shop"
+            href="https://shop.qnotables.ai"
             className="flex items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
             aria-label="Visit the shop"
           >

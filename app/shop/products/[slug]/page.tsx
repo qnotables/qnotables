@@ -18,7 +18,7 @@ async function ProductDetails({ slug }: { slug: string }) {
   return (
     <main className="min-h-screen bg-background">
       <div className="border-b border-border px-6 py-4 flex items-center justify-between">
-        <Link href="/shop" className="label-mono text-primary hover:underline text-sm">
+        <Link href="https://shop.qnotables.ai" className="label-mono text-primary hover:underline text-sm">
           ← Back to Shop
         </Link>
         {SHOP_ORIGIN && (
