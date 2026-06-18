@@ -53,6 +53,12 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://qnotables.com/blog-feed.xml",
     enabled: true,
   },
+      {
+    id: "Wired",
+    name: "wired",
+    url: "https://www.wired.com/feed/rss",
+    enabled: true,
+  },
 ]
 
 type ParsedItem = {

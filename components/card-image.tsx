@@ -4,6 +4,7 @@ interface CardImageProps {
   variant?: "cover" | "contain"
   mediaType?: string
   aspectRatio?: "video" | "square" | "auto"
+  objectPosition?: "center" | "top" | "bottom"
   className?: string
   onLoad?: () => void
 }
@@ -23,6 +24,7 @@ export function CardImage({
   variant = "cover",
   mediaType,
   aspectRatio = "video",
+  objectPosition = "center",
   className = "",
   onLoad,
 }: CardImageProps) {
@@ -41,6 +43,12 @@ export function CardImage({
   // Determine object-fit class
   const objectFitClass = finalVariant === "contain" ? "object-contain" : "object-cover"
 
+  // Determine object-position class
+  const objectPositionClass = 
+    objectPosition === "top" ? "object-top" : 
+    objectPosition === "bottom" ? "object-bottom" : 
+    "object-center"
+
   return (
     <div
       className={`relative w-full overflow-hidden bg-muted ${aspectClass} ${className}`}
@@ -50,7 +58,7 @@ export function CardImage({
         alt={alt}
         loading="lazy"
         onLoad={onLoad}
-        className={`h-full w-full ${objectFitClass} object-position-center`}
+        className={`h-full w-full ${objectFitClass} ${objectPositionClass}`}
       />
     </div>
   )
