@@ -1,25 +1,113 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, AlertCircle, ExternalLink, FileText, Calendar } from "lucide-react"
+import { ArrowLeft, AlertCircle, ExternalLink, FileText, Calendar, Clock, User } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
 import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
+import { getAllPosts, getPost, formatDate as formatBlogDate } from "@/lib/blog-posts"
 import { ShareButtons } from "@/components/share-buttons"
-import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
+import { getSiteUrl } from "@/lib/rss-utils"
 
 export const dynamic = "force-dynamic"
 
+/**
+ * Normalised shape used by this page — covers both ArchivePost (DB) and BlogPost (MDX).
+ */
+interface PagePost {
+  slug: string
+  title: string
+  subtitle?: string
+  excerpt?: string
+  body: string
+  author?: string
+  published_at?: string
+  updated_at?: string
+  cover_image_url?: string
+  video_url?: string
+  embed_url?: string
+  iframe_url?: string
+  document_url?: string
+  source_name?: string
+  source_url?: string
+  category?: string
+  post_type?: string
+  priority?: string
+  tags?: string[]
+  related_links?: { title: string; url: string }[]
+  timeline_date?: string
+  readMinutes?: number
+  source: "db" | "mdx"
+}
+
+async function resolvePost(slug: string): Promise<PagePost | null> {
+  // Try DB (ArchivePost) first
+  try {
+    const dbPost = await getArchiveBySlug(slug)
+    if (dbPost) {
+      return {
+        slug: dbPost.slug,
+        title: dbPost.title,
+        subtitle: dbPost.subtitle,
+        excerpt: dbPost.excerpt,
+        body: dbPost.body,
+        author: dbPost.source_author,
+        published_at: dbPost.published_at,
+        updated_at: dbPost.updated_at,
+        cover_image_url: dbPost.cover_image_url,
+        video_url: dbPost.video_url,
+        embed_url: dbPost.embed_url,
+        iframe_url: dbPost.iframe_url,
+        document_url: dbPost.document_url,
+        source_name: dbPost.source_name,
+        source_url: dbPost.source_url,
+        category: dbPost.category,
+        post_type: dbPost.post_type,
+        priority: dbPost.priority,
+        tags: dbPost.tags,
+        related_links: dbPost.related_links,
+        timeline_date: dbPost.timeline_date,
+        source: "db",
+      }
+    }
+  } catch {
+    // DB lookup failed — fall through to MDX
+  }
+
+  // Fall back to MDX / merged posts
+  const mdxPost = await getPost(slug)
+  if (!mdxPost) return null
+
+  return {
+    slug: mdxPost.slug,
+    title: mdxPost.title,
+    subtitle: mdxPost.subtitle,
+    excerpt: mdxPost.excerpt,
+    body: mdxPost.content,
+    author: mdxPost.author,
+    published_at: mdxPost.publishedAt || mdxPost.date,
+    updated_at: mdxPost.updatedAt,
+    cover_image_url: mdxPost.coverImage ?? undefined,
+    source_name: mdxPost.sourceName,
+    source_url: mdxPost.sourceUrl,
+    category: mdxPost.category,
+    post_type: mdxPost.postType,
+    priority: mdxPost.priority,
+    tags: mdxPost.tags ?? (mdxPost.tag ? [mdxPost.tag] : []),
+    readMinutes: mdxPost.readMinutes,
+    source: "mdx",
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getArchiveBySlug(slug)
+  const post = await resolvePost(slug)
 
   if (!post) return { title: "Not found — HOT AND FRESH" }
 
   const site = getSiteUrl()
   const canonical = `${site}/archives/${post.slug}`
-  const { url: ogImage } = resolveFeedImage(post)
   const description = post.excerpt || post.subtitle || "Archived HOT AND FRESH record."
 
   return {
@@ -30,7 +118,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: post.title,
       description,
       url: canonical,
-      images: ogImage ? [{ url: ogImage }] : undefined,
+      images: post.cover_image_url ? [{ url: post.cover_image_url }] : undefined,
       type: "article",
       publishedTime: post.published_at,
       modifiedTime: post.updated_at,
@@ -39,17 +127,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       card: "summary_large_image",
       title: post.title,
       description,
-      images: ogImage ? [ogImage] : undefined,
+      images: post.cover_image_url ? [post.cover_image_url] : undefined,
     },
   }
 }
 
 export async function generateStaticParams() {
   try {
-    const archives = await getAllArchives()
-    return archives.slice(0, 100).map((post) => ({
-      slug: post.slug,
-    }))
+    const [dbArchives, allPosts] = await Promise.all([
+      getAllArchives().catch(() => []),
+      getAllPosts().catch(() => []),
+    ])
+    const slugs = new Set<string>([
+      ...dbArchives.map((p) => p.slug),
+      ...allPosts.map((p) => p.slug),
+    ])
+    return Array.from(slugs).slice(0, 200).map((slug) => ({ slug }))
   } catch {
     return []
   }
@@ -57,22 +150,22 @@ export async function generateStaticParams() {
 
 export default async function ArchiveDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getArchiveBySlug(slug)
+  const post = await resolvePost(slug)
 
-  if (!post) {
-    notFound()
-  }
+  if (!post) notFound()
 
-  // Get related posts by tag or category
-  const allPosts = await getAllArchives()
+  // Related posts — use merged pool so MDX posts also appear
+  const allPosts = await getAllPosts().catch(() => [])
   const relatedPosts = allPosts
     .filter(
       (p) =>
         p.slug !== post.slug &&
-        ((post.tags && post.tags.some((t) => p.tags?.includes(t))) ||
+        ((post.tags?.length && p.tags?.some((t) => post.tags!.includes(t))) ||
           (post.category && p.category === post.category))
     )
     .slice(0, 3)
+
+  const site = getSiteUrl()
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -106,6 +199,11 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                   {post.category}
                 </span>
               )}
+              {post.source === "mdx" && (
+                <span className="label-mono border border-border bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
+                  Editorial
+                </span>
+              )}
             </div>
 
             <h1 className="stencil text-balance text-4xl leading-tight text-foreground md:text-5xl lg:text-6xl">
@@ -118,12 +216,24 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
               </p>
             )}
 
-            {/* Meta */}
+            {/* Meta row */}
             <div className="label-mono mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
               {post.published_at && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
                   {formatDate(new Date(post.published_at))}
+                </span>
+              )}
+              {post.readMinutes && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {post.readMinutes} min read
+                </span>
+              )}
+              {post.author && (
+                <span className="flex items-center gap-1">
+                  <User className="h-3.5 w-3.5" />
+                  {post.author}
                 </span>
               )}
               {post.timeline_date && (
@@ -145,9 +255,13 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
               {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="inline-block text-xs text-primary">
+                    <Link
+                      key={tag}
+                      href={`/archives/tag/${encodeURIComponent(tag)}`}
+                      className="text-xs text-primary hover:underline underline-offset-4"
+                    >
                       #{tag}
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -163,19 +277,17 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                 <img
                   src={post.cover_image_url}
                   alt={post.title}
-                  className="w-full border border-border object-cover"
+                  className="w-full border border-border object-top object-cover"
                 />
               )}
               {post.video_url && (
-                <div>
-                  <video
-                    src={post.video_url}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="w-full border border-border"
-                  />
-                </div>
+                <video
+                  src={post.video_url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full border border-border"
+                />
               )}
               {post.embed_url && (
                 <SafeEmbed url={post.embed_url} type="iframe" title={post.title} />
@@ -236,7 +348,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
             <ShareButtons
               title={post.title}
-              url={`${getSiteUrl()}/archives/${post.slug}`}
+              url={`${site}/archives/${post.slug}`}
               excerpt={post.excerpt || post.subtitle}
               hashtags={post.tags}
             />
@@ -255,11 +367,11 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                     href={`/archives/${relatedPost.slug}`}
                     className="group border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/30"
                   >
-                    {relatedPost.cover_image_url && (
+                    {relatedPost.coverImage && (
                       <img
-                        src={relatedPost.cover_image_url}
+                        src={relatedPost.coverImage}
                         alt={relatedPost.title}
-                        className="mb-3 h-32 w-full object-cover transition-transform group-hover:scale-105"
+                        className="mb-3 h-32 w-full object-cover object-top"
                       />
                     )}
                     <h3 className="stencil line-clamp-2 text-base text-foreground transition-colors group-hover:text-primary">

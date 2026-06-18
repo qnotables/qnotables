@@ -43,6 +43,7 @@ export function TimelineCard({ record, variant = "default" }: TimelineCardProps)
                 variant="cover"
                 mediaType={record.media_type}
                 aspectRatio="square"
+                objectPosition="top"
               />
             </div>
           )}

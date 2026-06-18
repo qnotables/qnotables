@@ -2,13 +2,11 @@ import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ArchiveHero } from "@/components/archive-hero"
-import { ArchiveSearchBar } from "@/components/archive-search-bar"
 import { FeaturedRecords } from "@/components/featured-records"
-import { LatestDispatches } from "@/components/latest-dispatches"
 import { ArchiveSidebar } from "@/components/archive-sidebar"
+import { ArchivesClient } from "@/components/archives-client"
 import { getAllPosts } from "@/lib/blog-posts"
 import {
-  transformBlogPostToArchive,
   extractCategories,
   extractTags,
   extractSources,
@@ -92,17 +90,6 @@ export default async function ArchivesPage() {
           lastUpdate={lastUpdate}
         />
 
-        {/* Search and Filter Bar */}
-        <ArchiveSearchBar
-          categories={categories}
-          postTypes={postTypes}
-          mediaTypes={mediaTypes}
-          years={years}
-          months={months}
-          sources={sources}
-          tags={tags}
-        />
-
         {/* Featured Records */}
         {featuredRecords.length > 0 && (
           <FeaturedRecords records={featuredRecords} />
@@ -110,8 +97,14 @@ export default async function ArchivesPage() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_280px]">
-          {/* Latest Dispatches */}
-          <LatestDispatches records={dispatchRecords} />
+          {/* Search + filter + records (all client-side) */}
+          <ArchivesClient
+            records={dispatchRecords}
+            tags={tags}
+            categories={categories}
+            postTypes={postTypes}
+            years={years}
+          />
 
           {/* Sidebar */}
           <ArchiveSidebar
