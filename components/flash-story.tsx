@@ -34,7 +34,7 @@ export function FlashStory({
           <img
             src={image}
             alt={title}
-            className="h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
+            className="absolute inset-0 h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
           />
           <div className="absolute left-0 top-0 flex items-center gap-2 p-3">
             <div className="flex items-center gap-2 bg-background/80 px-2 py-1 rounded backdrop-blur label-mono text-xs font-semibold text-primary">
