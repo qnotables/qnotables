@@ -37,6 +37,7 @@ export function FlashStory({
             alt={title}
             variant="contain"
             aspectRatio="video"
+            objectPosition="top"
             className="transition duration-300 hover:scale-[1.02]"
           />
           <div className="absolute left-0 top-0 flex items-center gap-2 p-3">
