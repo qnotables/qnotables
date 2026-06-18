@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FileText, Users, Settings, Archive, Info } from "lucide-react"
+import { FileText, Users, Settings, Archive, Info, Video } from "lucide-react"
 
 const links = [
   {
@@ -31,6 +31,12 @@ const links = [
     icon: Settings,
     label: "Settings",
     description: "User settings",
+  },
+  {
+    href: "/videos",
+    icon: Video,
+    label: "Videos",
+    description: "Watch reports",
   },
 ]
 
