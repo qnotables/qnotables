@@ -22,7 +22,7 @@ const videos = [
     date: "2025-06-10",
     category: "Briefing",
     watchUrl: "#",
-    embedUrl: "",
+    embedUrl: "https://rumble.com/qnotables/live",
   },
   {
     id: 2,
@@ -32,7 +32,7 @@ const videos = [
     date: "2025-06-08",
     category: "Situation Report",
     watchUrl: "#",
-    embedUrl: "",
+    embedUrl: "https://rumble.com/embed/viwa2j/?pub=25xjr",
   },
   {
     id: 3,
@@ -42,7 +42,7 @@ const videos = [
     date: "2025-06-05",
     category: "Archive",
     watchUrl: "#",
-    embedUrl: "",
+    embedUrl: "https://rumble.com/embed/vieoy1/?pub=25xjr",
   },
   {
     id: 4,
