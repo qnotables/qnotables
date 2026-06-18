@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only image and video files are allowed" }, { status: 400 })
     }
 
-    const maxBytes = isVideo ? 50 * 1024 * 1024 : 8 * 1024 * 1024
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024
     if (file.size > maxBytes) {
-      const limitLabel = isVideo ? "50 MB" : "8 MB"
+      const limitLabel = isVideo ? "500 MB" : "10 MB"
       return NextResponse.json(
         { error: `${isVideo ? "Video" : "Image"} must be under ${limitLabel}` },
         { status: 400 },
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const folderRaw = String(formData.get("folder") ?? "media")
-    const folder = ["blog", "media", "ads"].includes(folderRaw) ? folderRaw : "media"
+    const folder = ["blog", "media", "ads", "videos", "video-thumbnails"].includes(folderRaw) ? folderRaw : "media"
 
     const ext = file.name.split(".").pop() ?? "bin"
     const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
