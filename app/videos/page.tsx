@@ -54,6 +54,17 @@ const videos = [
     watchUrl: "#",
     embedUrl: "https://rumble.com/embed/vznuke/?pub=25xjr",
   },
+  {
+    id: 4,
+    title: "Featured Investigation",
+    description:
+      "An in-depth look at a developing investigation with primary sources, timeline reconstruction, and analysis.",
+    date: "2025-06-01",
+    category: "Investigation",
+    watchUrl: "#",
+    embedUrl: "https://rumble.com/embed/vnuege/?pub=25xjr",
+  },
+
 ]
 
 function formatDate(dateStr: string) {
