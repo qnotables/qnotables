@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Clock, Archive } from "lucide-react"
-import { CardImage } from "@/components/card-image"
 
 interface FlashStoryProps {
   title: string
@@ -32,13 +31,10 @@ export function FlashStory({
       {/* Image section */}
       {image && (
         <div className="relative aspect-video w-full overflow-hidden bg-background border-b border-border">
-          <CardImage
+          <img
             src={image}
             alt={title}
-            variant="cover"
-            aspectRatio="video"
-            objectPosition="top"
-            className="transition duration-300 hover:scale-[1.02]"
+            className="h-full w-full object-cover object-top transition duration-300 hover:scale-[1.02]"
           />
           <div className="absolute left-0 top-0 flex items-center gap-2 p-3">
             <div className="flex items-center gap-2 bg-background/80 px-2 py-1 rounded backdrop-blur label-mono text-xs font-semibold text-primary">
