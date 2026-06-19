@@ -75,8 +75,8 @@ export function ShareButtons({
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("[v0] copy link failed:", err)
+    } catch {
+      // Clipboard write failed — fail silently.
     }
   }, [shareUrl])
 
@@ -94,13 +94,21 @@ export function ShareButtons({
   }, [shareTitle, shareExcerpt, shareUrl])
 
   // Position the dropdown menu relative to the trigger button.
+  // Uses rAF so the menu node is guaranteed to be in the DOM when we measure.
   useEffect(() => {
-    if (showMenu && buttonRef.current && menuRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const top = rect.bottom + window.scrollY + 8
-      const left = Math.max(8, rect.right - 220 + window.scrollX)
+    if (!showMenu || !buttonRef.current) return
+    const raf = requestAnimationFrame(() => {
+      if (!buttonRef.current || !menuRef.current) return
+      const btnRect = buttonRef.current.getBoundingClientRect()
+      const menuWidth = menuRef.current.offsetWidth || 208 // 52 * 4
+      const top = btnRect.bottom + window.scrollY + 8
+      // Align menu's right edge with button's right edge, but clamp within viewport.
+      const idealLeft = btnRect.right - menuWidth + window.scrollX
+      const maxLeft = window.innerWidth - menuWidth - 8 + window.scrollX
+      const left = Math.max(8 + window.scrollX, Math.min(idealLeft, maxLeft))
       setMenuPosition({ top: `${top}px`, left: `${left}px` })
-    }
+    })
+    return () => cancelAnimationFrame(raf)
   }, [showMenu])
 
   // Close on outside click.

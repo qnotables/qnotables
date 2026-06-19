@@ -288,7 +288,7 @@ export function ThreadArticle({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <ShareButtons
           title={title}
-          url={`${window.location.origin}/forum/${id}`}
+          url={typeof window !== "undefined" ? `${window.location.origin}/forum/${id}` : `/forum/${id}`}
         />
 
         {/* Admin / mod controls */}
