@@ -12,12 +12,18 @@ import { ForumImage } from "@/components/forum-image"
 // - Images allowed with src/alt/title only
 const sanitizeSchema = {
   ...defaultSchema,
-  tagNames: (defaultSchema.tagNames ?? []).filter((t: string) => t !== "iframe"),
+  tagNames: [
+    ...(defaultSchema.tagNames ?? []).filter((t: string) => t !== "iframe"),
+    "video",
+    "source",
+  ],
   attributes: {
     ...defaultSchema.attributes,
     img: ["src", "alt", "title"],
     code: ["className"],
     a: ["href", "title", "target", "rel"],
+    video: ["src", "controls", "width", "height", "playsInline", "preload", "poster", "autoPlay", "muted", "loop"],
+    source: ["src", "type"],
   },
   protocols: {
     href: ["http", "https", "mailto"],

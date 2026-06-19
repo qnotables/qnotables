@@ -216,7 +216,7 @@ export default function AboutPage() {
                 Items preserved or discussed on this site are not automatic endorsements. A post may be a source record, lead, public claim, news item, field note, research thread, or discussion point. Readers should verify source material, compare reports, and distinguish documented facts from interpretation or opinion.
               </p>
               <div className="border-l-4 border-primary bg-primary/5 p-4">
-                <p className="stencil text-lg text-primary">Items are not endorsements.</p>
+                <p className="stencil text-lg text-primary">==NOTABLES ARE NOT ENDORSEMENTS==.</p>
               </div>
             </div>
           </div>
