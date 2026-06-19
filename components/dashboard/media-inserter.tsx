@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import { ImagePlus, Video, Loader2, AlertCircle } from "lucide-react"
+import { ImagePlus, Video, Loader2, AlertCircle, Link as LinkIcon } from "lucide-react"
+import { VideoEmbed } from "@/lib/video-embed-utils"
 
 interface MediaInserterProps {
   onInsertImage: (url: string, alt: string) => void
   onInsertVideo: (url: string) => void
+  onInsertVideoLink?: (embed: VideoEmbed) => void
 }
 
 type UploadState = "idle" | "uploading" | "done" | "error"
@@ -23,13 +25,14 @@ async function uploadFile(
   return json
 }
 
-export function MediaInserter({ onInsertImage, onInsertVideo }: MediaInserterProps) {
+export function MediaInserter({ onInsertImage, onInsertVideo, onInsertVideoLink }: MediaInserterProps) {
   const [imageState, setImageState] = useState<UploadState>("idle")
   const [videoState, setVideoState] = useState<UploadState>("idle")
   const [imageError, setImageError] = useState<string | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
   const imageRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLInputElement>(null)
+  const [showEmbedModal, setShowEmbedModal] = useState(false)
 
   const handleImageUpload = useCallback(
     async (file: File) => {
@@ -134,6 +137,58 @@ export function MediaInserter({ onInsertImage, onInsertVideo }: MediaInserterPro
         className="hidden"
       />
       {videoError && <span className="text-xs text-destructive">{videoError}</span>}
+
+      {/* Embed Video Link */}
+      {onInsertVideoLink && (
+        <button
+          type="button"
+          onClick={() => setShowEmbedModal(true)}
+          title="Embed video from URL"
+          className="inline-flex items-center justify-center h-8 w-8 border border-border bg-background text-foreground hover:border-primary hover:text-primary transition-colors"
+        >
+          <LinkIcon className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Embed Modal */}
+      {onInsertVideoLink && showEmbedModal && (
+        <EmbedVideoModalWrapper
+          isOpen={showEmbedModal}
+          onClose={() => setShowEmbedModal(false)}
+          onInsert={(embed) => {
+            onInsertVideoLink(embed)
+            setShowEmbedModal(false)
+          }}
+        />
+      )}
     </div>
   )
+}
+
+/**
+ * Lazy-loaded modal wrapper to avoid circular dependencies
+ */
+function EmbedVideoModalWrapper({
+  isOpen,
+  onClose,
+  onInsert,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onInsert: (embed: VideoEmbed) => void
+}) {
+  const [EmbedVideoModal, setEmbedVideoModal] = useState<typeof import("./embed-video-modal").EmbedVideoModal | null>(
+    null,
+  )
+
+  // Lazy load to avoid circular dependency
+  if (!EmbedVideoModal && isOpen) {
+    import("./embed-video-modal").then((m) => {
+      setEmbedVideoModal(() => m.EmbedVideoModal)
+    })
+  }
+
+  if (!EmbedVideoModal) return null
+
+  return <EmbedVideoModal isOpen={isOpen} onClose={onClose} onInsert={onInsert} />
 }

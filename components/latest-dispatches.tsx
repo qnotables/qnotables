@@ -24,7 +24,19 @@ function formatDateForDisplay(dateString: string): string {
   }
 }
 
-function getMediaIcon(mediaType?: string) {
+/**
+ * Detect if content contains video embeds
+ */
+function hasVideoEmbed(content?: string): boolean {
+  if (!content) return false
+  return /<!-- VIDEO_EMBED:/.test(content)
+}
+
+function getMediaIcon(mediaType?: string, hasEmbed?: boolean) {
+  if (hasEmbed) {
+    return { icon: Video, label: "VIDEO" }
+  }
+  
   if (!mediaType) return null
   const type = mediaType.toLowerCase()
   
@@ -100,7 +112,8 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
 
       <div className="grid grid-cols-1 gap-4">
         {records.map((record) => {
-          const mediaInfo = getMediaIcon(record.media_type)
+          const hasEmbed = hasVideoEmbed(record.excerpt)
+          const mediaInfo = getMediaIcon(record.media_type, hasEmbed)
           const hasThumbnail = Boolean(record.cover_image)
 
           return (
