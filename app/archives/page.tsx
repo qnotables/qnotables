@@ -122,7 +122,7 @@ export default async function ArchivesPage() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_280px]">
           {/* Latest Dispatches */}
-          <LatestDispatches records={allRecords} />
+          <LatestDispatches records={allRecords || []} />
 
           {/* Sidebar */}
           <ArchiveSidebar

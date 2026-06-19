@@ -10,6 +10,20 @@ interface LatestDispatchesProps {
   isLoading?: boolean
 }
 
+/**
+ * Format date string using UTC parsing to avoid hydration mismatch from timezone differences
+ */
+function formatDateForDisplay(dateString: string): string {
+  try {
+    // Parse the ISO date string and extract components to avoid timezone conversion
+    const [year, month, day] = dateString.split("T")[0].split("-")
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`
+  } catch {
+    return "Unknown Date"
+  }
+}
+
 function getMediaIcon(mediaType?: string) {
   if (!mediaType) return null
   const type = mediaType.toLowerCase()
@@ -129,7 +143,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                   )}
                   {record.published_at && (
                     <>
-                      <span>{new Date(record.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span>{formatDateForDisplay(record.published_at)}</span>
                       <span className="text-border">•</span>
                     </>
                   )}
