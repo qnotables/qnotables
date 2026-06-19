@@ -193,20 +193,49 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             <Markdown content={post.body} />
           </div>
 
-          {/* Document link */}
+          {/* Document embed */}
           {post.document_url && (
-            <div className="mt-12 border-l-4 border-primary bg-primary/5 p-4">
-              <p className="label-mono text-sm font-semibold text-primary">Document</p>
-              <a
-                href={post.document_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="label-mono mt-2 inline-flex items-center gap-2 text-sm text-foreground hover:text-primary"
-              >
-                <FileText className="h-4 w-4" />
-                Download or view document
-                <ExternalLink className="h-4 w-4" />
-              </a>
+            <div className="mt-12">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="label-mono text-sm font-semibold text-primary flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Document
+                </p>
+                <a
+                  href={post.document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="label-mono inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Open in new tab
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              {post.document_url.toLowerCase().endsWith(".pdf") ||
+              post.document_url.toLowerCase().includes(".pdf?") ? (
+                <div className="border border-border rounded overflow-hidden">
+                  <iframe
+                    src={post.document_url}
+                    title={post.title}
+                    className="w-full border-0 block"
+                    style={{ height: "800px" }}
+                    loading="lazy"
+                  />
+                </div>
+              ) : (
+                <div className="border-l-4 border-primary bg-primary/5 p-4">
+                  <a
+                    href={post.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="label-mono inline-flex items-center gap-2 text-sm text-foreground hover:text-primary"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download or view document
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

@@ -250,8 +250,39 @@ export function SafeEmbed({
     }
   }
 
+  // PDF embed
+  if (type === "document" || url.toLowerCase().endsWith(".pdf") || url.toLowerCase().includes(".pdf?")) {
+    return (
+      <div style={{ maxWidth, margin: "1rem 0" }}>
+        <div style={{ border: "1px solid #333", borderRadius: "4px", overflow: "hidden" }}>
+          <iframe
+            src={url}
+            title={title || "PDF Document"}
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "800px",
+              border: "none",
+              display: "block",
+            }}
+          />
+        </div>
+        <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "flex-end" }}>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            style={{ color: "#ff9900", fontSize: "0.75rem", textDecoration: "underline" }}
+          >
+            Open in new tab
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   // Fallback: external link
-  if (type === "external" || type === "document") {
+  if (type === "external") {
     return (
       <div style={{ maxWidth, margin: "1rem 0", padding: "1rem", background: "#2a2a2a", borderRadius: "4px" }}>
         <a

@@ -395,9 +395,12 @@ function ArchiveEditorMedia({ formData, onFieldChange }: any) {
             type="url"
             value={formData.document_url || ""}
             onChange={e => onFieldChange("document_url", e.target.value)}
-            placeholder="PDF or document URL"
+            placeholder="PDF or document URL (PDFs will be embedded inline)"
             className="w-full px-3 py-2 border border-border bg-background"
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            PDF files will be displayed as an inline embed on the archive page.
+          </p>
         </div>
       )}
     </div>
