@@ -11,7 +11,10 @@ interface LatestDispatchesProps {
 }
 
 function getMediaIcon(mediaType?: string) {
-  switch (mediaType) {
+  if (!mediaType) return null
+  const type = mediaType.toLowerCase()
+  
+  switch (type) {
     case "video":
       return { icon: Video, label: "VIDEO" }
     case "document":
@@ -19,6 +22,12 @@ function getMediaIcon(mediaType?: string) {
     case "external_link":
       return { icon: ExternalLink, label: "SOURCE" }
     default:
+      if (type.includes("video")) {
+        return { icon: Video, label: "VIDEO" }
+      }
+      if (type.includes("document")) {
+        return { icon: FileText, label: "DOCUMENT" }
+      }
       return null
   }
 }
@@ -187,7 +196,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                     href={`/archives/${record.slug}`}
                     className="label-mono text-xs font-semibold text-primary hover:underline whitespace-nowrap"
                   >
-                    READ →
+                    {record.type === "video" ? "WATCH" : "READ"} →
                   </Link>
                 </div>
               </div>

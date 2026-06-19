@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
 import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
+import { getVideoById, getPublishedVideos } from "@/app/actions/video-actions"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 
@@ -13,32 +14,37 @@ export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getArchiveBySlug(slug)
-
-  if (!post) return { title: "Not found — HOT AND FRESH" }
+  let post = await getArchiveBySlug(slug)
+  let video = null
+  
+  if (!post) {
+    video = await getVideoById(slug)
+    if (!video) return { title: "Not found — HOT AND FRESH" }
+  }
 
   const site = getSiteUrl()
-  const canonical = `${site}/archives/${post.slug}`
-  const { url: ogImage } = resolveFeedImage(post)
-  const description = post.excerpt || post.subtitle || "Archived HOT AND FRESH record."
+  const title = post?.title || video?.title
+  const desc = post?.excerpt || post?.subtitle || video?.description || "Archived HOT AND FRESH record."
+  const canonical = `${site}/archives/${post?.slug || video?.id}`
+  const ogImage = post ? resolveFeedImage(post).url : video?.thumbnail_url
 
   return {
-    title: `${post.title} — HOT AND FRESH`,
-    description,
+    title: `${title} — HOT AND FRESH`,
+    description: desc,
     alternates: { canonical },
     openGraph: {
-      title: post.title,
-      description,
+      title,
+      description: desc,
       url: canonical,
       images: ogImage ? [{ url: ogImage }] : undefined,
       type: "article",
-      publishedTime: post.published_at,
-      modifiedTime: post.updated_at,
+      publishedTime: post?.published_at || video?.date,
+      modifiedTime: post?.updated_at,
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description,
+      title,
+      description: desc,
       images: ogImage ? [ogImage] : undefined,
     },
   }
@@ -47,9 +53,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export async function generateStaticParams() {
   try {
     const archives = await getAllArchives()
-    return archives.slice(0, 100).map((post) => ({
-      slug: post.slug,
-    }))
+    const videos = await getPublishedVideos()
+    const params = [
+      ...archives.slice(0, 50).map((post) => ({
+        slug: post.slug,
+      })),
+      ...videos.slice(0, 50).map((video) => ({
+        slug: video.id,
+      })),
+    ]
+    return params
   } catch {
     return []
   }
@@ -57,22 +70,32 @@ export async function generateStaticParams() {
 
 export default async function ArchiveDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getArchiveBySlug(slug)
-
+  
+  // Try to fetch as blog post first, then as video
+  let post = await getArchiveBySlug(slug)
+  let video = null
+  
   if (!post) {
-    notFound()
+    // Try to fetch as video using the slug as video ID
+    video = await getVideoById(slug)
+    if (!video) {
+      notFound()
+    }
   }
 
-  // Get related posts by tag or category
-  const allPosts = await getAllArchives()
-  const relatedPosts = allPosts
-    .filter(
-      (p) =>
-        p.slug !== post.slug &&
-        ((post.tags && post.tags.some((t) => p.tags?.includes(t))) ||
-          (post.category && p.category === post.category))
-    )
-    .slice(0, 3)
+  // Get related posts by tag or category (only if this is a blog post)
+  let relatedPosts = []
+  if (post) {
+    const allPosts = await getAllArchives()
+    relatedPosts = allPosts
+      .filter(
+        (p) =>
+          p.slug !== post.slug &&
+          ((post.tags && post.tags.some((t) => p.tags?.includes(t))) ||
+            (post.category && p.category === post.category))
+      )
+      .slice(0, 3)
+  }
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -91,47 +114,47 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
             {/* Badges */}
             <div className="mb-6 flex flex-wrap gap-2">
-              {post.priority === "critical" && (
+              {post?.priority === "critical" && (
                 <span className="label-mono inline-flex items-center gap-1 border border-red-600/50 bg-red-50/10 px-2 py-1 text-xs font-semibold text-red-600">
                   <AlertCircle className="h-3 w-3" /> CRITICAL
                 </span>
               )}
-              {post.post_type && (
+              {(post?.post_type || video?.category || "Video") && (
                 <span className="label-mono border border-primary bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                  {post.post_type}
+                  {video ? "Video" : post?.post_type}
                 </span>
               )}
-              {post.category && (
+              {(post?.category || video?.category) && (
                 <span className="label-mono border border-border bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
-                  {post.category}
+                  {post?.category || video?.category}
                 </span>
               )}
             </div>
 
             <h1 className="stencil text-balance text-4xl leading-tight text-foreground md:text-5xl lg:text-6xl">
-              {post.title}
+              {post?.title || video?.title}
             </h1>
 
-            {post.subtitle && (
+            {(post?.subtitle || video?.description) && (
               <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-                {post.subtitle}
+                {post?.subtitle || video?.description}
               </p>
             )}
 
             {/* Meta */}
             <div className="label-mono mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
-              {post.published_at && (
+              {(post?.published_at || video?.date) && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
-                  {formatDate(new Date(post.published_at))}
+                  {formatDate(new Date(post?.published_at || video?.date || new Date()))}
                 </span>
               )}
-              {post.timeline_date && (
+              {post?.timeline_date && (
                 <span className="flex items-center gap-1 text-xs">
                   Timeline: {formatDate(new Date(post.timeline_date))}
                 </span>
               )}
-              {post.source_name && post.source_url && (
+              {post?.source_name && post?.source_url && (
                 <a
                   href={post.source_url}
                   target="_blank"
@@ -142,7 +165,18 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               )}
-              {post.tags && post.tags.length > 0 && (
+              {video?.external_url && (
+                <a
+                  href={video.external_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 transition-colors hover:text-primary"
+                >
+                  External Link
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+              {post?.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
                     <span key={tag} className="inline-block text-xs text-primary">
@@ -156,20 +190,21 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         </div>
 
         {/* Featured media */}
-        {(post.cover_image_url || post.video_url || post.embed_url || post.iframe_url) && (
+        {(post?.cover_image_url || post?.video_url || post?.embed_url || post?.iframe_url || video?.thumbnail_url || video?.video_url) && (
           <div className="border-b border-border bg-muted/20 px-4 py-8 md:px-6">
             <div className="mx-auto max-w-4xl space-y-4">
-              {post.cover_image_url && (
+              {post?.cover_image_url && (
                 <img
                   src={post.cover_image_url}
                   alt={post.title}
                   className="w-full border border-border object-cover"
                 />
               )}
-              {post.video_url && (
+              {(post?.video_url || video?.video_url) && (
                 <div>
                   <video
-                    src={post.video_url}
+                    src={post?.video_url || video?.video_url!}
+                    poster={video?.thumbnail_url}
                     controls
                     playsInline
                     preload="metadata"
@@ -177,11 +212,18 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                   />
                 </div>
               )}
-              {post.embed_url && (
+              {post?.embed_url && (
                 <SafeEmbed url={post.embed_url} type="iframe" title={post.title} />
               )}
-              {post.iframe_url && (
+              {post?.iframe_url && (
                 <SafeEmbed iframeCode={post.iframe_url} type="iframe" title={post.title} />
+              )}
+              {video?.thumbnail_url && !video?.video_url && (
+                <img
+                  src={video.thumbnail_url}
+                  alt={video.title}
+                  className="w-full border border-border object-cover"
+                />
               )}
             </div>
           </div>
@@ -189,12 +231,23 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
         {/* Main content */}
         <article className="mx-auto max-w-4xl px-4 py-12 md:px-6 md:py-16">
-          <div className="prose prose-invert max-w-none">
-            <Markdown content={post.body} />
-          </div>
+          {post && (
+            <div className="prose prose-invert max-w-none">
+              <Markdown content={post.body} />
+            </div>
+          )}
+          {video && (
+            <div className="space-y-6">
+              {video.description && (
+                <p className="text-lg leading-relaxed text-muted-foreground">
+                  {video.description}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Document link */}
-          {post.document_url && (
+          {post?.document_url && (
             <div className="mt-12 border-l-4 border-primary bg-primary/5 p-4">
               <p className="label-mono text-sm font-semibold text-primary">Document</p>
               <a
@@ -211,7 +264,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           )}
 
           {/* Related links */}
-          {post.related_links && post.related_links.length > 0 && (
+          {post?.related_links && post.related_links.length > 0 && (
             <div className="mt-12 border-t border-border pt-8">
               <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">RELATED LINKS</p>
               <div className="space-y-2">
@@ -235,10 +288,10 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           <div className="mt-12 border-t border-border pt-8">
             <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
             <ShareButtons
-              title={post.title}
-              url={`${getSiteUrl()}/archives/${post.slug}`}
-              excerpt={post.excerpt || post.subtitle}
-              hashtags={post.tags}
+              title={post?.title || video?.title}
+              url={`${getSiteUrl()}/archives/${post?.slug || video?.id}`}
+              excerpt={post?.excerpt || post?.subtitle || video?.description}
+              hashtags={post?.tags}
             />
           </div>
         </article>
