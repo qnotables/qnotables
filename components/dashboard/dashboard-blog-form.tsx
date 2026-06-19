@@ -8,6 +8,7 @@ import { Markdown } from "@/components/markdown"
 import { MediaInserter } from "@/components/dashboard/media-inserter"
 import { createPostDashboard, updatePostDashboard } from "@/app/dashboard/blog/blog-form-actions"
 import { VideoEmbed, stringifyVideoEmbed } from "@/lib/video-embed-utils"
+import { IframeEmbed, stringifyIframeEmbed } from "@/lib/iframe-embed-utils"
 import type { BlogPost } from "@/lib/blog-posts"
 
 type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
@@ -417,6 +418,11 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   onInsertVideoLink={(embed: VideoEmbed) => {
                     const embedJson = stringifyVideoEmbed(embed)
                     const newBody = formData.body + `\n<!-- VIDEO_EMBED: ${embedJson} -->\n`
+                    handleFieldChange("body", newBody)
+                  }}
+                  onInsertIframeLink={(embed: IframeEmbed) => {
+                    const embedJson = stringifyIframeEmbed(embed)
+                    const newBody = formData.body + `\n<!-- IFRAME_EMBED: ${embedJson} -->\n`
                     handleFieldChange("body", newBody)
                   }}
                 />

@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import { ImagePlus, Video, Loader2, AlertCircle, Link as LinkIcon } from "lucide-react"
+import { ImagePlus, Video, Loader2, AlertCircle, Link as LinkIcon, Frame } from "lucide-react"
 import { VideoEmbed } from "@/lib/video-embed-utils"
+import { IframeEmbed } from "@/lib/iframe-embed-utils"
 
 interface MediaInserterProps {
   onInsertImage: (url: string, alt: string) => void
   onInsertVideo: (url: string) => void
   onInsertVideoLink?: (embed: VideoEmbed) => void
+  onInsertIframeLink?: (embed: IframeEmbed) => void
 }
 
 type UploadState = "idle" | "uploading" | "done" | "error"
@@ -25,14 +27,20 @@ async function uploadFile(
   return json
 }
 
-export function MediaInserter({ onInsertImage, onInsertVideo, onInsertVideoLink }: MediaInserterProps) {
+export function MediaInserter({ 
+  onInsertImage, 
+  onInsertVideo, 
+  onInsertVideoLink,
+  onInsertIframeLink 
+}: MediaInserterProps) {
   const [imageState, setImageState] = useState<UploadState>("idle")
   const [videoState, setVideoState] = useState<UploadState>("idle")
   const [imageError, setImageError] = useState<string | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
   const imageRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLInputElement>(null)
-  const [showEmbedModal, setShowEmbedModal] = useState(false)
+  const [showVideoEmbedModal, setShowVideoEmbedModal] = useState(false)
+  const [showIframeEmbedModal, setShowIframeEmbedModal] = useState(false)
 
   const handleImageUpload = useCallback(
     async (file: File) => {
@@ -142,7 +150,7 @@ export function MediaInserter({ onInsertImage, onInsertVideo, onInsertVideoLink 
       {onInsertVideoLink && (
         <button
           type="button"
-          onClick={() => setShowEmbedModal(true)}
+          onClick={() => setShowVideoEmbedModal(true)}
           title="Embed video from URL"
           className="inline-flex items-center justify-center h-8 w-8 border border-border bg-background text-foreground hover:border-primary hover:text-primary transition-colors"
         >
@@ -150,14 +158,38 @@ export function MediaInserter({ onInsertImage, onInsertVideo, onInsertVideoLink 
         </button>
       )}
 
-      {/* Embed Modal */}
-      {onInsertVideoLink && showEmbedModal && (
+      {/* Embed Iframe Link */}
+      {onInsertIframeLink && (
+        <button
+          type="button"
+          onClick={() => setShowIframeEmbedModal(true)}
+          title="Embed iframe from URL"
+          className="inline-flex items-center justify-center h-8 w-8 border border-border bg-background text-foreground hover:border-primary hover:text-primary transition-colors"
+        >
+          <Frame className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Embed Video Modal */}
+      {onInsertVideoLink && showVideoEmbedModal && (
         <EmbedVideoModalWrapper
-          isOpen={showEmbedModal}
-          onClose={() => setShowEmbedModal(false)}
+          isOpen={showVideoEmbedModal}
+          onClose={() => setShowVideoEmbedModal(false)}
           onInsert={(embed) => {
             onInsertVideoLink(embed)
-            setShowEmbedModal(false)
+            setShowVideoEmbedModal(false)
+          }}
+        />
+      )}
+
+      {/* Embed Iframe Modal */}
+      {onInsertIframeLink && showIframeEmbedModal && (
+        <EmbedIframeModalWrapper
+          isOpen={showIframeEmbedModal}
+          onClose={() => setShowIframeEmbedModal(false)}
+          onInsert={(embed) => {
+            onInsertIframeLink(embed)
+            setShowIframeEmbedModal(false)
           }}
         />
       )}
@@ -166,7 +198,7 @@ export function MediaInserter({ onInsertImage, onInsertVideo, onInsertVideoLink 
 }
 
 /**
- * Lazy-loaded modal wrapper to avoid circular dependencies
+ * Lazy-loaded modal wrapper to avoid circular dependencies for video embeds
  */
 function EmbedVideoModalWrapper({
   isOpen,
@@ -191,4 +223,32 @@ function EmbedVideoModalWrapper({
   if (!EmbedVideoModal) return null
 
   return <EmbedVideoModal isOpen={isOpen} onClose={onClose} onInsert={onInsert} />
+}
+
+/**
+ * Lazy-loaded modal wrapper to avoid circular dependencies for iframe embeds
+ */
+function EmbedIframeModalWrapper({
+  isOpen,
+  onClose,
+  onInsert,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onInsert: (embed: IframeEmbed) => void
+}) {
+  const [EmbedIframeModal, setEmbedIframeModal] = useState<typeof import("./embed-iframe-modal").EmbedIframeModal | null>(
+    null,
+  )
+
+  // Lazy load to avoid circular dependency
+  if (!EmbedIframeModal && isOpen) {
+    import("./embed-iframe-modal").then((m) => {
+      setEmbedIframeModal(() => m.EmbedIframeModal)
+    })
+  }
+
+  if (!EmbedIframeModal) return null
+
+  return <EmbedIframeModal isOpen={isOpen} onClose={onClose} onInsert={onInsert} />
 }

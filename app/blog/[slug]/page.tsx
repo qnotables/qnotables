@@ -8,6 +8,8 @@ import { getPost, formatDate } from "@/lib/blog-posts"
 import { getRelatedPosts } from "@/lib/archives"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
+import { BlogComments } from "@/components/blog-comments"
+import { getBlogComments } from "@/app/actions/blog-comment-actions"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -50,6 +52,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
+  const comments = post.id ? await getBlogComments(post.id) : []
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -136,6 +139,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               ))}
             </div>
           </section>
+        )}
+
+        {/* Comments section */}
+        {post.id && (
+          <div className="mt-12">
+            <BlogComments postId={post.id} initialComments={comments} />
+          </div>
         )}
       </main>
 

@@ -7,36 +7,74 @@ import { isDirectImageUrl, isSocialMediaUrl } from "@/lib/forum-utils"
 import { ForumImage } from "@/components/forum-image"
 import { VideoEmbedBlock } from "@/components/video-embed-block"
 import { parseVideoEmbed } from "@/lib/video-embed-utils"
+import { SafeEmbed } from "@/components/safe-embed"
+import { parseIframeEmbed } from "@/lib/iframe-embed-utils"
 
 /**
- * Process video embeds from HTML comments and render them as components
- * Returns both the cleaned content and an array of VideoEmbed components
+ * Process embeds from HTML comments and render them as components
+ * Returns both the cleaned content and an array of embed components
  */
-function processVideoEmbeds(content: string): { cleanContent: string; embeds: React.ReactNode[] } {
-  const embedPattern = /<!-- VIDEO_EMBED: ({.*?}) -->/g
+function processEmbeds(content: string): { cleanContent: string; embeds: React.ReactNode[] } {
+  const videoPattern = /<!-- VIDEO_EMBED: ({.*?}) -->/g
+  const iframePattern = /<!-- IFRAME_EMBED: ({.*?}) -->/g
   const embeds: React.ReactNode[] = []
+  
+  // First pass: collect all embeds with their positions
+  const allMatches: Array<{ index: number; endIndex: number; node: React.ReactNode }> = []
+  
+  // Collect video embeds
   let match
-  let lastIndex = 0
-  let cleanContent = ""
-
-  while ((match = embedPattern.exec(content)) !== null) {
-    // Add content before this embed
-    cleanContent += content.slice(lastIndex, match.index)
-    
-    // Parse and render the embed
+  while ((match = videoPattern.exec(content)) !== null) {
     const embedJson = match[1]
     const embed = parseVideoEmbed(embedJson)
     if (embed) {
-      embeds.push(<VideoEmbedBlock key={`embed-${embeds.length}`} embed={embed} />)
-      cleanContent += "\n" // Add a newline to maintain structure
+      allMatches.push({
+        index: match.index,
+        endIndex: videoPattern.lastIndex,
+        node: <VideoEmbedBlock key={`embed-${allMatches.length}`} embed={embed} />,
+      })
     }
-    
-    lastIndex = embedPattern.lastIndex
   }
-
+  
+  // Collect iframe embeds
+  while ((match = iframePattern.exec(content)) !== null) {
+    const embedJson = match[1]
+    const embed = parseIframeEmbed(embedJson)
+    if (embed) {
+      allMatches.push({
+        index: match.index,
+        endIndex: iframePattern.lastIndex,
+        node: (
+          <SafeEmbed
+            key={`iframe-${allMatches.length}`}
+            url={embed.url}
+            title={embed.title}
+            type="iframe"
+            aspectRatio={embed.aspectRatio}
+            maxWidth={embed.maxWidth}
+          />
+        ),
+      })
+    }
+  }
+  
+  // Sort by position
+  allMatches.sort((a, b) => a.index - b.index)
+  
+  // Build clean content and collect embed nodes
+  let cleanContent = ""
+  let lastIndex = 0
+  
+  for (const match of allMatches) {
+    cleanContent += content.slice(lastIndex, match.index)
+    embeds.push(match.node)
+    cleanContent += "\n"
+    lastIndex = match.endIndex
+  }
+  
   // Add remaining content
   cleanContent += content.slice(lastIndex)
-
+  
   return { cleanContent, embeds }
 }
 
@@ -160,8 +198,8 @@ const components: Components = {
 }
 
 export function Markdown({ content }: { content: string }) {
-  // Extract and render video embeds before markdown processing
-  const { cleanContent, embeds } = processVideoEmbeds(content)
+  // Extract and render embeds (both video and iframe) before markdown processing
+  const { cleanContent, embeds } = processEmbeds(content)
   
   return (
     <div className="flex flex-col gap-4 leading-relaxed text-foreground/90">
