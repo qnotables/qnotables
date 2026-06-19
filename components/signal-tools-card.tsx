@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -13,12 +13,6 @@ const SIGNAL_TOOLS = [
     description: "Search the record",
     icon: Archive,
     href: "/archives",
-  },
-  {
-    label: "RSS Feed",
-    description: "Follow the wire",
-    icon: Rss,
-    href: "/feed.xml",
   },
   {
     label: "Forum",
@@ -43,21 +37,27 @@ const SIGNAL_TOOLS = [
     description: "Track the sequence",
     icon: Clock,
     href: "/archives/timeline",
+  }, 
+  {
+    label: "RSS Feed",
+    description: "Follow the wire",
+    icon: Rss,
+    href: "/feed.xml",
   },
 ]
 
 const SIGNAL_TOOLS_SECONDARY = [
   {
-    label: "External Tool 1",
+    label: "Qresearch",
     description: "Configure link",
-    icon: LayoutDashboard,
-    href: "",
+    icon: Shield,
+    href: "8ch.net/qresearch/catalog.html",
   },
   {
-    label: "External Tool 2",
+    label: "Qalerts",
     description: "Configure link",
-    icon: Archive,
-    href: "",
+    icon: Shield,
+    href: "https:www.qalerts.app",
   },
   {
     label: "External Tool 3",
@@ -114,10 +114,7 @@ export function SignalToolsCard() {
         })}
       </div>
 
-      <div className="border-t border-border pt-4">
-        <div className="mb-3">
-          <h3 className="stencil text-xs font-bold text-foreground/70">EXTERNAL LINKS</h3>
-        </div>
+      <div>
         <div className="flex gap-3">
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
