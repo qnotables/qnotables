@@ -49,45 +49,27 @@ const SIGNAL_TOOLS = [
 const SIGNAL_TOOLS_SECONDARY = [
   {
     label: "Qresearch",
-    description: "Configure link",
+    description: "Join the fight",
     icon: Shield,
     href: "https://8ch.net/qresearch/catalog.html",
   },
   {
-    label: "Qalerts",
-    description: "Configure link",
+    label: "Q posts",
+    description: "Read the posts",
     icon: ShieldPlus,
-    href: "https://www.qalerts.app",
-  },
-  {
-    label: "External Tool 3",
-    description: "Configure link",
-    icon: Mail,
-    href: "mailto:contact@qnotables.ai",
+    href: "https://www.qanon.pub",
   },
   {
     label: "bookmarks",
-    description: "linkhub",
+    description: "Share a resource",
     icon: Bookmark,
     href: "/bookmarks",
   },
   {
-    label: "External Tool 5",
+    label: "Contact",
     description: "Configure link",
-    icon: FolderPlusIcon,
-    href: "/forum",
-  },
-  {
-    label: "External Tool 6",
-    description: "Configure link",
-    icon: ShoppingBag,
-    href: "",
-  },
-  {
-    label: "External Tool 7",
-    description: "Configure link",
-    icon: Clock,
-    href: "",
+    icon: Mail,
+    href: "mailto:contact@qnotables.ai",
   },
 ]
 

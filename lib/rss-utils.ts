@@ -447,7 +447,44 @@ export async function getFeedItems(limit = 50): Promise<FeedItem[]> {
     return []
   }
 
-  return rows.map(rowToFeedItem)
+  // Map rows to feed items, enriching with source OG images where needed
+  const items = rows.map(rowToFeedItem)
+
+  // For items that fell back to the default image AND have a source URL,
+  // attempt to fetch the source page's OG image in parallel (capped at 10).
+  const needsOgFetch = items.filter(
+    (item, i) =>
+      item.imageSource === "fallback" &&
+      rows[i]?.source_url &&
+      isAbsoluteExternalUrl(rows[i]?.source_url)
+  )
+
+  if (needsOgFetch.length > 0) {
+    const fetchBatch = needsOgFetch.slice(0, 10)
+    const ogImages = await Promise.allSettled(
+      fetchBatch.map((item) => {
+        const row = rows.find((r) => r.slug === item.slug)
+        return fetchOpenGraphImage(row?.source_url)
+      })
+    )
+
+    ogImages.forEach((result, i) => {
+      if (result.status === "fulfilled" && result.value) {
+        const item = fetchBatch[i]
+        const idx = items.findIndex((it) => it.slug === item.slug)
+        if (idx !== -1) {
+          items[idx] = {
+            ...items[idx],
+            imageUrl: result.value,
+            imageSource: "source_og",
+            warnings: items[idx].warnings.filter((w) => !w.includes("default feed image")),
+          }
+        }
+      }
+    })
+  }
+
+  return items
 }
 
 /* ----------------------------- XML generation ----------------------------- */
