@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -57,7 +57,7 @@ const SIGNAL_TOOLS_SECONDARY = [
     label: "Qalerts",
     description: "Configure link",
     icon: ShieldPlus,
-    href: "#https://www.qalerts.app",
+    href: "https://www.qalerts.app",
   },
   {
     label: "External Tool 3",
@@ -74,7 +74,7 @@ const SIGNAL_TOOLS_SECONDARY = [
   {
     label: "External Tool 5",
     description: "Configure link",
-    icon: FormInput,
+    icon: FolderPlusIcon,
     href: "/forum",
   },
   {
