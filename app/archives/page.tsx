@@ -7,8 +7,10 @@ import { FeaturedRecords } from "@/components/featured-records"
 import { LatestDispatches } from "@/components/latest-dispatches"
 import { ArchiveSidebar } from "@/components/archive-sidebar"
 import { getAllPosts } from "@/lib/blog-posts"
+import { getPublishedVideos } from "@/app/actions/video-actions"
 import {
   transformBlogPostToArchive,
+  convertVideoToArchive,
   extractCategories,
   extractTags,
   extractSources,
@@ -18,6 +20,7 @@ import {
   extractMonths,
   getFeaturedRecords,
   getAllArchiveRecords,
+  ArchiveRecord,
 } from "@/lib/archives-utils"
 
 export const dynamic = "force-dynamic"
@@ -28,11 +31,22 @@ export const metadata = {
 }
 
 export default async function ArchivesPage() {
-  // Fetch posts from database (with MDX fallback)
+  // Fetch posts and videos from database
   const allPosts = await getAllPosts()
+  const allVideos = await getPublishedVideos()
 
-  // If no posts, show empty state
-  if (!allPosts || allPosts.length === 0) {
+  // Convert videos to archive records
+  const videoRecords = allVideos.map(convertVideoToArchive)
+
+  // Merge blog posts and videos
+  const allRecords = [
+    ...getAllArchiveRecords(allPosts),
+    ...videoRecords,
+  ]
+    .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+
+  // If no records, show empty state
+  if (!allRecords || allRecords.length === 0) {
     return (
       <div className="min-h-screen tactical-grid">
         <SiteHeader />
@@ -55,17 +69,14 @@ export default async function ArchivesPage() {
   const years = extractYears(allPosts)
   const months = extractMonths(allPosts)
 
-  // Get featured records
+  // Get featured records (only from blog posts for now)
   const featuredRecords = getFeaturedRecords(allPosts)
-
-  // Get all records for latest dispatches
-  const dispatchRecords = getAllArchiveRecords(allPosts)
 
   // Calculate stats
   const stats = {
-    totalRecords: allPosts.length,
-    featured: allPosts.filter((p) => p.featured).length,
-    videos: allPosts.filter((p) => p.postType === "Video Archive" || p.postType === "Media Clip").length,
+    totalRecords: allRecords.length,
+    featured: featuredRecords.length,
+    videos: videoRecords.length,
     documents: allPosts.filter((p) => p.postType === "Document Drop" || p.postType === "Public Record" || p.postType === "Source Archive").length,
   }
 
@@ -111,7 +122,7 @@ export default async function ArchivesPage() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_280px]">
           {/* Latest Dispatches */}
-          <LatestDispatches records={dispatchRecords} />
+          <LatestDispatches records={allRecords || []} />
 
           {/* Sidebar */}
           <ArchiveSidebar

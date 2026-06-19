@@ -2,7 +2,8 @@ import Link from "next/link"
 import { ArrowLeft, Play } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { getArchiveVideos, formatDate } from "@/lib/archive"
+import { getPublishedVideos } from "@/app/actions/video-actions"
+import { convertVideoToArchive } from "@/lib/archives-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +13,8 @@ export const metadata = {
 }
 
 export default async function VideosPage() {
-  const videos = await getArchiveVideos()
+  const publishedVideos = await getPublishedVideos()
+  const videos = publishedVideos.map(convertVideoToArchive)
 
   return (
     <div className="min-h-screen tactical-grid flex flex-col">
@@ -41,9 +43,9 @@ export default async function VideosPage() {
                 href={`/archives/${video.slug}`}
                 className="group relative overflow-hidden border border-border bg-muted/30 transition-all hover:border-primary hover:bg-muted/50"
               >
-                {video.cover_image_url && (
+                {video.cover_image && (
                   <img
-                    src={video.cover_image_url}
+                    src={video.cover_image}
                     alt={video.title}
                     className="h-40 w-full object-cover transition-transform group-hover:scale-105"
                   />
@@ -55,7 +57,7 @@ export default async function VideosPage() {
                   <h3 className="font-semibold text-foreground group-hover:text-primary line-clamp-2">{video.title}</h3>
                   {video.published_at && (
                     <p className="label-mono mt-2 text-xs text-muted-foreground">
-                      {formatDate(new Date(video.published_at))}
+                      {new Date(video.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                   )}
                 </div>

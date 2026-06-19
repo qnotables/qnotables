@@ -10,8 +10,37 @@ interface LatestDispatchesProps {
   isLoading?: boolean
 }
 
-function getMediaIcon(mediaType?: string) {
-  switch (mediaType) {
+/**
+ * Format date string using UTC parsing to avoid hydration mismatch from timezone differences
+ */
+function formatDateForDisplay(dateString: string): string {
+  try {
+    // Parse the ISO date string and extract components to avoid timezone conversion
+    const [year, month, day] = dateString.split("T")[0].split("-")
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`
+  } catch {
+    return "Unknown Date"
+  }
+}
+
+/**
+ * Detect if content contains video embeds
+ */
+function hasVideoEmbed(content?: string): boolean {
+  if (!content) return false
+  return /<!-- VIDEO_EMBED:/.test(content)
+}
+
+function getMediaIcon(mediaType?: string, hasEmbed?: boolean) {
+  if (hasEmbed) {
+    return { icon: Video, label: "VIDEO" }
+  }
+  
+  if (!mediaType) return null
+  const type = mediaType.toLowerCase()
+  
+  switch (type) {
     case "video":
       return { icon: Video, label: "VIDEO" }
     case "document":
@@ -19,6 +48,12 @@ function getMediaIcon(mediaType?: string) {
     case "external_link":
       return { icon: ExternalLink, label: "SOURCE" }
     default:
+      if (type.includes("video")) {
+        return { icon: Video, label: "VIDEO" }
+      }
+      if (type.includes("document")) {
+        return { icon: FileText, label: "DOCUMENT" }
+      }
       return null
   }
 }
@@ -77,7 +112,8 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
 
       <div className="grid grid-cols-1 gap-4">
         {records.map((record) => {
-          const mediaInfo = getMediaIcon(record.media_type)
+          const hasEmbed = hasVideoEmbed(record.excerpt)
+          const mediaInfo = getMediaIcon(record.media_type, hasEmbed)
           const hasThumbnail = Boolean(record.cover_image)
 
           return (
@@ -120,7 +156,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                   )}
                   {record.published_at && (
                     <>
-                      <span>{new Date(record.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span>{formatDateForDisplay(record.published_at)}</span>
                       <span className="text-border">•</span>
                     </>
                   )}
@@ -187,7 +223,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                     href={`/archives/${record.slug}`}
                     className="label-mono text-xs font-semibold text-primary hover:underline whitespace-nowrap"
                   >
-                    READ →
+                    {record.type === "video" ? "WATCH" : "READ"} →
                   </Link>
                 </div>
               </div>

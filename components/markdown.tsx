@@ -5,6 +5,40 @@ import rehypeExternalLinks from "rehype-external-links"
 import type { Components } from "react-markdown"
 import { isDirectImageUrl, isSocialMediaUrl } from "@/lib/forum-utils"
 import { ForumImage } from "@/components/forum-image"
+import { VideoEmbedBlock } from "@/components/video-embed-block"
+import { parseVideoEmbed } from "@/lib/video-embed-utils"
+
+/**
+ * Process video embeds from HTML comments and render them as components
+ * Returns both the cleaned content and an array of VideoEmbed components
+ */
+function processVideoEmbeds(content: string): { cleanContent: string; embeds: React.ReactNode[] } {
+  const embedPattern = /<!-- VIDEO_EMBED: ({.*?}) -->/g
+  const embeds: React.ReactNode[] = []
+  let match
+  let lastIndex = 0
+  let cleanContent = ""
+
+  while ((match = embedPattern.exec(content)) !== null) {
+    // Add content before this embed
+    cleanContent += content.slice(lastIndex, match.index)
+    
+    // Parse and render the embed
+    const embedJson = match[1]
+    const embed = parseVideoEmbed(embedJson)
+    if (embed) {
+      embeds.push(<VideoEmbedBlock key={`embed-${embeds.length}`} embed={embed} />)
+      cleanContent += "\n" // Add a newline to maintain structure
+    }
+    
+    lastIndex = embedPattern.lastIndex
+  }
+
+  // Add remaining content
+  cleanContent += content.slice(lastIndex)
+
+  return { cleanContent, embeds }
+}
 
 // Tightened sanitize schema:
 // - No iframes (user-authored content must not embed arbitrary iframes)
@@ -126,8 +160,12 @@ const components: Components = {
 }
 
 export function Markdown({ content }: { content: string }) {
+  // Extract and render video embeds before markdown processing
+  const { cleanContent, embeds } = processVideoEmbeds(content)
+  
   return (
     <div className="flex flex-col gap-4 leading-relaxed text-foreground/90">
+      {embeds.length > 0 && <div className="space-y-6">{embeds}</div>}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[
@@ -142,7 +180,7 @@ export function Markdown({ content }: { content: string }) {
         ]}
         components={components}
       >
-        {content}
+        {cleanContent}
       </ReactMarkdown>
     </div>
   )

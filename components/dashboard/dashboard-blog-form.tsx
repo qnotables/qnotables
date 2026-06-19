@@ -7,6 +7,7 @@ import { TextStats } from "@/components/text-stats"
 import { Markdown } from "@/components/markdown"
 import { MediaInserter } from "@/components/dashboard/media-inserter"
 import { createPostDashboard, updatePostDashboard } from "@/app/dashboard/blog/blog-form-actions"
+import { VideoEmbed, stringifyVideoEmbed } from "@/lib/video-embed-utils"
 import type { BlogPost } from "@/lib/blog-posts"
 
 type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
@@ -24,6 +25,7 @@ const POST_TYPE_OPTIONS = [
   "Explainer",
   "Timeline",
   "Document Drop",
+  "Video",
 ] as const
 
 interface PostFormData {
@@ -410,6 +412,11 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   }}
                   onInsertVideo={(url) => {
                     const newBody = formData.body + `\n<video controls width="100%"><source src="${url}" type="video/mp4"></video>\n`
+                    handleFieldChange("body", newBody)
+                  }}
+                  onInsertVideoLink={(embed: VideoEmbed) => {
+                    const embedJson = stringifyVideoEmbed(embed)
+                    const newBody = formData.body + `\n<!-- VIDEO_EMBED: ${embedJson} -->\n`
                     handleFieldChange("body", newBody)
                   }}
                 />

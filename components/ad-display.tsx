@@ -32,7 +32,7 @@ export async function TopAd() {
               buttonLink: ad.button_link,
             }))}
             interval={10000}
-            className="h-[150px] w-full"
+            className="h-[160px] w-full"
           />
         </div>
 

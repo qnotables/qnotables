@@ -1,4 +1,5 @@
 import { BlogPost } from "@/lib/blog-posts"
+import { Video } from "@/app/actions/video-actions"
 
 /**
  * Transform a BlogPost into the format expected by archive components
@@ -20,6 +21,9 @@ export interface ArchiveRecord {
   featured: boolean
   author: string
   cover_image?: string | null
+  type?: "blog" | "video"
+  video_url?: string
+  external_url?: string
 }
 
 /**
@@ -89,6 +93,31 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     featured: post.featured || false,
     author: post.author || "HOT AND FRESH",
     cover_image: coverImage,
+    type: "blog",
+  }
+}
+
+/**
+ * Convert a Video into an ArchiveRecord format
+ */
+export function convertVideoToArchive(video: Video): ArchiveRecord {
+  return {
+    id: video.id,
+    slug: video.id, // Use video ID as slug for routing
+    title: video.title,
+    excerpt: video.description || "",
+    category: video.category || "General",
+    post_type: "Video",
+    tags: [],
+    published_at: video.date || new Date().toISOString(),
+    readMinutes: 0,
+    media_type: "Video",
+    featured: false,
+    author: "HOT AND FRESH",
+    cover_image: video.thumbnail_url,
+    type: "video",
+    video_url: video.video_url,
+    external_url: video.external_url,
   }
 }
 
