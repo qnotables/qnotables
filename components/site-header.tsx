@@ -12,8 +12,9 @@ import { SearchOverlay } from "@/components/search-overlay"
 
 type WireStory = { id: string; headline: string; summary: string; source: string; url?: string }
 
-export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
+export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: WireStory[] }) {
   const [now, setNow] = useState<string>("")
+  const [wireStories, setWireStories] = useState<WireStory[]>(initialWireStories || [])
   const { active, setActive } = useDeskFilter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -35,8 +36,30 @@ export function SiteHeader({ wireStories }: { wireStories?: WireStory[] }) {
     return () => clearInterval(id)
   }, [])
 
+  // Fetch wire stories on mount if not provided as prop
+  useEffect(() => {
+    if (initialWireStories && initialWireStories.length > 0) {
+      setWireStories(initialWireStories)
+      return
+    }
+
+    const fetchWireStories = async () => {
+      try {
+        const response = await fetch("/api/wire-feed", { cache: "no-store" })
+        if (response.ok) {
+          const data = await response.json()
+          setWireStories(data.stories || [])
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch wire stories:", error)
+      }
+    }
+
+    fetchWireStories()
+  }, [initialWireStories])
+
   // Prepare ticker items from wire stories
-  const tickerItems = wireStories
+  const tickerItems = wireStories.length
     ? wireStories.map((s) => ({ headline: s.headline, url: s.url }))
     : []
   const displayTickerItems: { headline: string; url?: string }[] = tickerItems.length ? tickerItems : [{ headline: "Awaiting live wire feed…" }]
