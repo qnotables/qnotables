@@ -24,7 +24,7 @@ export function CardImage({
   variant = "cover",
   mediaType,
   aspectRatio = "video",
-  objectPosition = "center",
+  objectPosition = "top",
   className = "",
   onLoad,
 }: CardImageProps) {
