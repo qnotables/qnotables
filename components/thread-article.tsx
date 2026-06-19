@@ -286,7 +286,10 @@ export function ThreadArticle({
 
       {/* Footer: share + mod controls */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <ShareButtons title={title} />
+        <ShareButtons
+          title={title}
+          url={`${window.location.origin}/forum/${id}`}
+        />
 
         {/* Admin / mod controls */}
         {isAdmin && (
