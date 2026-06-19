@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -51,31 +51,31 @@ const SIGNAL_TOOLS_SECONDARY = [
     label: "Qresearch",
     description: "Configure link",
     icon: Shield,
-    href: "8ch.net/qresearch/catalog.html",
+    href: "https://8ch.net/qresearch/catalog.html",
   },
   {
     label: "Qalerts",
     description: "Configure link",
-    icon: Shield,
-    href: "https:www.qalerts.app",
+    icon: ShieldPlus,
+    href: "#https://www.qalerts.app",
   },
   {
     label: "External Tool 3",
     description: "Configure link",
-    icon: Rss,
-    href: "",
+    icon: Mail,
+    href: "mailto:contact@qnotables.ai",
   },
   {
-    label: "External Tool 4",
-    description: "Configure link",
-    icon: MessageSquare,
-    href: "",
+    label: "bookmarks",
+    description: "linkhub",
+    icon: Bookmark,
+    href: "/bookmarks",
   },
   {
     label: "External Tool 5",
     description: "Configure link",
-    icon: FileText,
-    href: "",
+    icon: FormInput,
+    href: "/forum",
   },
   {
     label: "External Tool 6",
