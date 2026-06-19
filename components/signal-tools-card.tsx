@@ -114,7 +114,7 @@ export function SignalToolsCard() {
         })}
       </div>
 
-      <div className="border-t border-border pt-4">
+      <div>
         <div className="flex gap-3">
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
