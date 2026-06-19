@@ -46,14 +46,59 @@ const SIGNAL_TOOLS = [
   },
 ]
 
+const SIGNAL_TOOLS_SECONDARY = [
+  {
+    label: "External Tool 1",
+    description: "Configure link",
+    icon: LayoutDashboard,
+    href: "",
+  },
+  {
+    label: "External Tool 2",
+    description: "Configure link",
+    icon: Archive,
+    href: "",
+  },
+  {
+    label: "External Tool 3",
+    description: "Configure link",
+    icon: Rss,
+    href: "",
+  },
+  {
+    label: "External Tool 4",
+    description: "Configure link",
+    icon: MessageSquare,
+    href: "",
+  },
+  {
+    label: "External Tool 5",
+    description: "Configure link",
+    icon: FileText,
+    href: "",
+  },
+  {
+    label: "External Tool 6",
+    description: "Configure link",
+    icon: ShoppingBag,
+    href: "",
+  },
+  {
+    label: "External Tool 7",
+    description: "Configure link",
+    icon: Clock,
+    href: "",
+  },
+]
+
 export function SignalToolsCard() {
   return (
-    <div className="border border-border bg-background p-4 md:p-5 h-[150px] overflow-hidden">
+    <div className="border border-border bg-background p-4 md:p-5 overflow-hidden">
       <div className="mb-4">
         <h2 className="stencil text-sm font-bold text-foreground">SIGNAL TOOLS</h2>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 mb-4">
         {SIGNAL_TOOLS.map((tool) => {
           const Icon = tool.icon
           return (
@@ -67,6 +112,27 @@ export function SignalToolsCard() {
             </Link>
           )
         })}
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <div className="mb-3">
+          <h3 className="stencil text-xs font-bold text-foreground/70">EXTERNAL LINKS</h3>
+        </div>
+        <div className="flex gap-3">
+          {SIGNAL_TOOLS_SECONDARY.map((tool) => {
+            const Icon = tool.icon
+            return (
+              <Link
+                key={tool.label}
+                href={tool.href || "#"}
+                title={tool.label}
+                className="flex-shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+              >
+                <Icon className="h-6 w-6" aria-hidden="true" />
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
