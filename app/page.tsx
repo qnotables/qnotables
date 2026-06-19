@@ -12,6 +12,7 @@ import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { SituationReportCycle } from "@/components/situation-report-cycle"
 import type { SituationForumItem, SituationBlogItem, SituationArchiveItem } from "@/components/situation-report-cycle"
+import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { getNews } from "@/lib/rss"
 import { getHottestBlogPost, getHottestArchivePost } from "@/lib/blog-posts"
 import { getHottestForumThread } from "@/lib/forum"
@@ -103,6 +104,9 @@ export default async function Page() {
       <TopAd />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+        {/* Rumble Live Stream */}
+        <RumbleLiveStream />
+
         {/* section label */}
         <div className="mb-5 flex items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
