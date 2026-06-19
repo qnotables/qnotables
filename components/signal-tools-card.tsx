@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -48,10 +48,10 @@ const SIGNAL_TOOLS = [
 
 const SIGNAL_TOOLS_SECONDARY = [
   {
-    label: "External Tool 1",
+    label: "Qresearch",
     description: "Configure link",
-    icon: LayoutDashboard,
-    href: "",
+    icon: Shield,
+    href: "8ch.net/qresearch/catalog.html",
   },
   {
     label: "External Tool 2",
