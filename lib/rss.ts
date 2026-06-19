@@ -32,7 +32,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     id: "bbc",
     name: "BBC News",
-    url: "https://feeds.bbci.co.uk/news/rss.xml",
+    url: "https://sys.8ch.net/qnotables/tripcode.xml",
     enabled: true,
   },
   {
@@ -75,7 +75,7 @@ const CATEGORIZATION_RULES: { desk: Category; keywords: string[] }[] = [
   { desk: "ENERGY", keywords: ["energy", "oil", "gas", "grid", "renewable", "solar", "wind", "nuclear", "electric", "fuel", "petroleum", "power"] },
   { desk: "DEFENSE", keywords: ["defen", "military", "war", "army", "navy", "air force", "weapon", "security", "conflict", "missile", "troops", "nato", "combat", "strike"] },
   { desk: "TECH", keywords: ["tech", "software", "hardware", "computing", "internet", "gadget", "cyber", "startup", "artificial intelligence", " ai", "app", "digital", "robot", "data"] },
-  { desk: "SCIENCE", keywords: ["science", "research", "space", "astronom", "physics", "biology", "chemistry", "environment", "climate", "study", "scientist", "nature", "discovery"] },
+  { desk: "SCIENCE", keywords: ["science", "spacex", "space", "astronom", "physics", "biology", "chemistry", "environment", "climate", "study", "scientist", "nature", "discovery"] },
   { desk: "ECONOMY", keywords: ["econom", "business", "market", "trade", "finance", "financial", "stock", "inflation", "bank", "money", "jobs", "industry", "tariff", "commerce"] },
   { desk: "POLITICS", keywords: ["politic", "election", "government", "parliament", "congress", "senate", "policy", "diplomac", "minister", "president", "vote", "law", "legislat"] },
   { desk: "WORLD", keywords: ["world", "international", "global", "foreign", "asia", "africa", "europe", "middle east", "americas", "ukraine", "china", "russia", "asia-pacific"] },
