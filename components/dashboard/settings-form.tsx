@@ -13,6 +13,9 @@ export interface SiteSettings {
   shop_preview_mode: boolean
   public_registration: boolean
   maintenance_mode: boolean
+  forum_moderation_mode: boolean
+  forum_max_links: number
+  forum_max_embeds: number
 }
 
 function Toggle({ name, label, description, defaultChecked }: { name: string; label: string; description: string; defaultChecked: boolean }) {
@@ -82,6 +85,46 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
         <Toggle name="public_registration" label="Public Registration" description="Allow new users to sign up." defaultChecked={settings.public_registration} />
         <Toggle name="shop_preview_mode" label="Shop Preview Mode" description="Display the shop in preview-only mode." defaultChecked={settings.shop_preview_mode} />
         <Toggle name="maintenance_mode" label="Maintenance Mode" description="Take the public site offline for maintenance." defaultChecked={settings.maintenance_mode} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="stencil text-lg text-foreground">Forum</h2>
+        <Toggle
+          name="forum_moderation_mode"
+          label="Moderation Mode"
+          description="Hold posts and replies from new users (fewer than 5 posts or account younger than 7 days) for manual review before they appear publicly."
+          defaultChecked={settings.forum_moderation_mode}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="label-mono text-muted-foreground">
+              Max links per post
+              <span className="ml-1 normal-case text-muted-foreground/60">(1–50)</span>
+            </label>
+            <input
+              name="forum_max_links"
+              type="number"
+              min={1}
+              max={50}
+              defaultValue={settings.forum_max_links ?? 8}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="label-mono text-muted-foreground">
+              Max embeds per post
+              <span className="ml-1 normal-case text-muted-foreground/60">(1–20)</span>
+            </label>
+            <input
+              name="forum_max_embeds"
+              type="number"
+              min={1}
+              max={20}
+              defaultValue={settings.forum_max_embeds ?? 4}
+              className={inputClass}
+            />
+          </div>
+        </div>
       </section>
 
       {error ? <p className="label-mono text-destructive">{error}</p> : null}
