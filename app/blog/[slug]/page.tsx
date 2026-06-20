@@ -4,6 +4,7 @@ import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
+import { TiptapRenderer, isTiptapJson } from "@/components/tiptap-renderer"
 import { getPost, formatDate } from "@/lib/blog-posts"
 import { getRelatedPosts } from "@/lib/archives"
 import { ShareButtons } from "@/components/share-buttons"
@@ -99,7 +100,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         )}
 
         <article className="mt-8">
-          <Markdown content={post.content} />
+          {isTiptapJson(post.content) ? (
+            <TiptapRenderer content={post.content} />
+          ) : (
+            <Markdown content={post.content} />
+          )}
         </article>
 
         {/* Share section */}

@@ -4,7 +4,7 @@ import { useActionState, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import Link from "next/link"
 import { ImagePlus, Loader2, Save, X } from "lucide-react"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { TiptapEditor } from "@/components/tiptap-editor"
 import { TextStats } from "@/components/text-stats"
 import { SeoField } from "@/components/seo-field"
 import { createPost, updatePost } from "@/app/blog/actions"
@@ -238,13 +238,13 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
 
       <div className="flex flex-col gap-2">
         <label className="label-mono text-muted-foreground">Body</label>
-        <MarkdownEditor
+        <TiptapEditor
           name="body"
           defaultValue={post?.content}
-          rows={18}
           required
           uploadFolder="blog"
-          placeholder="Write your post in Markdown. Use the image button to upload artwork…"
+          placeholder="Write your post… Paste a YouTube, Rumble, Odysee, or Vimeo URL to embed it."
+          isSignedIn
         />
       </div>
 

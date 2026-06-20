@@ -1,14 +1,13 @@
 "use client"
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ImagePlus, Loader2, Save, X, AlertCircle, Check } from "lucide-react"
 import { TextStats } from "@/components/text-stats"
+import { TiptapEditor } from "@/components/tiptap-editor"
+import { TiptapRenderer, isTiptapJson } from "@/components/tiptap-renderer"
 import { Markdown } from "@/components/markdown"
-import { MediaInserter } from "@/components/dashboard/media-inserter"
 import { createPostDashboard, updatePostDashboard } from "@/app/dashboard/blog/blog-form-actions"
-import { VideoEmbed, stringifyVideoEmbed } from "@/lib/video-embed-utils"
-import { IframeEmbed, stringifyIframeEmbed } from "@/lib/iframe-embed-utils"
 import type { BlogPost } from "@/lib/blog-posts"
 
 type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
@@ -400,40 +399,14 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="label-mono text-sm font-semibold text-foreground">Body *</label>
-                <TextStats text={formData.body} showTime />
-              </div>
-              <div className="flex items-center gap-2 border border-border bg-background/50 px-2 py-2">
-                <span className="label-mono text-xs text-muted-foreground">Insert:</span>
-                <MediaInserter
-                  onInsertImage={(url, alt) => {
-                    const newBody = formData.body + `\n![${alt}](${url})\n`
-                    handleFieldChange("body", newBody)
-                  }}
-                  onInsertVideo={(url) => {
-                    const newBody = formData.body + `\n<video controls width="100%"><source src="${url}" type="video/mp4"></video>\n`
-                    handleFieldChange("body", newBody)
-                  }}
-                  onInsertVideoLink={(embed: VideoEmbed) => {
-                    const embedJson = stringifyVideoEmbed(embed)
-                    const newBody = formData.body + `\n<!-- VIDEO_EMBED: ${embedJson} -->\n`
-                    handleFieldChange("body", newBody)
-                  }}
-                  onInsertIframeLink={(embed: IframeEmbed) => {
-                    const embedJson = stringifyIframeEmbed(embed)
-                    const newBody = formData.body + `\n<!-- IFRAME_EMBED: ${embedJson} -->\n`
-                    handleFieldChange("body", newBody)
-                  }}
-                />
-              </div>
-              <textarea
-                value={formData.body}
-                onChange={(e) => handleFieldChange("body", e.target.value)}
-                required
-                placeholder="Write your post in Markdown. Supports **bold**, *italic*, [links](url), etc. Use the insert buttons above to embed images and videos."
-                className="label-mono w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary font-mono text-sm"
-                rows={24}
+              <label className="label-mono text-sm font-semibold text-foreground">Body *</label>
+              <TiptapEditor
+                name="body"
+                defaultValue={formData.body}
+                placeholder="Write your post… Paste a YouTube, Rumble, Odysee, or Vimeo URL to embed it."
+                uploadFolder="blog"
+                isSignedIn
+                onChange={(json) => handleFieldChange("body", json)}
               />
             </div>
           </div>
@@ -441,13 +414,17 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
 
         {/* PREVIEW TAB */}
         {activeTab === "preview" && (
-          <div className="prose-invert max-w-none">
+          <div className="max-w-none">
             <div className="mb-6">
               <h1 className="stencil text-3xl mb-2">{formData.title || "Untitled"}</h1>
               {formData.subtitle && <p className="text-lg text-muted-foreground">{formData.subtitle}</p>}
             </div>
             {formData.body ? (
-              <Markdown content={formData.body} />
+              isTiptapJson(formData.body) ? (
+                <TiptapRenderer content={formData.body} />
+              ) : (
+                <Markdown content={formData.body} />
+              )
             ) : (
               <p className="label-mono text-muted-foreground italic">No content yet. Write something to preview.</p>
             )}
