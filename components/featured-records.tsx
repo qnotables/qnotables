@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
 import { CardImage } from "@/components/card-image"
+import { ShareButtons } from "@/components/share-buttons"
+import { getSiteUrl } from "@/lib/rss-utils"
 
 interface FeaturedRecordsProps {
   records: ArchiveRecord[]
@@ -99,6 +101,11 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
                     <span className="text-primary">{getMediaIcon(record.media_type)}</span>
                   )}
                 </div>
+                <ShareButtons
+                  title={record.title}
+                  url={`${getSiteUrl()}/archives/${record.slug}`}
+                  excerpt={record.excerpt}
+                />
                 <Link
                   href={`/archives/${record.slug}`}
                   className="label-mono text-xs font-semibold text-primary hover:underline"
