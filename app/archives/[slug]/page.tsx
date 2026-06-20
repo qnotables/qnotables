@@ -4,6 +4,7 @@ import { ArrowLeft, AlertCircle, ExternalLink, FileText, Calendar } from "lucide
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Markdown } from "@/components/markdown"
+import { TiptapRenderer, isTiptapJson } from "@/components/tiptap-renderer"
 import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
 import { getVideoById, getPublishedVideos } from "@/app/actions/video-actions"
@@ -232,8 +233,12 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         {/* Main content */}
         <article className="mx-auto max-w-4xl px-4 py-12 md:px-6 md:py-16">
           {post && (
-            <div className="prose prose-invert max-w-none">
-              <Markdown content={post.body} />
+            <div className="max-w-none">
+              {isTiptapJson(post.body) ? (
+                <TiptapRenderer content={post.body} />
+              ) : (
+                <Markdown content={post.body} />
+              )}
             </div>
           )}
           {video && (
