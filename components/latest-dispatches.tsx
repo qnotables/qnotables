@@ -1,15 +1,18 @@
 "use client"
 
 import Link from "next/link"
-import { Clock, Tag, Video, FileText, ExternalLink, Star, BookMarked } from "lucide-react"
+import { Clock, Video, FileText, ExternalLink, BookMarked } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl } from "@/lib/rss-utils"
+import { RecordVotes } from "@/components/record-votes"
+import { RecordVoteCounts } from "@/app/archives/actions"
 
 interface LatestDispatchesProps {
   records: ArchiveRecord[]
   isLoading?: boolean
+  voteCounts?: RecordVoteCounts
 }
 
 /**
@@ -69,7 +72,7 @@ function isGraphImage(mediaType?: string): boolean {
          mediaType.toLowerCase().includes("diagram")
 }
 
-export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) {
+export function LatestDispatches({ records, isLoading, voteCounts = {} }: LatestDispatchesProps) {
   if (isLoading) {
     return (
       <section className="mb-16">
@@ -116,32 +119,30 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
         {records.map((record) => {
           const hasEmbed = hasVideoEmbed(record.excerpt)
           const mediaInfo = getMediaIcon(record.media_type, hasEmbed)
-          const hasThumbnail = Boolean(record.cover_image)
+          const votes = voteCounts[record.slug] ?? { up: 0, down: 0, userVote: null }
 
           return (
             <article
               key={record.id}
-              className={`group border border-border rounded hover:border-primary/50 hover:bg-card/50 transition-all ${
-                hasThumbnail ? "flex gap-4 p-4" : "p-4"
-              }`}
+              className="group border border-border rounded hover:border-primary/50 hover:bg-card/50 transition-all overflow-hidden"
             >
-              {/* Thumbnail preview for any post with a cover image */}
-              {hasThumbnail && record.cover_image && (
-                <div className="shrink-0 hidden sm:block">
-                  <div className="w-24 h-24 rounded border border-border/50 overflow-hidden bg-muted">
+              {/* Cover image — always shown when available, full-width at top */}
+              {record.cover_image && (
+                <Link href={`/archives/${record.slug}`} className="block">
+                  <div className="w-full aspect-[16/7] overflow-hidden bg-muted border-b border-border/50">
                     <CardImage
                       src={record.cover_image}
                       alt={record.title}
-                      variant="contain"
+                      variant={isGraphImage(record.media_type) ? "contain" : "cover"}
                       mediaType={record.media_type}
-                      aspectRatio="square"
+                      aspectRatio="video"
                     />
                   </div>
-                </div>
+                </Link>
               )}
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
+              {/* Card body */}
+              <div className="p-4">
                 {/* Top metadata row */}
                 <div className="label-mono flex flex-wrap items-center gap-2 mb-2 text-xs text-muted-foreground">
                   {record.category && (
@@ -162,7 +163,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                       <span className="text-border">•</span>
                     </>
                   )}
-                  {record.readMinutes && (
+                  {record.readMinutes > 0 && (
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {record.readMinutes} MIN
                     </span>
@@ -171,7 +172,7 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
 
                 {/* Title and subtitle */}
                 <Link href={`/archives/${record.slug}`} className="block mb-2">
-                  <h3 className="stencil text-lg md:text-xl leading-snug text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="stencil text-lg md:text-xl leading-snug text-foreground group-hover:text-primary transition-colors text-balance">
                     {record.title}
                   </h3>
                   {record.subtitle && (
@@ -186,8 +187,9 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                   </p>
                 )}
 
-                {/* Bottom row: tags, badges, and read button */}
+                {/* Bottom row */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/50">
+                  {/* Left: badges + tags */}
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {record.featured && (
                       <span className="label-mono text-xs px-1.5 py-0.5 border border-primary/40 bg-primary/10 text-primary rounded">
@@ -221,7 +223,15 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  {/* Right: votes, share, read */}
+                  <div className="flex items-center gap-2">
+                    <RecordVotes
+                      recordId={record.slug}
+                      initialUpVotes={votes.up}
+                      initialDownVotes={votes.down}
+                      userVote={votes.userVote}
+                    />
+                    <span className="text-border">|</span>
                     <ShareButtons
                       title={record.title}
                       url={`${getSiteUrl()}/archives/${record.slug}`}

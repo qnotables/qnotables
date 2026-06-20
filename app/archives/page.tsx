@@ -22,6 +22,7 @@ import {
   getAllArchiveRecords,
   ArchiveRecord,
 } from "@/lib/archives-utils"
+import { getRecordVotes } from "@/app/archives/actions"
 
 export const dynamic = "force-dynamic"
 
@@ -59,6 +60,10 @@ export default async function ArchivesPage() {
       </div>
     )
   }
+
+  // Fetch vote counts for all records
+  const recordIds = allRecords.map((r) => r.slug)
+  const voteCounts = await getRecordVotes(recordIds)
 
   // Extract metadata from posts
   const categories = extractCategories(allPosts)
@@ -122,7 +127,7 @@ export default async function ArchivesPage() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_280px]">
           {/* Latest Dispatches */}
-          <LatestDispatches records={allRecords || []} />
+          <LatestDispatches records={allRecords || []} voteCounts={voteCounts} />
 
           {/* Sidebar */}
           <ArchiveSidebar
