@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useRef, useState } from "react"
+import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ImagePlus, Loader2, Save, X, AlertCircle, Check } from "lucide-react"
 import { TextStats } from "@/components/text-stats"
