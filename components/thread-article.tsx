@@ -26,6 +26,8 @@ interface ThreadArticleProps {
   is_locked: boolean
   is_featured: boolean
   is_soft_deleted: boolean
+  /** Canonical URL of the thread. Passed from the server to avoid SSR/window errors. */
+  shareUrl?: string
 }
 
 function CategoryBadge({ category }: { category: string | null }) {
@@ -83,6 +85,7 @@ export function ThreadArticle({
   is_locked,
   is_featured,
   is_soft_deleted,
+  shareUrl,
 }: ThreadArticleProps) {
   const [editing, setEditing] = useState(false)
   const [pending, setPending] = useState(false)
@@ -301,7 +304,7 @@ export function ThreadArticle({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <ShareButtons
           title={title}
-          url={`${window.location.origin}/forum/${id}`}
+          url={shareUrl}
         />
 
         {/* Admin / mod controls */}

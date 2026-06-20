@@ -5,11 +5,11 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { createShareUrl, type SharePlatform } from "@/lib/rss-utils"
 
 export interface ShareButtonsProps {
-  /** Preferred title prop. */
+  /** Post title used in share text. */
   title?: string
   /** Backward-compatible alias for title. */
   headline?: string
-  /** Canonical URL of the post. Falls back to current page URL. */
+  /** Canonical URL of the post. Falls back to current page URL on the client. */
   url?: string
   /** Short excerpt included in share text where supported. */
   excerpt?: string
@@ -19,6 +19,48 @@ export interface ShareButtonsProps {
   hashtags?: string[]
   className?: string
 }
+
+const PLATFORMS: {
+  id: SharePlatform
+  label: string
+  icon: React.ReactNode
+}[] = [
+  {
+    id: "twitter",
+    label: "Share on X",
+    icon: <span className="label-mono w-4 text-center text-xs font-bold leading-none">X</span>,
+  },
+  {
+    id: "truthsocial",
+    label: "Truth Social",
+    icon: <span className="label-mono w-4 text-center text-[10px] font-bold leading-none">TS</span>,
+  },
+  {
+    id: "facebook",
+    label: "Facebook",
+    icon: <span className="label-mono w-4 text-center text-xs font-bold leading-none">f</span>,
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    icon: <MessageCircle className="h-4 w-4 shrink-0" />,
+  },
+  {
+    id: "gab",
+    label: "Gab",
+    icon: <span className="label-mono w-4 text-center text-xs font-bold leading-none">G</span>,
+  },
+  {
+    id: "gettr",
+    label: "Gettr",
+    icon: <span className="label-mono w-4 text-center text-[10px] font-bold leading-none">GT</span>,
+  },
+  {
+    id: "email",
+    label: "Email",
+    icon: <Mail className="h-4 w-4 shrink-0" />,
+  },
+]
 
 export function ShareButtons({
   title,
@@ -32,15 +74,14 @@ export function ShareButtons({
   const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const [canNativeShare, setCanNativeShare] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<{ top: string; left: string }>({ top: "0", left: "0" })
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
+  // Resolve the share URL client-side to avoid hydration mismatches.
+  const [shareUrl, setShareUrl] = useState(url || "")
+
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const shareTitle = title || headline || "HOT AND FRESH"
   const shareExcerpt = excerpt || source
 
-  // Resolve the canonical URL on the client (falls back to current location).
-  const [shareUrl, setShareUrl] = useState(url || "")
   useEffect(() => {
     if (url) {
       setShareUrl(url)
@@ -71,13 +112,30 @@ export function ShareButtons({
   )
 
   const copyLink = useCallback(async () => {
+    const target = shareUrl || (typeof window !== "undefined" ? window.location.href : "")
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(target)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("[v0] copy link failed:", err)
+    } catch {
+      // Fallback for older browsers
+      try {
+        const ta = document.createElement("textarea")
+        ta.value = target
+        ta.style.position = "fixed"
+        ta.style.opacity = "0"
+        document.body.appendChild(ta)
+        ta.focus()
+        ta.select()
+        document.execCommand("copy")
+        document.body.removeChild(ta)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {
+        // silent fail
+      }
     }
+    setShowMenu(false)
   }, [shareUrl])
 
   const nativeShare = useCallback(async () => {
@@ -85,91 +143,104 @@ export function ShareButtons({
       await navigator.share({
         title: shareTitle,
         text: shareExcerpt || shareTitle,
-        url: shareUrl,
+        url: shareUrl || window.location.href,
       })
       setShowMenu(false)
     } catch {
-      // User cancelled or share failed — ignore silently.
+      // User cancelled or API unavailable — ignore.
     }
   }, [shareTitle, shareExcerpt, shareUrl])
 
-  // Position the dropdown menu relative to the trigger button.
-  useEffect(() => {
-    if (showMenu && buttonRef.current && menuRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const top = rect.bottom + window.scrollY + 8
-      const left = Math.max(8, rect.right - 220 + window.scrollX)
-      setMenuPosition({ top: `${top}px`, left: `${left}px` })
-    }
-  }, [showMenu])
-
-  // Close on outside click.
+  // Close on outside click or Escape key.
   useEffect(() => {
     if (!showMenu) return
-    function handle(e: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowMenu(false)
       }
     }
-    document.addEventListener("mousedown", handle)
-    return () => document.removeEventListener("mousedown", handle)
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowMenu(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    document.addEventListener("keydown", handleKey)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      document.removeEventListener("keydown", handleKey)
+    }
   }, [showMenu])
 
   const itemClass =
-    "flex items-center gap-2 rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+    "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:bg-muted"
 
   return (
-    <div className={`relative inline-block ${className}`}>
+    <div ref={containerRef} className={`relative inline-block ${className}`}>
       <button
-        ref={buttonRef}
         type="button"
         onClick={() => setShowMenu((s) => !s)}
-        className="label-mono flex items-center gap-1 text-muted-foreground transition-colors hover:text-primary"
+        className="label-mono flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-primary"
         aria-haspopup="menu"
         aria-expanded={showMenu}
-        title="Share this record"
+        aria-label="Share this post"
+        title="Share this post"
       >
-        <Share2 className="h-4 w-4" /> SHARE
+        <Share2 className="h-4 w-4" />
+        <span>SHARE</span>
       </button>
 
       {showMenu && (
         <div
-          ref={menuRef}
           role="menu"
-          className="fixed z-50 flex w-52 flex-col gap-0.5 rounded border border-border bg-card p-1.5 shadow-lg"
-          style={{ top: menuPosition.top, left: menuPosition.left }}
+          aria-label="Share options"
+          // Render above or below the trigger — using bottom-full prevents viewport overflow on mobile.
+          className="absolute bottom-full left-0 z-50 mb-2 flex min-w-[200px] flex-col rounded border border-border bg-card py-1 shadow-lg"
         >
-          <button type="button" onClick={copyLink} className={itemClass} role="menuitem">
-            {copied ? <Check className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4" />}
-            {copied ? "Copied" : "Copy Link"}
+          {/* Copy link */}
+          <button
+            type="button"
+            onClick={copyLink}
+            className={itemClass}
+            role="menuitem"
+            aria-label={copied ? "Link copied" : "Copy link to clipboard"}
+          >
+            {copied ? (
+              <Check className="h-4 w-4 shrink-0 text-primary" />
+            ) : (
+              <Link2 className="h-4 w-4 shrink-0" />
+            )}
+            <span>{copied ? "Copied!" : "Copy Link"}</span>
           </button>
 
+          {/* Native share — only shown when browser supports it */}
           {canNativeShare && (
-            <button type="button" onClick={nativeShare} className={itemClass} role="menuitem">
-              <Share2 className="h-4 w-4" /> Share…
+            <button
+              type="button"
+              onClick={nativeShare}
+              className={itemClass}
+              role="menuitem"
+              aria-label="Share using device share sheet"
+            >
+              <Share2 className="h-4 w-4 shrink-0" />
+              <span>Share via Device</span>
             </button>
           )}
 
-          <button type="button" onClick={() => openShare("twitter")} className={itemClass} role="menuitem">
-            <span className="label-mono w-4 text-center text-xs font-bold">X</span> Share on X
-          </button>
-          <button type="button" onClick={() => openShare("facebook")} className={itemClass} role="menuitem">
-            <span className="label-mono w-4 text-center text-xs font-bold">f</span> Facebook
-          </button>
-          <button type="button" onClick={() => openShare("truthsocial")} className={itemClass} role="menuitem">
-            <span className="label-mono w-4 text-center text-xs font-bold">TS</span> Truth Social
-          </button>
-          <button type="button" onClick={() => openShare("telegram")} className={itemClass} role="menuitem">
-            <MessageCircle className="h-4 w-4" /> Telegram
-          </button>
-          <button type="button" onClick={() => openShare("email")} className={itemClass} role="menuitem">
-            <Mail className="h-4 w-4" /> Email
-          </button>
+          <div className="my-1 border-t border-border" role="separator" />
+
+          {/* All platforms */}
+          {PLATFORMS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => openShare(p.id)}
+              className={itemClass}
+              role="menuitem"
+              aria-label={`Share on ${p.label}`}
+            >
+              {p.icon}
+              <span>{p.label}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

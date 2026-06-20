@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Clock, Tag, Video, FileText, ExternalLink, Star, BookMarked } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
 import { CardImage } from "@/components/card-image"
+import { ShareButtons } from "@/components/share-buttons"
+import { getSiteUrl } from "@/lib/rss-utils"
 
 interface LatestDispatchesProps {
   records: ArchiveRecord[]
@@ -219,12 +221,20 @@ export function LatestDispatches({ records, isLoading }: LatestDispatchesProps) 
                     )}
                   </div>
 
-                  <Link
-                    href={`/archives/${record.slug}`}
-                    className="label-mono text-xs font-semibold text-primary hover:underline whitespace-nowrap"
-                  >
-                    {record.type === "video" ? "WATCH" : "READ"} →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <ShareButtons
+                      title={record.title}
+                      url={`${getSiteUrl()}/archives/${record.slug}`}
+                      excerpt={record.excerpt || record.subtitle}
+                      hashtags={record.tags}
+                    />
+                    <Link
+                      href={`/archives/${record.slug}`}
+                      className="label-mono text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                    >
+                      {record.type === "video" ? "WATCH" : "READ"} →
+                    </Link>
+                  </div>
                 </div>
               </div>
             </article>

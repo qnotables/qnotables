@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
+import { getSiteUrl } from "@/lib/rss-utils"
 
 interface Thread {
   id: string
@@ -47,16 +48,27 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq("id", slug)
     .maybeSingle()
 
-  if (!data) return { title: "Thread — Hot and Fresh" }
+  if (!data) return { title: "Thread — HOT AND FRESH" }
 
-  const cat = normalizeCategoryName(data.category)
+  const site = getSiteUrl()
+  const canonical = `${site}/forum/${slug}`
+  const description = data.body?.slice(0, 160).replace(/\s+/g, " ") ?? ""
+
   return {
-    title: `${data.title} — Hot and Fresh`,
-    description: data.body?.slice(0, 160).replace(/\s+/g, " ") ?? "",
+    title: `${data.title} — HOT AND FRESH`,
+    description,
+    alternates: { canonical },
     openGraph: {
       title: data.title,
-      description: data.body?.slice(0, 160).replace(/\s+/g, " ") ?? "",
+      description,
+      url: canonical,
       siteName: "HOT AND FRESH",
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title: data.title,
+      description,
     },
   }
 }
@@ -175,6 +187,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           is_locked={Boolean(t.is_locked)}
           is_featured={Boolean(t.is_featured)}
           is_soft_deleted={Boolean(t.is_soft_deleted)}
+          shareUrl={`${getSiteUrl()}/forum/${t.id}`}
         />
 
         {/* Replies header */}

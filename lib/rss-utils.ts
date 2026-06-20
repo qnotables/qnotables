@@ -658,6 +658,8 @@ export type SharePlatform =
   | "telegram"
   | "linkedin"
   | "reddit"
+  | "gab"
+  | "gettr"
 
 /**
  * Build a share URL for a given platform. Returns the canonical post URL
@@ -684,6 +686,10 @@ export function createShareUrl(platform: SharePlatform, params: ShareUrlParams):
       return `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
     case "reddit":
       return `https://www.reddit.com/submit?url=${url}&title=${title}`
+    case "gab":
+      return `https://gab.com/compose?url=${url}&text=${title}`
+    case "gettr":
+      return `https://gettr.com/share?url=${url}&text=${title}`
     case "email":
       return `mailto:?subject=${title}&body=${text}%0A%0A${url}`
     default:
