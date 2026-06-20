@@ -16,16 +16,22 @@ export function ReplyForm({
   isSignedIn?: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
+  const [pendingMsg, setPendingMsg] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
   const [resetKey, setResetKey] = useState(0)
 
   function action(formData: FormData) {
     setError(null)
+    setPendingMsg(null)
     startTransition(async () => {
       const res = await createReply(formData)
       if (res?.error) {
         setError(res.error)
+      } else if (res?.pending) {
+        setPendingMsg(res.message ?? "Your reply is pending review by a moderator.")
+        setResetKey((k) => k + 1)
+        onCancel?.()
       } else {
         // Remount the editor to clear it
         setResetKey((k) => k + 1)
@@ -56,6 +62,11 @@ export function ReplyForm({
       {error ? (
         <p className="label-mono border border-destructive/50 bg-destructive/10 px-4 py-2 text-destructive">
           {error}
+        </p>
+      ) : null}
+      {pendingMsg ? (
+        <p className="label-mono border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-amber-400">
+          {pendingMsg}
         </p>
       ) : null}
       <div className="flex gap-2">

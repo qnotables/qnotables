@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Clock, Pencil, Trash2, X, Loader2, Pin, Lock, Star, Eye, EyeOff } from "lucide-react"
-import { updateThread, deleteThread } from "@/app/forum/actions"
+import { Clock, Pencil, Trash2, X, Loader2, Pin, Lock, Star, Eye, EyeOff, ImageOff } from "lucide-react"
+import { updateThread, deleteThread, removeThreadMedia } from "@/app/forum/actions"
 import { moderateThread } from "@/app/dashboard/actions"
 import { timeAgo } from "@/lib/time"
 import { Markdown } from "@/components/markdown"
@@ -93,7 +93,9 @@ export function ThreadArticle({
   const [localLocked, setLocalLocked] = useState(is_locked)
   const [localFeatured, setLocalFeatured] = useState(is_featured)
   const [localHidden, setLocalHidden] = useState(is_soft_deleted)
+  const [localBody, setLocalBody] = useState(body)
   const [modBusy, setModBusy] = useState(false)
+  const [mediaStripped, setMediaStripped] = useState(false)
 
   const tagList = tags ? tags.split(/[,\s]+/).filter(Boolean).slice(0, 8) : []
   const categoryName = normalizeCategoryName(category)
@@ -125,6 +127,17 @@ export function ThreadArticle({
     setModBusy(true)
     const res = await moderateThread(id, field, !current)
     if (res.success) setter(!current)
+    setModBusy(false)
+  }
+
+  async function handleStripMedia() {
+    if (!confirm("Remove all images and embeds from this thread?")) return
+    setModBusy(true)
+    const res = await removeThreadMedia(id)
+    if (!res.error && res.cleanBody !== undefined) {
+      setLocalBody(res.cleanBody)
+      setMediaStripped(true)
+    }
     setModBusy(false)
   }
 
@@ -281,7 +294,7 @@ export function ThreadArticle({
 
       {/* Body */}
       <div className="mt-5">
-        <Markdown content={preprocessBody(body)} />
+        <Markdown content={preprocessBody(localBody)} />
       </div>
 
       {/* Footer: share + mod controls */}
@@ -347,6 +360,16 @@ export function ThreadArticle({
             >
               {localHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
               {localHidden ? "Restore" : "Hide"}
+            </button>
+            <button
+              type="button"
+              disabled={modBusy || mediaStripped}
+              onClick={handleStripMedia}
+              title="Remove all images and embeds from this thread"
+              className="flex items-center gap-1 border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+            >
+              <ImageOff className="h-3 w-3" />
+              {mediaStripped ? "Stripped" : "Strip Media"}
             </button>
           </div>
         )}

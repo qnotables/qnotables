@@ -8,13 +8,19 @@ import { FORUM_CATEGORIES } from "@/lib/forum-utils"
 
 export function NewThreadForm() {
   const [error, setError] = useState<string | null>(null)
+  const [pendingMsg, setPendingMsg] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function action(formData: FormData) {
     setError(null)
+    setPendingMsg(null)
     startTransition(async () => {
       const res = await createThread(formData)
-      if (res?.error) setError(res.error)
+      if (res?.error) {
+        setError(res.error)
+      } else if (res?.pending) {
+        setPendingMsg(res.message ?? "Your post is pending review by a moderator.")
+      }
     })
   }
 
@@ -120,9 +126,15 @@ export function NewThreadForm() {
         </p>
       ) : null}
 
+      {pendingMsg ? (
+        <p className="label-mono border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-amber-400">
+          {pendingMsg}
+        </p>
+      ) : null}
+
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || Boolean(pendingMsg)}
         className="label-mono w-full bg-primary py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {pending ? "Posting..." : "Post Thread"}

@@ -34,6 +34,7 @@ interface Reply {
   created_at: string
   author_id: string
   parent_reply_id: string | null
+  is_hidden: boolean
   profiles: { display_name: string } | null
 }
 
@@ -81,11 +82,19 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   if (!thread || thread.is_soft_deleted) notFound()
   const t = thread as unknown as Thread
 
-  const { data: replyData } = await supabase
+  const repliesQuery = supabase
     .from("forum_replies")
-    .select("id, body, created_at, author_id, parent_reply_id, profiles(display_name)")
+    .select("id, body, created_at, author_id, parent_reply_id, is_hidden, profiles(display_name)")
     .eq("thread_id", slug)
+    .eq("is_pending", false)
     .order("created_at", { ascending: true })
+
+  // Non-admins only see visible replies
+  if (!isAdmin) {
+    repliesQuery.eq("is_hidden", false)
+  }
+
+  const { data: replyData } = await repliesQuery
 
   const replies = (replyData ?? []) as unknown as Reply[]
 
@@ -181,7 +190,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         <div className="flex flex-col gap-3">
           {topLevelReplies.map((r) => (
             <div key={r.id}>
-              <div className="border border-border bg-card p-5">
+              <div className={`border p-5 ${r.is_hidden ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card"}`}>
                 <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground">
                   <div className="flex items-center gap-3">
                     <Link
@@ -193,9 +202,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
                     </span>
+                    {r.is_hidden && (
+                      <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                        HIDDEN
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {isAdmin && <ReplyModControls replyId={r.id} />}
+                    {isAdmin && <ReplyModControls replyId={r.id} isHidden={r.is_hidden} />}
                     <ReplyVotes
                       replyId={r.id}
                       initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
@@ -213,7 +227,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
               {nestedReplies(r).length > 0 && (
                 <div className="ml-4 flex flex-col gap-3 border-l-2 border-border py-3">
                   {nestedReplies(r).map((nested) => (
-                    <div key={nested.id} className="border border-border bg-muted/20 p-4">
+                    <div key={nested.id} className={`border p-4 ${nested.is_hidden ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted/20"}`}>
                       <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground text-sm">
                         <div className="flex items-center gap-3">
                           <Link
@@ -225,9 +239,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
                           </span>
+                          {nested.is_hidden && (
+                            <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                              HIDDEN
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {isAdmin && <ReplyModControls replyId={nested.id} />}
+                          {isAdmin && <ReplyModControls replyId={nested.id} isHidden={nested.is_hidden} />}
                           <ReplyVotes
                             replyId={nested.id}
                             initialUpVotes={

@@ -23,6 +23,7 @@ export default async function ForumPage() {
       "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
     )
     .eq("is_soft_deleted", false)
+    .eq("is_pending", false)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
 

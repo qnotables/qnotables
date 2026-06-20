@@ -109,6 +109,28 @@ export async function deleteReplyAdmin(id: string): Promise<Result> {
   return { success: true }
 }
 
+export async function hideReply(id: string): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const db = createAdminClient()
+  const { error } = await db.from("forum_replies").update({ is_hidden: true }).eq("id", id)
+  if (error) return { success: false, error: error.message }
+  await logActivity({ action: "hid forum reply", targetType: "forum_reply", targetId: id })
+  revalidatePath("/dashboard/forum")
+  revalidatePath("/forum")
+  return { success: true }
+}
+
+export async function unhideReply(id: string): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const db = createAdminClient()
+  const { error } = await db.from("forum_replies").update({ is_hidden: false }).eq("id", id)
+  if (error) return { success: false, error: error.message }
+  await logActivity({ action: "restored forum reply", targetType: "forum_reply", targetId: id })
+  revalidatePath("/dashboard/forum")
+  revalidatePath("/forum")
+  return { success: true }
+}
+
 /* ----------------------------- Users ----------------------------- */
 
 export async function setUserRole(id: string, role: string): Promise<Result> {
@@ -308,6 +330,8 @@ export async function resolveFlag(id: string, status: string): Promise<Result> {
 export async function saveSettings(formData: FormData): Promise<Result> {
   if (!(await guard())) return { success: false, error: "Not authorized." }
   const db = createAdminClient()
+  const rawMaxLinks = parseInt(String(formData.get("forum_max_links") ?? "8"), 10)
+  const rawMaxEmbeds = parseInt(String(formData.get("forum_max_embeds") ?? "4"), 10)
   const payload = {
     id: 1,
     site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
@@ -318,6 +342,9 @@ export async function saveSettings(formData: FormData): Promise<Result> {
     shop_preview_mode: formData.get("shop_preview_mode") === "on",
     public_registration: formData.get("public_registration") === "on",
     maintenance_mode: formData.get("maintenance_mode") === "on",
+    forum_moderation_mode: formData.get("forum_moderation_mode") === "on",
+    forum_max_links: isNaN(rawMaxLinks) ? 8 : Math.max(1, Math.min(50, rawMaxLinks)),
+    forum_max_embeds: isNaN(rawMaxEmbeds) ? 4 : Math.max(1, Math.min(20, rawMaxEmbeds)),
     updated_at: new Date().toISOString(),
   }
   const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })

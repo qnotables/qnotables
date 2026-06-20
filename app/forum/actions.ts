@@ -3,19 +3,40 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { isAdminEmail } from "@/lib/admin"
 import { parseTags, serializeTags } from "@/lib/forum-utils"
+import {
+  checkRateLimit,
+  sanitizeBody,
+  containsScriptTags,
+  containsUnsafeHtml,
+  hasTooManyLinks,
+  hasTooManyEmbeds,
+  isNewUser,
+  flagBodyAutomatic,
+  stripMediaFromBody,
+  SPAM_LIMITS,
+} from "@/lib/forum-spam-guard"
 
 export async function createThread(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
-  const body = String(formData.get("body") ?? "").trim()
+  const rawBody = String(formData.get("body") ?? "").trim()
   const category = String(formData.get("category") ?? "").trim() || null
   const rawTags = String(formData.get("tags") ?? "").trim()
   const source_url = String(formData.get("source_url") ?? "").trim() || null
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
 
-  if (title.length < 4 || body.length < 4) {
+  if (title.length < 4 || rawBody.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
+  }
+
+  // Hard safety checks — no sanitizing, just reject
+  if (containsScriptTags(rawBody) || containsScriptTags(title)) {
+    return { error: "Post contains disallowed content." }
+  }
+  if (containsUnsafeHtml(rawBody)) {
+    return { error: "Post contains unsafe HTML." }
   }
 
   const supabase = await createClient()
@@ -24,15 +45,73 @@ export async function createThread(formData: FormData) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to post." }
 
+  // Rate limit: 1 post per 30 s
+  const rl = checkRateLimit(user.id, "post", SPAM_LIMITS.POST_COOLDOWN_MS, 1)
+  if (!rl.allowed) {
+    const secs = Math.ceil(rl.retryAfterMs / 1000)
+    return { error: `Posting too fast. Please wait ${secs}s before posting again.` }
+  }
+
+  // Load site settings for per-site limits
+  const admin = createAdminClient()
+  const { data: settings } = await admin
+    .from("site_settings")
+    .select("forum_max_links, forum_max_embeds, forum_moderation_mode")
+    .eq("id", 1)
+    .maybeSingle()
+
+  const maxLinks = settings?.forum_max_links ?? SPAM_LIMITS.MAX_LINKS_PER_POST
+  const maxEmbeds = settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST
+  const moderationMode = settings?.forum_moderation_mode ?? false
+
+  const linkCheck = hasTooManyLinks(rawBody, maxLinks)
+  if (!linkCheck.ok) {
+    return { error: `Too many links (${linkCheck.count}). Maximum allowed: ${linkCheck.max}.` }
+  }
+  const embedCheck = hasTooManyEmbeds(rawBody, maxEmbeds)
+  if (!embedCheck.ok) {
+    return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
+  }
+
+  // Sanitize body before storage
+  const body = sanitizeBody(rawBody)
+
+  // Check if user is new — for moderation queue
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("created_at, post_count")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const userIsNew = isNewUser(profile ?? {})
+  const isPending = moderationMode && userIsNew
+
   const { data, error } = await supabase
     .from("forum_threads")
-    .insert({ title, body, author_id: user.id, category, tags, source_url })
+    .insert({ title, body, author_id: user.id, category, tags, source_url, is_pending: isPending })
     .select("id")
     .single()
 
   if (error) return { error: error.message }
 
+  // Auto-flag if body looks spammy (even if not hard-rejected)
+  const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
+  if (flagReason) {
+    await admin.from("moderation_flags").insert({
+      content_type: "forum_thread",
+      content_id: data.id,
+      reason: flagReason,
+      status: "open",
+      auto_flagged: true,
+    })
+  }
+
   revalidatePath("/forum")
+
+  if (isPending) {
+    return { error: null, pending: true, message: "Your post is pending review by a moderator." }
+  }
+
   redirect(`/forum/${data.id}`)
 }
 
@@ -117,11 +196,15 @@ export async function updateDisplayName(formData: FormData) {
 
 export async function createReply(formData: FormData) {
   const threadId = String(formData.get("thread_id") ?? "")
-  const body = String(formData.get("body") ?? "").trim()
+  const rawBody = String(formData.get("body") ?? "").trim()
   const parentReplyId = String(formData.get("parent_reply_id") ?? "") || null
 
   if (!threadId) return { error: "Missing thread." }
-  if (body.length < 2) return { error: "Reply is too short." }
+  if (rawBody.length < 2) return { error: "Reply is too short." }
+
+  // Hard safety checks
+  if (containsScriptTags(rawBody)) return { error: "Reply contains disallowed content." }
+  if (containsUnsafeHtml(rawBody)) return { error: "Reply contains unsafe HTML." }
 
   const supabase = await createClient()
   const {
@@ -129,18 +212,232 @@ export async function createReply(formData: FormData) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to reply." }
 
-  const { error } = await supabase
+  // Rate limit: 1 reply per 30 s
+  const rl = checkRateLimit(user.id, "post", SPAM_LIMITS.POST_COOLDOWN_MS, 1)
+  if (!rl.allowed) {
+    const secs = Math.ceil(rl.retryAfterMs / 1000)
+    return { error: `Posting too fast. Please wait ${secs}s before replying again.` }
+  }
+
+  // Load per-site limits
+  const admin = createAdminClient()
+  const { data: settings } = await admin
+    .from("site_settings")
+    .select("forum_max_links, forum_max_embeds, forum_moderation_mode")
+    .eq("id", 1)
+    .maybeSingle()
+
+  const maxLinks = settings?.forum_max_links ?? SPAM_LIMITS.MAX_LINKS_PER_POST
+  const maxEmbeds = settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST
+  const moderationMode = settings?.forum_moderation_mode ?? false
+
+  const linkCheck = hasTooManyLinks(rawBody, maxLinks)
+  if (!linkCheck.ok) {
+    return { error: `Too many links (${linkCheck.count}). Maximum allowed: ${linkCheck.max}.` }
+  }
+  const embedCheck = hasTooManyEmbeds(rawBody, maxEmbeds)
+  if (!embedCheck.ok) {
+    return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
+  }
+
+  const body = sanitizeBody(rawBody)
+
+  // Check new-user status
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("created_at, post_count")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const isPending = moderationMode && isNewUser(profile ?? {})
+
+  const { data: replyData, error } = await supabase
     .from("forum_replies")
     .insert({
       thread_id: threadId,
       body,
       author_id: user.id,
       parent_reply_id: parentReplyId,
+      is_pending: isPending,
     })
+    .select("id")
+    .single()
 
   if (error) return { error: error.message }
 
+  // Auto-flag
+  const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
+  if (flagReason && replyData?.id) {
+    await admin.from("moderation_flags").insert({
+      content_type: "forum_reply",
+      content_id: replyData.id,
+      reason: flagReason,
+      status: "open",
+      auto_flagged: true,
+    })
+  }
+
   revalidatePath(`/forum/${threadId}`)
+  if (isPending) {
+    return { error: null, pending: true, message: "Your reply is pending review by a moderator." }
+  }
+  return { error: null }
+}
+
+// ─── Rich-media moderation actions ───────────────────────────────────────────
+
+/** Strip all embedded images/video/embeds from a thread body (admin only). */
+export async function removeThreadMedia(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { data: thread } = await supabase
+    .from("forum_threads")
+    .select("body")
+    .eq("id", threadId)
+    .maybeSingle()
+
+  if (!thread) return { error: "Thread not found." }
+
+  const cleanBody = stripMediaFromBody(thread.body ?? "")
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ body: cleanBody })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/forum/${threadId}`)
+  revalidatePath("/forum")
+  return { error: null, cleanBody }
+}
+
+/** Strip all embedded images/video/embeds from a reply body (admin only). */
+export async function removeReplyMedia(replyId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { data: reply } = await supabase
+    .from("forum_replies")
+    .select("body, thread_id")
+    .eq("id", replyId)
+    .maybeSingle()
+
+  if (!reply) return { error: "Reply not found." }
+
+  const cleanBody = stripMediaFromBody(reply.body ?? "")
+  const { error } = await supabase
+    .from("forum_replies")
+    .update({ body: cleanBody })
+    .eq("id", replyId)
+
+  if (error) return { error: error.message }
+  if (reply.thread_id) revalidatePath(`/forum/${reply.thread_id}`)
+  return { error: null, cleanBody }
+}
+
+/** Approve a pending thread (admin only). */
+export async function approveThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_pending: false })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/forum")
+  revalidatePath("/dashboard/moderation")
+  return { error: null }
+}
+
+/** Reject a pending thread by soft-deleting it (admin only). */
+export async function rejectThread(threadId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { error } = await supabase
+    .from("forum_threads")
+    .update({ is_soft_deleted: true, is_pending: false })
+    .eq("id", threadId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/forum")
+  revalidatePath("/dashboard/moderation")
+  return { error: null }
+}
+
+/** Approve a pending reply (admin only). */
+export async function approveReply(replyId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { data: reply } = await supabase
+    .from("forum_replies")
+    .select("thread_id")
+    .eq("id", replyId)
+    .maybeSingle()
+
+  const { error } = await supabase
+    .from("forum_replies")
+    .update({ is_pending: false })
+    .eq("id", replyId)
+
+  if (error) return { error: error.message }
+  if (reply?.thread_id) revalidatePath(`/forum/${reply.thread_id}`)
+  revalidatePath("/dashboard/moderation")
+  return { error: null }
+}
+
+/** Reject + hide a pending reply (admin only). */
+export async function rejectReply(replyId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || !isAdminEmail(user.email)) {
+    return { error: "You do not have permission." }
+  }
+
+  const { data: reply } = await supabase
+    .from("forum_replies")
+    .select("thread_id")
+    .eq("id", replyId)
+    .maybeSingle()
+
+  const { error } = await supabase
+    .from("forum_replies")
+    .update({ is_hidden: true, is_pending: false })
+    .eq("id", replyId)
+
+  if (error) return { error: error.message }
+  if (reply?.thread_id) revalidatePath(`/forum/${reply.thread_id}`)
+  revalidatePath("/dashboard/moderation")
   return { error: null }
 }
 

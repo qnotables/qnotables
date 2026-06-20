@@ -18,6 +18,9 @@ const DEFAULTS: SiteSettings = {
   shop_preview_mode: true,
   public_registration: true,
   maintenance_mode: false,
+  forum_moderation_mode: false,
+  forum_max_links: 8,
+  forum_max_embeds: 4,
 }
 
 export default async function SettingsPage() {
@@ -37,6 +40,9 @@ export default async function SettingsPage() {
         shop_preview_mode: data.shop_preview_mode ?? true,
         public_registration: data.public_registration ?? true,
         maintenance_mode: data.maintenance_mode ?? false,
+        forum_moderation_mode: data.forum_moderation_mode ?? false,
+        forum_max_links: data.forum_max_links ?? 8,
+        forum_max_embeds: data.forum_max_embeds ?? 4,
       }
     : DEFAULTS
 

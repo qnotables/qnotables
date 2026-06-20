@@ -1,6 +1,7 @@
 import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { checkRateLimit, SPAM_LIMITS } from "@/lib/forum-spam-guard"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,16 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ])
 
 const ALLOWED_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"])
+
+// Explicitly blocked dangerous extensions (defence-in-depth beyond MIME check)
+const BLOCKED_EXTS = new Set([
+  "svg", "html", "htm", "xhtml",
+  "js", "mjs", "cjs", "ts",
+  "php", "php3", "php4", "php5", "phtml",
+  "exe", "bat", "cmd", "sh", "bash", "zsh",
+  "py", "rb", "pl", "asp", "aspx", "jsp",
+  "xml", "xsl", "css",
+])
 
 // 5 MB for forum images
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -60,6 +71,21 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Per-user upload rate limit: max 3 uploads per 60 s
+  const uploadRl = checkRateLimit(
+    user.id,
+    "upload",
+    SPAM_LIMITS.UPLOAD_COOLDOWN_MS,
+    SPAM_LIMITS.MAX_UPLOADS_PER_WINDOW,
+  )
+  if (!uploadRl.allowed) {
+    const secs = Math.ceil(uploadRl.retryAfterMs / 1000)
+    return NextResponse.json(
+      { success: false, error: `Upload limit reached. Please wait ${secs}s before uploading again.` },
+      { status: 429, headers: { "Retry-After": String(secs) } },
+    )
+  }
+
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
@@ -92,6 +118,13 @@ export async function POST(request: NextRequest) {
     if (originalExt && !ALLOWED_IMAGE_EXTS.has(originalExt)) {
       return NextResponse.json(
         { success: false, error: "Only JPG, PNG, WEBP, and GIF images are allowed." },
+        { status: 400 },
+      )
+    }
+    // Block any explicitly dangerous extensions as defence-in-depth
+    if (originalExt && BLOCKED_EXTS.has(originalExt)) {
+      return NextResponse.json(
+        { success: false, error: "This file type is not allowed." },
         { status: 400 },
       )
     }
