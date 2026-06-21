@@ -5,6 +5,89 @@ import Image from 'next/image'
 import { ChevronLeft, ChevronRight, X, ZoomIn, Play } from 'lucide-react'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
 
+interface LightboxProps {
+  images: GalleryImage[]
+  index: number
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+}
+
+function Lightbox({ images, index, onClose, onPrev, onNext }: LightboxProps) {
+  const item = images[index]
+  const isVideo = item.file_type?.startsWith('video/')
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.title}
+    >
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 z-10 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Prev */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Media */}
+      <div
+        className="relative max-h-[90vh] max-w-[90vw]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isVideo ? (
+          <video
+            src={item.image_url}
+            className="max-h-[85vh] max-w-[90vw] shadow-2xl"
+            controls
+            autoPlay
+            playsInline
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image_url}
+            alt={item.alt_text}
+            className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
+          />
+        )}
+        {item.title && (
+          <div className="mt-2 text-center font-mono text-sm text-white/70">
+            {item.title}
+            <span className="ml-3 text-white/40">{index + 1} / {images.length}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Next */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+          aria-label="Next"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface GalleryCarouselProps {
   images: GalleryImage[]
 }
@@ -186,79 +269,15 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
       )}
 
       {/* Lightbox overlay */}
-      {lightboxIndex !== null && (() => {
-        const lb = images[lightboxIndex]
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-            onClick={closeLightbox}
-            role="dialog"
-            aria-modal="true"
-            aria-label={lb.title}
-          >
-            {/* Close */}
-            <button
-              onClick={closeLightbox}
-              className="absolute right-4 top-4 z-10 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Prev */}
-            {images.length > 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); lightboxPrev() }}
-                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-
-            {/* Media */}
-            <div
-              className="relative max-h-[90vh] max-w-[90vw]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {lb.file_type?.startsWith('video/') ? (
-                <video
-                  src={lb.image_url}
-                  className="max-h-[85vh] max-w-[90vw] shadow-2xl"
-                  controls
-                  autoPlay
-                  playsInline
-                />
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={lb.image_url}
-                  alt={lb.alt_text}
-                  className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
-                />
-              )}
-              {/* Caption */}
-              {lb.title && (
-                <div className="mt-2 text-center font-mono text-sm text-white/70">
-                  {lb.title}
-                  <span className="ml-3 text-white/40">{lightboxIndex + 1} / {images.length}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Next */}
-            {images.length > 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); lightboxNext() }}
-                className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            )}
-          </div>
-        )
-      })()}
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={images}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={lightboxPrev}
+          onNext={lightboxNext}
+        />
+      )}
     </div>
   )
 }

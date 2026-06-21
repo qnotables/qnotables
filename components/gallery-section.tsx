@@ -14,6 +14,12 @@ export function GallerySection() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  // Guard against SSR/client mismatch — render nothing until after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Check authentication
   useEffect(() => {
@@ -47,7 +53,8 @@ export function GallerySection() {
     setImages(data)
   }
 
-  if (isCheckingAuth || isLoading) {
+  // Return a static skeleton that matches SSR output until client has mounted
+  if (!mounted || isCheckingAuth || isLoading) {
     return (
       <section className="space-y-3 py-6">
         <div className="space-y-1">
