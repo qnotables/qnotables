@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  return createAdminClient(url, key)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,15 +50,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upload to Vercel Blob
-    const filename = `gallery/${user.id}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+    // Upload to Vercel Blob under the shared "media" folder
+    const filename = `media/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
     const blob = await put(filename, file, {
       access: 'public',
-      addRandomSuffix: false,
+      addRandomSuffix: true,
     })
 
-    // Store metadata in Supabase
-    const { data, error } = await supabase
+    const admin = getAdminClient()
+
+    // Write to gallery_images (user-facing, starts unapproved)
+    const { data: galleryRow, error: galleryError } = await supabase
       .from('gallery_images')
       .insert([
         {
@@ -67,17 +76,31 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single()
 
-    if (error) {
-      console.error('[gallery] Error saving image metadata:', error)
+    if (galleryError) {
+      console.error('[gallery] Error saving gallery metadata:', galleryError)
       return NextResponse.json(
         { error: 'Failed to save image metadata' },
         { status: 500 }
       )
     }
 
+    // Also write to media_assets so it appears in the dashboard Media Library
+    const { error: mediaError } = await admin.from('media_assets').insert({
+      file_name: title || file.name,
+      file_url: blob.url,
+      file_type: file.type,
+      file_size: file.size,
+      alt_text: altText || null,
+    })
+
+    if (mediaError) {
+      // Non-fatal — gallery image is saved; just log the media library write failure
+      console.error('[gallery] Failed to mirror to media_assets:', mediaError)
+    }
+
     return NextResponse.json({
       success: true,
-      id: data?.id,
+      id: galleryRow?.id,
       url: blob.url,
       title,
     })
