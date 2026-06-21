@@ -3,6 +3,7 @@ import { Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ForumList, type ThreadListItem } from "@/components/forum-list"
+import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
 
 export const metadata = {
@@ -46,6 +47,7 @@ export default async function ForumPage() {
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
+      <TopAd />
 
       <main className="mx-auto max-w-4xl px-4 py-10 md:px-6">
         <div className="mb-8 flex flex-wrap items-center gap-3">
@@ -75,6 +77,7 @@ export default async function ForumPage() {
         <ForumList threads={rows} isSignedIn={Boolean(user)} />
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
   )

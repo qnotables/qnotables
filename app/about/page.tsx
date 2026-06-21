@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Archive, Rss, Search, Shield, FileText, Users, Clock, LinkIcon, Mail } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { TopAd, BottomAd } from "@/components/ad-display"
 import { PillarCard } from "@/components/about/pillar-card"
 import { ResearchStep } from "@/components/about/research-step"
 import { DeskCard } from "@/components/about/desk-card"
@@ -96,6 +97,7 @@ export default function AboutPage() {
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
+      <TopAd />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -310,6 +312,7 @@ export default function AboutPage() {
         </div>
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
   )

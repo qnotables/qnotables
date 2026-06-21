@@ -7,6 +7,7 @@ import { MembershipComparison } from "@/components/membership-comparison"
 import { MerchGrid } from "@/components/merch-grid"
 import { ShopFAQ } from "@/components/shop-faq"
 import { SiteFooter } from "@/components/site-footer"
+import { TopAd, BottomAd } from "@/components/ad-display"
 
 export const metadata: Metadata = {
   title: "Shop & Membership — HOT AND FRESH",
@@ -45,6 +46,8 @@ export default function ShopPage() {
         </div>
       </header>
 
+      <TopAd />
+
       <main>
         <ShopHero />
 
@@ -72,6 +75,7 @@ export default function ShopPage() {
         <ShopFAQ />
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
   )

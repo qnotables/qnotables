@@ -6,6 +6,7 @@ import { ArchiveSearchBar } from "@/components/archive-search-bar"
 import { FeaturedRecords } from "@/components/featured-records"
 import { LatestDispatches } from "@/components/latest-dispatches"
 import { ArchiveSidebar } from "@/components/archive-sidebar"
+import { TopAd, BottomAd } from "@/components/ad-display"
 import { getAllPosts } from "@/lib/blog-posts"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import {
@@ -91,6 +92,7 @@ export default async function ArchivesPage() {
   return (
     <div className="min-h-screen tactical-grid">
       <SiteHeader />
+      <TopAd />
 
       <main className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6 lg:py-16">
         {/* Hero Section */}
@@ -136,6 +138,7 @@ export default async function ArchivesPage() {
         </div>
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
   )
