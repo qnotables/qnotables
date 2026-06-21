@@ -20,19 +20,33 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
+  Video,
 } from "lucide-react"
 import { Markdown } from "@/components/markdown"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_IMAGES = 5
-const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"])
-const ALLOWED_EXTS = /\.(jpg|jpeg|png|webp|gif)$/i
+const MAX_BYTES = 5 * 1024 * 1024 // 5 MB for images
+const MAX_VIDEOS = 3
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024 // 500 MB for videos
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"])
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/mov"])
+const ALLOWED_IMAGE_EXTS = /\.(jpg|jpeg|png|webp|gif)$/i
+const ALLOWED_VIDEO_EXTS = /\.(mp4|webm|mov)$/i
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UploadedImage {
+  id: string
+  url: string
+  filename: string
+  size: number
+  status: "uploading" | "done" | "error"
+  error?: string
+}
+
+interface UploadedVideo {
   id: string
   url: string
   filename: string
@@ -101,11 +115,18 @@ function insertText(value: string, start: number, end: number, text: string): Ed
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-function validateFile(file: File): string | null {
-  if (!ALLOWED_TYPES.has(file.type)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
-  if (file.size > MAX_BYTES) return "Image must be 5 MB or smaller."
-  const ext = "." + (file.name.split(".").pop() ?? "")
-  if (!ALLOWED_EXTS.test(ext)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
+function validateFile(file: File, type: "image" | "video"): string | null {
+  if (type === "image") {
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
+    if (file.size > MAX_BYTES) return "Image must be 5 MB or smaller."
+    const ext = "." + (file.name.split(".").pop() ?? "")
+    if (!ALLOWED_IMAGE_EXTS.test(ext)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
+  } else {
+    if (!ALLOWED_VIDEO_TYPES.has(file.type)) return "Only MP4, WEBM, and MOV videos are allowed."
+    if (file.size > MAX_VIDEO_BYTES) return "Video must be 500 MB or smaller."
+    const ext = "." + (file.name.split(".").pop() ?? "")
+    if (!ALLOWED_VIDEO_EXTS.test(ext)) return "Only MP4, WEBM, and MOV videos are allowed."
+  }
   return null
 }
 
@@ -173,6 +194,65 @@ function ImagePreviewGrid({
   )
 }
 
+// ─── Video Preview Grid ───────────────────────────────────────────────────
+
+function VideoPreviewGrid({
+  videos,
+  onRemove,
+}: {
+  videos: UploadedVideo[]
+  onRemove: (id: string) => void
+}) {
+  if (videos.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-3">
+      {videos.map((vid) => (
+        <div
+          key={vid.id}
+          className="group relative h-16 w-16 flex-shrink-0 overflow-hidden border border-border bg-background flex items-center justify-center"
+        >
+          {vid.status === "uploading" ? (
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          ) : vid.status === "error" ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
+              <span className="label-mono text-center text-[9px] leading-tight text-destructive">
+                {vid.error ?? "Error"}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-1">
+              <Video className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Status overlay for done */}
+          {vid.status === "done" && (
+            <div className="absolute bottom-0.5 right-0.5">
+              <CheckCircle2 className="h-3 w-3 text-green-400 drop-shadow" />
+            </div>
+          )}
+
+          {/* Remove button */}
+          <button
+            type="button"
+            onClick={() => onRemove(vid.id)}
+            className="absolute right-0 top-0 hidden p-0.5 group-hover:block bg-background/80 hover:bg-destructive hover:text-white text-muted-foreground transition-colors"
+            aria-label="Remove video"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+
+      <span className="label-mono self-end text-[10px] text-muted-foreground">
+        {videos.filter((v) => v.status === "done").length}/{MAX_VIDEOS} videos
+      </span>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MarkdownEditor({
@@ -188,11 +268,13 @@ export function MarkdownEditor({
   const [value, setValue] = useState(defaultValue)
   const [tab, setTab] = useState<"write" | "preview">("write")
   const [images, setImages] = useState<UploadedImage[]>([])
+  const [videos, setVideos] = useState<UploadedVideo[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [showImageMenu, setShowImageMenu] = useState(false)
   const stats = calculateStats(value)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const videoFileRef = useRef<HTMLInputElement>(null)
   const imageMenuRef = useRef<HTMLDivElement>(null)
   const pendingSelection = useRef<{ start: number; end: number } | null>(null)
 
@@ -237,30 +319,39 @@ export function MarkdownEditor({
 
   // ─── Upload logic ─────────────────────────────────────────────────────────
 
-  const doneCount = images.filter((i) => i.status === "done").length
-  const canUpload = isSignedIn && doneCount < MAX_IMAGES
+  const doneImageCount = images.filter((i) => i.status === "done").length
+  const doneVideoCount = videos.filter((v) => v.status === "done").length
+  const canUploadImage = isSignedIn && doneImageCount < MAX_IMAGES
+  const canUploadVideo = isSignedIn && doneVideoCount < MAX_VIDEOS
 
-  async function uploadFile(file: File) {
-    const validationError = validateFile(file)
+  async function uploadFile(file: File, type: "image" | "video") {
+    const validationError = validateFile(file, type)
     if (validationError) {
-      // Show error as a transient image entry
       const errId = crypto.randomUUID()
-      setImages((prev) => [
-        ...prev,
-        { id: errId, url: "", filename: file.name, size: file.size, status: "error", error: validationError },
-      ])
-      // Auto-remove error tile after 4 s
-      setTimeout(() => setImages((prev) => prev.filter((i) => i.id !== errId)), 4000)
+      if (type === "image") {
+        setImages((prev) => [...prev, { id: errId, url: "", filename: file.name, size: file.size, status: "error", error: validationError }])
+      } else {
+        setVideos((prev) => [...prev, { id: errId, url: "", filename: file.name, size: file.size, status: "error", error: validationError }])
+      }
+      setTimeout(() => {
+        if (type === "image") {
+          setImages((prev) => prev.filter((i) => i.id !== errId))
+        } else {
+          setVideos((prev) => prev.filter((v) => v.id !== errId))
+        }
+      }, 4000)
       return
     }
 
-    if (doneCount >= MAX_IMAGES) return
-
     const tempId = crypto.randomUUID()
-    setImages((prev) => [
-      ...prev,
-      { id: tempId, url: "", filename: file.name, size: file.size, status: "uploading" },
-    ])
+    if (type === "image" && doneImageCount >= MAX_IMAGES) return
+    if (type === "video" && doneVideoCount >= MAX_VIDEOS) return
+
+    if (type === "image") {
+      setImages((prev) => [...prev, { id: tempId, url: "", filename: file.name, size: file.size, status: "uploading" }])
+    } else {
+      setVideos((prev) => [...prev, { id: tempId, url: "", filename: file.name, size: file.size, status: "uploading" }])
+    }
 
     try {
       const fd = new FormData()
@@ -270,33 +361,45 @@ export function MarkdownEditor({
       const json = await res.json()
 
       if (!res.ok || !json.success) {
-        throw new Error(json.error ?? "Image upload failed.")
+        throw new Error(json.error ?? `${type} upload failed.`)
       }
 
-      setImages((prev) =>
-        prev.map((i) =>
-          i.id === tempId
-            ? { ...i, url: json.url, filename: json.filename, status: "done" }
-            : i,
-        ),
-      )
-      insertAtCaret(`\n![uploaded image](${json.url})\n`)
+      if (type === "image") {
+        setImages((prev) => prev.map((i) => (i.id === tempId ? { ...i, url: json.url, filename: json.filename, status: "done" } : i)))
+        insertAtCaret(`\n![uploaded image](${json.url})\n`)
+      } else {
+        setVideos((prev) => prev.map((v) => (v.id === tempId ? { ...v, url: json.url, filename: json.filename, status: "done" } : v)))
+        insertAtCaret(`\n![uploaded video](${json.url})\n`)
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Image upload failed."
-      setImages((prev) =>
-        prev.map((i) => (i.id === tempId ? { ...i, status: "error", error: msg } : i)),
-      )
+      const msg = err instanceof Error ? err.message : `${type} upload failed.`
+      if (type === "image") {
+        setImages((prev) => prev.map((i) => (i.id === tempId ? { ...i, status: "error", error: msg } : i)))
+      } else {
+        setVideos((prev) => prev.map((v) => (v.id === tempId ? { ...v, status: "error", error: msg } : v)))
+      }
     }
   }
 
-  function handleFiles(files: FileList | File[]) {
-    const arr = Array.from(files)
-    const remaining = MAX_IMAGES - doneCount
-    arr.slice(0, remaining).forEach(uploadFile)
+  function handleImageFiles(files: FileList | File[]) {
+    const arr = Array.from(files).filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
+    const remaining = MAX_IMAGES - doneImageCount
+    arr.slice(0, remaining).forEach((f) => uploadFile(f, "image"))
   }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) handleFiles(e.target.files)
+  function handleVideoFiles(files: FileList | File[]) {
+    const arr = Array.from(files).filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
+    const remaining = MAX_VIDEOS - doneVideoCount
+    arr.slice(0, remaining).forEach((f) => uploadFile(f, "video"))
+  }
+
+  function onImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) handleImageFiles(e.target.files)
+    e.target.value = ""
+  }
+
+  function onVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) handleVideoFiles(e.target.files)
     e.target.value = ""
   }
 
@@ -309,7 +412,7 @@ export function MarkdownEditor({
       if (item.kind === "file" && item.type.startsWith("image/")) {
         e.preventDefault()
         const file = item.getAsFile()
-        if (file && canUpload) uploadFile(file)
+        if (file && canUploadImage) uploadFile(file, "image")
         break
       }
     }
@@ -327,22 +430,34 @@ export function MarkdownEditor({
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragOver(false)
-      if (!canUpload) return
       const files = e.dataTransfer.files
-      if (files.length) handleFiles(files)
+      if (!files.length) return
+      const imageFiles = Array.from(files).filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
+      const videoFiles = Array.from(files).filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
+      if (imageFiles.length && canUploadImage) handleImageFiles(imageFiles)
+      if (videoFiles.length && canUploadVideo) handleVideoFiles(videoFiles)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canUpload, doneCount],
+    [canUploadImage, canUploadVideo, doneImageCount, doneVideoCount],
   )
 
   function removeImage(imgId: string) {
     setImages((prev) => {
       const img = prev.find((i) => i.id === imgId)
-      // Also remove the markdown that was inserted for this image
       if (img?.url) {
         setValue((v) => v.replace(`\n![uploaded image](${img.url})\n`, "").replace(`![uploaded image](${img.url})`, ""))
       }
       return prev.filter((i) => i.id !== imgId)
+    })
+  }
+
+  function removeVideo(vidId: string) {
+    setVideos((prev) => {
+      const vid = prev.find((v) => v.id === vidId)
+      if (vid?.url) {
+        setValue((v) => v.replace(`\n![uploaded video](${vid.url})\n`, "").replace(`![uploaded video](${vid.url})`, ""))
+      }
+      return prev.filter((v) => v.id !== vidId)
     })
   }
 
@@ -509,12 +624,12 @@ export function MarkdownEditor({
               )}
             </div>
 
-            {/* Direct upload button */}
+            {/* Direct image upload button */}
             {isSignedIn && (
               <button
                 type="button"
-                title={canUpload ? "Upload image" : `Image limit reached (${MAX_IMAGES})`}
-                disabled={!canUpload || anyUploading}
+                title={canUploadImage ? "Upload image" : `Image limit reached (${MAX_IMAGES})`}
+                disabled={!canUploadImage || anyUploading}
                 onClick={() => fileRef.current?.click()}
                 className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -526,13 +641,34 @@ export function MarkdownEditor({
               </button>
             )}
 
+            {/* Video upload button */}
+            {isSignedIn && (
+              <button
+                type="button"
+                title={canUploadVideo ? "Upload video" : `Video limit reached (${MAX_VIDEOS})`}
+                disabled={!canUploadVideo || anyUploading}
+                onClick={() => videoFileRef.current?.click()}
+                className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Video className="h-3.5 w-3.5" />
+              </button>
+            )}
+
             <input
               ref={fileRef}
               type="file"
               accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
               multiple
               className="hidden"
-              onChange={onFileChange}
+              onChange={onImageFileChange}
+            />
+
+            <input
+              ref={videoFileRef}
+              type="file"
+              accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={onVideoFileChange}
             />
           </div>
         )}
@@ -543,7 +679,7 @@ export function MarkdownEditor({
         {/* Drag-over overlay */}
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-primary bg-primary/10">
-            <p className="label-mono text-sm font-semibold text-primary">Drop image to upload</p>
+            <p className="label-mono text-sm font-semibold text-primary">Drop image or video to upload</p>
           </div>
         )}
         <textarea
@@ -573,6 +709,9 @@ export function MarkdownEditor({
 
       {/* Uploaded image preview grid */}
       <ImagePreviewGrid images={images} onRemove={removeImage} />
+
+      {/* Uploaded video preview grid */}
+      <VideoPreviewGrid videos={videos} onRemove={removeVideo} />
 
       {/* Drag hint when empty and signed in */}
       {tab === "write" && isSignedIn && canUpload && images.length === 0 && (
