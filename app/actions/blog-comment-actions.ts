@@ -2,11 +2,17 @@
 
 import { createClient } from "@supabase/supabase-js"
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-)
+// Lazy-load Supabase client to avoid initialization errors during build
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    throw new Error("Supabase configuration missing")
+  }
+
+  return createClient(url, key)
+}
 
 export interface BlogComment {
   id: string
@@ -44,7 +50,7 @@ export async function createBlogComment(
       return { success: false, error: "Author name must be at least 2 characters" }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from("blog_comments")
       .insert([
         {
@@ -78,7 +84,7 @@ export async function createBlogComment(
  */
 export async function getBlogComments(postId: string): Promise<BlogComment[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from("blog_comments")
       .select("*")
       .eq("post_id", postId)
@@ -107,7 +113,7 @@ export async function updateBlogComment(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Verify ownership (server-side check)
-    const { data: comment, error: fetchError } = await supabase
+    const { data: comment, error: fetchError } = await getSupabaseClient()
       .from("blog_comments")
       .select("author_id")
       .eq("id", commentId)
@@ -117,7 +123,7 @@ export async function updateBlogComment(
       return { success: false, error: "You can only edit your own comments" }
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("blog_comments")
       .update({
         body: newBody.trim(),
@@ -147,7 +153,7 @@ export async function deleteBlogComment(
   try {
     // If authorId provided, verify ownership
     if (authorId) {
-      const { data: comment, error: fetchError } = await supabase
+      const { data: comment, error: fetchError } = await getSupabaseClient()
         .from("blog_comments")
         .select("author_id")
         .eq("id", commentId)
@@ -162,7 +168,7 @@ export async function deleteBlogComment(
       }
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("blog_comments")
       .update({
         is_deleted: true,

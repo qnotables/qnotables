@@ -13,6 +13,8 @@ import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 import { BlogComments } from "@/components/blog-comments"
 import { getBlogComments } from "@/app/actions/blog-comment-actions"
 
+export const dynamic = "force-dynamic"
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPost(slug)

@@ -131,7 +131,14 @@ async function getDbPosts(): Promise<BlogPost[]> {
 
     // Use admin client so this works both in RSC (with cookies) and in
     // contexts where the cookie store isn't available (generateStaticParams, etc.)
-    const admin = createAdminClient()
+    let admin
+    try {
+      admin = createAdminClient()
+    } catch (clientErr) {
+      console.warn("[v0] Failed to create admin client", clientErr)
+      return []
+    }
+
     const { data, error } = await admin
       .from("blog_posts")
       .select(
