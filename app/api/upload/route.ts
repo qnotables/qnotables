@@ -13,7 +13,15 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/gif",
 ])
 
+const ALLOWED_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/mov",
+])
+
 const ALLOWED_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"])
+const ALLOWED_VIDEO_EXTS = new Set(["mp4", "webm", "mov"])
 
 // Explicitly blocked dangerous extensions (defence-in-depth beyond MIME check)
 const BLOCKED_EXTS = new Set([
@@ -25,8 +33,9 @@ const BLOCKED_EXTS = new Set([
   "xml", "xsl", "css",
 ])
 
-// 5 MB for forum images
+// 5 MB for forum/blog images; 500 MB for blog videos
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -39,13 +48,17 @@ function safeExtension(filename: string, mimeType: string): string {
     "image/png": "png",
     "image/webp": "webp",
     "image/gif": "gif",
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/quicktime": "mov",
+    "video/mov": "mov",
   }
   if (mimeMap[mimeType]) return mimeMap[mimeType]
 
   // Fall back to the last segment of the filename only
   const parts = filename.toLowerCase().split(".")
   const ext = parts[parts.length - 1] ?? ""
-  if (ALLOWED_IMAGE_EXTS.has(ext)) return ext
+  if (ALLOWED_IMAGE_EXTS.has(ext) || ALLOWED_VIDEO_EXTS.has(ext)) return ext
   return "jpg"
 }
 
@@ -94,30 +107,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No file provided." }, { status: 400 })
     }
 
-    // Validate MIME type — images only
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    // Sanitize folder param first (needed for video permission check)
+    const folderRaw = String(formData.get("folder") ?? "forum")
+    const folder = folderRaw === "blog" ? "blog" : "forum"
+
+    const isImage = ALLOWED_IMAGE_TYPES.has(file.type)
+    const isVideo = ALLOWED_VIDEO_TYPES.has(file.type)
+
+    // Videos only allowed in blog folder
+    if (!isImage && !(isVideo && folder === "blog")) {
       return NextResponse.json(
         {
           success: false,
-          error: "Only JPG, PNG, WEBP, and GIF images are allowed.",
+          error: folder === "blog"
+            ? "Only images (JPG, PNG, WEBP, GIF) and videos (MP4, WEBM, MOV) are allowed."
+            : "Only JPG, PNG, WEBP, and GIF images are allowed.",
         },
         { status: 400 },
       )
     }
 
     // Validate size
-    if (file.size > MAX_IMAGE_BYTES) {
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+    const maxLabel = isVideo ? "500 MB" : "5 MB"
+    if (file.size > maxBytes) {
       return NextResponse.json(
-        { success: false, error: "Image must be 5 MB or smaller." },
+        { success: false, error: `${isVideo ? "Video" : "Image"} must be ${maxLabel} or smaller.` },
         { status: 400 },
       )
     }
 
     // Validate original filename extension as a second check
     const originalExt = file.name.toLowerCase().split(".").pop() ?? ""
-    if (originalExt && !ALLOWED_IMAGE_EXTS.has(originalExt)) {
+    const allowedExts = isVideo ? ALLOWED_VIDEO_EXTS : ALLOWED_IMAGE_EXTS
+    if (originalExt && !allowedExts.has(originalExt)) {
       return NextResponse.json(
-        { success: false, error: "Only JPG, PNG, WEBP, and GIF images are allowed." },
+        { success: false, error: "File extension does not match file type." },
         { status: 400 },
       )
     }
@@ -128,10 +153,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
-
-    // Sanitize folder param
-    const folderRaw = String(formData.get("folder") ?? "forum")
-    const folder = folderRaw === "blog" ? "blog" : "forum"
 
     // Generate a safe, unique filename — never trust the original name
     const ext = safeExtension(file.name, file.type)

@@ -36,6 +36,7 @@ import {
   Clock,
   Film,
   ExternalLink,
+  Video,
 } from "lucide-react"
 import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
 
@@ -43,7 +44,9 @@ import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
 
 const MAX_IMAGES = 10
 const MAX_BYTES = 10 * 1024 * 1024
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"])
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/mov"])
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -178,6 +181,73 @@ function createEmbedBlockExtension() {
   })
 }
 
+// ─── VideoBlock Node ──────────────────────────────────────────────────────────
+
+function VideoBlockView({ node, deleteNode }: {
+  node: { attrs: { src: string; title: string } }
+  deleteNode: () => void
+}) {
+  const { src, title } = node.attrs
+  return (
+    <NodeViewWrapper className="video-block-wrapper my-4 select-none" contentEditable={false}>
+      <div className="relative overflow-hidden border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border bg-muted/60 px-3 py-1.5">
+          <div className="flex items-center gap-2">
+            <Video className="h-3.5 w-3.5 text-primary" />
+            <span className="label-mono text-xs text-muted-foreground">UPLOADED VIDEO</span>
+            {title && <span className="label-mono truncate text-xs text-foreground">{title}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={deleteNode}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 text-muted-foreground hover:text-destructive transition-colors"
+            title="Remove video"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        <video
+          src={src}
+          controls
+          playsInline
+          className="w-full max-h-[480px] bg-black"
+          title={title}
+        />
+      </div>
+    </NodeViewWrapper>
+  )
+}
+
+function createVideoBlockExtension() {
+  return TiptapNode.create({
+    name: "videoBlock",
+    group: "block",
+    atom: true,
+    draggable: true,
+    selectable: true,
+
+    addAttributes() {
+      return {
+        src: { default: "" },
+        title: { default: "" },
+      }
+    },
+
+    parseHTML() {
+      return [{ tag: 'div[data-type="video-block"]' }]
+    },
+
+    renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+      return ["div", mergeAttributes(HTMLAttributes as Record<string, string>, { "data-type": "video-block" })]
+    },
+
+    addNodeView() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return ReactNodeViewRenderer(VideoBlockView as any)
+    },
+  })
+}
+
 // ─── Toolbar Button ───────────────────────────────────────────────────────────
 
 function ToolBtn({
@@ -291,7 +361,10 @@ export function TiptapEditor({
   const [images, setImages] = useState<UploadedImage[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [pendingEmbed, setPendingEmbed] = useState<EmbedData | null>(null)
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [videoUploadError, setVideoUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const videoFileRef = useRef<HTMLInputElement>(null)
   const [jsonValue, setJsonValue] = useState<string>("")
   const [previewText, setPreviewText] = useState<string>("")
 
@@ -312,6 +385,9 @@ export function TiptapEditor({
   }
 
   const EmbedBlock = useRef(createEmbedBlockExtension()).current
+  const VideoBlock = useRef(createVideoBlockExtension()).current
+  // Use a ref so handleDrop can call the latest uploadVideoFile without stale closure
+  const uploadVideoFileRef = useRef<(file: File) => void>(() => {})
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -335,6 +411,7 @@ export function TiptapEditor({
       Placeholder.configure({ placeholder }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       EmbedBlock,
+      VideoBlock,
     ],
     content: getInitialContent(),
     onUpdate({ editor }) {
@@ -364,10 +441,17 @@ export function TiptapEditor({
       handleDrop(view, event) {
         const files = event.dataTransfer?.files
         if (files?.length) {
-          const imageFiles = Array.from(files).filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
+          const allFiles = Array.from(files)
+          const imageFiles = allFiles.filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
+          const videoFiles = allFiles.filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
           if (imageFiles.length > 0 && canUpload) {
             event.preventDefault()
             imageFiles.slice(0, MAX_IMAGES - doneCount).forEach(uploadImageFile)
+            return true
+          }
+          if (videoFiles.length > 0 && uploadFolder === "blog") {
+            event.preventDefault()
+            uploadVideoFileRef.current(videoFiles[0])
             return true
           }
         }
@@ -430,6 +514,53 @@ export function TiptapEditor({
   function removeImage(imgId: string) {
     setImages((prev) => prev.filter((i) => i.id !== imgId))
   }
+
+  // ─── Video upload ──────────────────────────────────────────────────────────
+
+  const uploadVideoFile = useCallback(
+
+    async (file: File) => {
+      if (!ALLOWED_VIDEO_TYPES.has(file.type)) {
+        setVideoUploadError("Only MP4, WEBM, and MOV videos are allowed.")
+        return
+      }
+      if (file.size > MAX_VIDEO_BYTES) {
+        setVideoUploadError("Video must be 500 MB or smaller.")
+        return
+      }
+      if (uploadFolder !== "blog") {
+        setVideoUploadError("Video uploads are only available in blog posts.")
+        return
+      }
+
+      setVideoUploading(true)
+      setVideoUploadError(null)
+
+      try {
+        const fd = new FormData()
+        fd.append("file", file)
+        fd.append("folder", uploadFolder)
+        const res = await fetch("/api/upload", { method: "POST", body: fd })
+        const json = await res.json()
+
+        if (!res.ok || !json.success) throw new Error(json.error ?? "Upload failed")
+
+        // Insert video block into editor
+        editor?.chain().focus().insertContent({
+          type: "videoBlock",
+          attrs: { src: json.url, title: file.name },
+        }).run()
+      } catch (err) {
+        setVideoUploadError(err instanceof Error ? err.message : "Video upload failed")
+      } finally {
+        setVideoUploading(false)
+      }
+    },
+    [editor, uploadFolder],
+  )
+
+  // Keep the ref in sync so handleDrop can always call the latest version
+  uploadVideoFileRef.current = uploadVideoFile
 
   // ─── Embed insertion ───────────────────────────────────────────────────────
 
@@ -579,6 +710,38 @@ export function TiptapEditor({
       >
         <Upload className="h-3.5 w-3.5" />
       </ToolBtn>
+
+      {/* Video upload — blog only */}
+      {isSignedIn && uploadFolder === "blog" && (
+        <ToolBtn
+          title={videoUploading ? "Uploading video…" : "Upload video (MP4, WEBM, MOV — max 500 MB)"}
+          disabled={videoUploading}
+          onClick={() => videoFileRef.current?.click()}
+        >
+          {videoUploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Video className="h-3.5 w-3.5" />
+          )}
+        </ToolBtn>
+      )}
+
+      {/* Embed URL button */}
+      <ToolBtn
+        title="Insert embed (YouTube, Rumble, Vimeo, etc.)"
+        onClick={() => {
+          const url = prompt("Paste a YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok URL:")
+          if (!url) return
+          const embed = detectEmbedUrl(url.trim())
+          if (embed) {
+            setPendingEmbed(embed)
+          } else {
+            alert("URL not recognised as an embeddable video. Try YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok.")
+          }
+        }}
+      >
+        <Film className="h-3.5 w-3.5" />
+      </ToolBtn>
     </div>
   )
 
@@ -637,7 +800,7 @@ export function TiptapEditor({
         <div className="relative">
           {dragOver && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-primary bg-primary/10">
-              <p className="label-mono text-sm font-semibold text-primary">Drop image to upload</p>
+              <p className="label-mono text-sm font-semibold text-primary">Drop image or video to upload</p>
             </div>
           )}
           <EditorContent editor={editor} />
@@ -663,7 +826,7 @@ export function TiptapEditor({
       {/* Image previews */}
       <ImagePreviewGrid images={images} onRemove={removeImage} />
 
-      {/* Hidden file input */}
+      {/* Hidden image file input */}
       <input
         ref={fileRef}
         type="file"
@@ -679,6 +842,30 @@ export function TiptapEditor({
           e.target.value = ""
         }}
       />
+
+      {/* Hidden video file input */}
+      <input
+        ref={videoFileRef}
+        type="file"
+        accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) uploadVideoFile(file)
+          e.target.value = ""
+        }}
+      />
+
+      {/* Video upload error */}
+      {videoUploadError && (
+        <div className="flex items-center gap-2 border-t border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="label-mono">{videoUploadError}</span>
+          <button type="button" onClick={() => setVideoUploadError(null)} className="ml-auto">
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Hidden input carrying the serialized JSON for form submission */}
       <input type="hidden" name={name} id={id} value={jsonValue} required={required} />
