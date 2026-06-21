@@ -64,6 +64,7 @@ export default async function Page() {
         priority: hottestBlog.priority,
         postType: hottestBlog.postType,
         sourceName: hottestBlog.sourceName,
+        content: hottestBlog.content,
       }
     : null
 
