@@ -14,7 +14,7 @@ interface DraftPost {
   excerpt: string | null
   source_name: string | null
   source_url: string | null
-  cover_image_url: string | null
+  cover_image: string | null
   imported_at: string | null
   created_at: string
   status: string
@@ -203,9 +203,9 @@ export function ScraperDraftsTable({ initialDrafts }: { initialDrafts: DraftPost
             >
               <td className="max-w-xs px-4 py-3">
                 <div className="flex items-start gap-2">
-                  {post.cover_image_url && (
+                  {post.cover_image && (
                     <img
-                      src={post.cover_image_url}
+                      src={post.cover_image}
                       alt=""
                       className="mt-0.5 h-10 w-10 flex-shrink-0 object-cover"
                       aria-hidden="true"
