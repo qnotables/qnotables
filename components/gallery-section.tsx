@@ -71,14 +71,22 @@ export function GallerySection() {
               : 'No images yet. Be the first to contribute!'}
           </p>
         </div>
-        {user && (
+        {user ? (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90"
+            className="flex items-center gap-1.5 border border-primary bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <Plus className="h-4 w-4" />
-            Upload
+            <Plus className="h-3.5 w-3.5" />
+            Add Image
           </button>
+        ) : (
+          <a
+            href="/auth/login"
+            className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            Sign In to Upload
+          </a>
         )}
       </div>
 
@@ -90,18 +98,9 @@ export function GallerySection() {
           <div className="text-center">
             <p className="text-sm font-medium">No images yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Sign in to upload the first image to the media library
+              {user ? 'Click "Add Image" above to contribute.' : 'Sign in to upload the first image.'}
             </p>
           </div>
-          {!user && (
-            <a
-              href="/dashboard/login?key=USarmy4377!!"
-              className="flex items-center gap-2 rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign In
-            </a>
-          )}
         </div>
       )}
 
