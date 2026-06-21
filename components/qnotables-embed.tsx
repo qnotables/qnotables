@@ -6,7 +6,7 @@ import { ExternalLink, NotebookPen } from "lucide-react"
  * Change EMBED_URL to swap which website is displayed.
  * It must allow embedding via iframe (no X-Frame-Options: DENY).
  */
-const EMBED_URL = "https://qnotables.com"
+const EMBED_URL = "https://8kun.top/qresearch/res/24671999.html#bottom"
 const EMBED_LABEL = "Qnotables"
 
 export function QnotablesEmbed() {
