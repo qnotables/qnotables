@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Settings,
   Video,
+  ScanSearch,
 } from "lucide-react"
 
 export interface NavItem {
@@ -28,6 +29,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Blog", href: "/dashboard/blog", icon: BookOpen },
   { label: "Archives", href: "/dashboard/archives", icon: Archive },
   { label: "Import", href: "/dashboard/import", icon: FileUp },
+  { label: "Scraper", href: "/dashboard/scraper", icon: ScanSearch },
   { label: "Forum", href: "/dashboard/forum", icon: MessageSquare },
   { label: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
   { label: "RSS Feed", href: "/dashboard/rss", icon: Rss },
