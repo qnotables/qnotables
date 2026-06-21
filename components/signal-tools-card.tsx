@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -64,6 +64,12 @@ const SIGNAL_TOOLS_SECONDARY = [
     description: "Share a resource",
     icon: Bookmark,
     href: "/bookmarks",
+  },
+  {
+    label: "Donate",
+    description: "Support crypto",
+    icon: Heart,
+    href: "/donate",
   },
   {
     label: "Contact",
