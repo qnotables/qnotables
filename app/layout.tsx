@@ -1,4 +1,5 @@
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata, Viewport } from 'next'
 import { Oswald, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -59,6 +60,7 @@ export default function RootLayout({
           </CartProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.NODE_ENV === 'production' && <SpeedInsights />}
       </body>
     </html>
   )
