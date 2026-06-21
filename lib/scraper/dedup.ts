@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error("Supabase not configured")
-  return createClient(url, key)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return createClient(url, key) as any
 }
 
 /**

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { generateSlug } from "@/lib/slug-utils"
 import type { ScrapedItem, ScraperSource, SourceResult, ScrapeRunResult } from "./types"
 import { parseRssSource } from "./rss-parser"
@@ -6,14 +6,17 @@ import { parseHtmlSource } from "./html-parser"
 import { getExistingCanonicalUrls } from "./dedup"
 import { SCRAPER_SOURCES } from "./sources"
 
-function getSupabaseClient() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySupabaseClient = SupabaseClient<any, any, any>
+
+function getSupabaseClient(): AnySupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error("Supabase not configured")
   return createClient(url, key)
 }
 
-async function generateUniqueSlug(title: string, supabase: ReturnType<typeof createClient>): Promise<string> {
+async function generateUniqueSlug(title: string, supabase: AnySupabaseClient): Promise<string> {
   let slug = generateSlug(title)
 
   const { data } = await supabase
@@ -31,7 +34,7 @@ async function generateUniqueSlug(title: string, supabase: ReturnType<typeof cre
   return `${slug}-${counter}`
 }
 
-async function saveDraftPost(item: ScrapedItem, category: string | undefined, supabase: ReturnType<typeof createClient>): Promise<void> {
+async function saveDraftPost(item: ScrapedItem, category: string | undefined, supabase: AnySupabaseClient): Promise<void> {
   const now = new Date().toISOString()
   const slug = await generateUniqueSlug(item.title, supabase)
 
@@ -43,6 +46,7 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
     .filter(Boolean)
     .join("\n\n")
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await supabase.from("blog_posts").insert([
     {
       title: item.title,
@@ -66,7 +70,7 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
       updated_at: now,
       tags: [],
       related_links: [],
-    },
+    } as any,
   ])
 }
 
