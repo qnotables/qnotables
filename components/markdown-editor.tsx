@@ -21,8 +21,10 @@ import {
   AlertCircle,
   ChevronDown,
   Video,
+  Film,
 } from "lucide-react"
 import { Markdown } from "@/components/markdown"
+import { detectEmbedUrl } from "@/lib/tiptap-embed-utils"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -479,6 +481,25 @@ export function MarkdownEditor({
     insertAtCaret(`![image](${trimmed})`)
   }
 
+  // ─── Embed button handler ──────────────────────────────────────────────────
+
+  function handleEmbedInsert() {
+    const url = prompt("Paste a YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok URL:")
+    if (!url) return
+    const embed = detectEmbedUrl(url.trim())
+    if (!embed) {
+      alert("URL not recognized. Try YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok.")
+      return
+    }
+    const embedJson = JSON.stringify({
+      provider: embed.provider,
+      url: embed.embedUrl,
+      title: embed.title || "Embedded video",
+      aspectRatio: "16/9",
+    })
+    insertAtCaret(`\n<!-- IFRAME_EMBED: ${embedJson} -->\n`)
+  }
+
   // ─── Toolbar actions ──────────────────────────────────────────────────────
 
   const toolbarActions = [
@@ -524,6 +545,11 @@ export function MarkdownEditor({
         const url = prompt("Link URL (e.g. https://example.com):")
         if (url) applyEdit((v, s, e) => wrapText(v, s, e, "[", `](${url})`, "link text"))
       },
+    },
+    {
+      icon: <Film className="h-3.5 w-3.5" />,
+      label: "Embed video",
+      run: handleEmbedInsert,
     },
   ]
 
