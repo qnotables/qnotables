@@ -93,7 +93,6 @@ export async function fetchMediaLibraryImages(
   const { data, error } = await admin
     .from('media_assets')
     .select('id, file_name, file_url, alt_text, file_type, created_at')
-    .like('file_type', 'image/%')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 

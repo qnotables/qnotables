@@ -74,8 +74,8 @@ export function GallerySection() {
           <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
           <p className="text-xs text-muted-foreground">
             {images.length > 0
-              ? `${images.length} image${images.length === 1 ? '' : 's'} from the community`
-              : 'No images yet. Be the first to contribute!'}
+              ? `${images.length} item${images.length === 1 ? '' : 's'} from the community`
+              : 'No media yet. Be the first to contribute!'}
           </p>
         </div>
         {user ? (
