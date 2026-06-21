@@ -2,6 +2,7 @@ import Image from "next/image"
 import { Play, Calendar, Tag, ExternalLink } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { TopAd, BottomAd } from "@/components/ad-display"
 import { getPublishedVideos, type Video } from "@/app/actions/video-actions"
 
 export const dynamic = "force-dynamic"
@@ -68,6 +69,7 @@ export default async function VideosPage() {
   return (
     <div id="top" className="min-h-screen tactical-grid flex flex-col">
       <SiteHeader />
+      <TopAd />
 
       <main className="flex-1">
         {/* Page header */}
@@ -102,6 +104,7 @@ export default async function VideosPage() {
         </div>
       </main>
 
+      <BottomAd />
       <SiteFooter />
     </div>
   )
