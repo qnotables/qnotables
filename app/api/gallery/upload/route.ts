@@ -28,24 +28,28 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const title = (formData.get('title') as string) || 'Untitled'
     const description = (formData.get('description') as string) || ''
-    const altText = (formData.get('altText') as string) || 'Gallery image'
+    const altText = (formData.get('altText') as string) || 'Gallery media'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+
+    // Validate file type — images and videos only
+    if (!isImage && !isVideo) {
       return NextResponse.json(
-        { error: 'File must be an image' },
+        { error: 'File must be an image or video' },
         { status: 400 }
       )
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Images: max 10MB, videos: max 200MB
+    const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File too large (max 10MB)' },
+        { error: isVideo ? 'Video too large (max 200MB)' : 'Image too large (max 10MB)' },
         { status: 400 }
       )
     }
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
           image_url: blob.url,
           title: title || 'Untitled',
           description: description || null,
-          alt_text: altText || 'Gallery image',
+          alt_text: altText || 'Gallery media',
           approved: false,
           featured: false,
         },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ZoomIn, Play } from 'lucide-react'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
 
 interface GalleryCarouselProps {
@@ -85,27 +85,43 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
         </button>
       )}
 
-      {/* Main image card */}
+      {/* Main media card */}
       <button
         onClick={() => openLightbox(currentIndex)}
         className="group relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black"
         onMouseEnter={() => setIsAutoPlay(false)}
         onMouseLeave={() => setIsAutoPlay(true)}
-        aria-label={`View ${currentImage.title} full size`}
+        aria-label={`${currentImage.file_type?.startsWith('video/') ? 'Play' : 'View'} ${currentImage.title}`}
       >
-        <Image
-          src={currentImage.image_url}
-          alt={currentImage.alt_text}
-          fill
-          className="object-cover transition-transform duration-200 group-hover:scale-105"
-          sizes="160px"
-          priority
-        />
-        {/* Zoom hint on hover */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-          <ZoomIn className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-        </div>
-        {/* Image counter */}
+        {currentImage.file_type?.startsWith('video/') ? (
+          <>
+            <video
+              src={currentImage.image_url}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <Play className="h-8 w-8 fill-white text-white drop-shadow" />
+            </div>
+          </>
+        ) : (
+          <>
+            <Image
+              src={currentImage.image_url}
+              alt={currentImage.alt_text}
+              fill
+              className="object-cover transition-transform duration-200 group-hover:scale-105"
+              sizes="160px"
+              priority
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+              <ZoomIn className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+          </>
+        )}
+        {/* Counter */}
         {images.length > 1 && (
           <div className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-xs font-mono text-white">
             {currentIndex + 1}/{images.length}
@@ -124,18 +140,35 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
                 key={img.id}
                 onClick={() => openLightbox(absoluteIndex)}
                 className="group relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black opacity-60 transition-opacity hover:opacity-100"
-                aria-label={`View ${img.title} full size`}
+                aria-label={`${img.file_type?.startsWith('video/') ? 'Play' : 'View'} ${img.title}`}
               >
-                <Image
-                  src={img.image_url}
-                  alt={img.alt_text}
-                  fill
-                  className="object-cover"
-                  sizes="160px"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                  <ZoomIn className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                </div>
+                {img.file_type?.startsWith('video/') ? (
+                  <>
+                    <video
+                      src={img.image_url}
+                      className="h-full w-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <Play className="h-6 w-6 fill-white text-white drop-shadow" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Image
+                      src={img.image_url}
+                      alt={img.alt_text}
+                      fill
+                      className="object-cover"
+                      sizes="160px"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                      <ZoomIn className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </>
+                )}
               </button>
             )
           })}
@@ -183,18 +216,27 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
               </button>
             )}
 
-            {/* Image */}
+            {/* Media */}
             <div
               className="relative max-h-[90vh] max-w-[90vw]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Use a regular img tag for unconstrained full-size rendering */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={lb.image_url}
-                alt={lb.alt_text}
-                className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
-              />
+              {lb.file_type?.startsWith('video/') ? (
+                <video
+                  src={lb.image_url}
+                  className="max-h-[85vh] max-w-[90vw] shadow-2xl"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={lb.image_url}
+                  alt={lb.alt_text}
+                  className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
+                />
+              )}
               {/* Caption */}
               {lb.title && (
                 <div className="mt-2 text-center font-mono text-sm text-white/70">

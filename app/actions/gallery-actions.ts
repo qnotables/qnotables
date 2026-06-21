@@ -10,6 +10,7 @@ export interface GalleryImage {
   description?: string
   alt_text: string
   image_url: string
+  file_type?: string
   approved: boolean
   featured: boolean
   created_at: string
@@ -107,8 +108,9 @@ export async function fetchMediaLibraryImages(
     user_id: '',
     title: row.file_name ?? 'Untitled',
     description: undefined,
-    alt_text: row.alt_text ?? row.file_name ?? 'Media image',
+    alt_text: row.alt_text ?? row.file_name ?? 'Media item',
     image_url: row.file_url,
+    file_type: row.file_type ?? 'image/jpeg',
     approved: true,
     featured: false,
     created_at: row.created_at,

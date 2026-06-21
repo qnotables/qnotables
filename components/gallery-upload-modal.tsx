@@ -24,37 +24,38 @@ export function GalleryUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (selectedFile: File) => {
-    if (!selectedFile.type.startsWith('image/')) {
-      setError('Please select an image file')
+    const isImage = selectedFile.type.startsWith('image/')
+    const isVideo = selectedFile.type.startsWith('video/')
+
+    if (!isImage && !isVideo) {
+      setError('Please select an image or video file')
       return
     }
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('File must be smaller than 10MB')
+    const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024
+    if (selectedFile.size > maxSize) {
+      setError(isVideo ? 'Video must be smaller than 200MB' : 'Image must be smaller than 10MB')
       return
     }
 
     setFile(selectedFile)
     setError('')
 
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string)
-    }
-    reader.readAsDataURL(selectedFile)
+    // Create preview URL
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setPreview(objectUrl)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!file) {
-      setError('Please select an image')
+      setError('Please select an image or video')
       return
     }
 
     if (!altText.trim()) {
-      setError('Alt text is required for accessibility')
+      setError('Description is required for accessibility')
       return
     }
 
@@ -101,7 +102,7 @@ export function GalleryUploadModal({
       <div className="w-full max-w-md rounded-lg border border-border bg-background">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-lg font-semibold">Upload Image</h2>
+          <h2 className="text-lg font-semibold">Upload Media</h2>
           <button
             onClick={onClose}
             className="rounded p-1 hover:bg-muted"
@@ -115,7 +116,7 @@ export function GalleryUploadModal({
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* File upload area */}
           <div>
-            <label className="block text-sm font-medium mb-2">Image</label>
+            <label className="block text-sm font-medium mb-2">Image or Video</label>
             <div
               className="relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted p-8 cursor-pointer hover:bg-muted/80"
               onClick={() => fileInputRef.current?.click()}
@@ -129,27 +130,37 @@ export function GalleryUploadModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]
                   if (f) handleFileSelect(f)
                 }}
               />
-              {preview ? (
+              {preview && file ? (
                 <>
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="h-32 w-32 object-cover rounded"
-                  />
+                  {file.type.startsWith('video/') ? (
+                    <video
+                      src={preview}
+                      className="h-32 max-w-full rounded object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      className="h-32 w-32 object-cover rounded"
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground">Click to change</p>
                 </>
               ) : (
                 <>
                   <Upload className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm font-medium">Drop image or click to upload</p>
-                  <p className="text-xs text-muted-foreground">Max 10MB</p>
+                  <p className="text-sm font-medium">Drop image or video here, or click to upload</p>
+                  <p className="text-xs text-muted-foreground">Images up to 10MB · Videos up to 200MB</p>
                 </>
               )}
             </div>
