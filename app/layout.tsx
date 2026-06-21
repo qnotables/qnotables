@@ -52,6 +52,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={false}
           disableTransitionOnChange
+          storageKey="theme"
         >
           <CartProvider>
             {children}

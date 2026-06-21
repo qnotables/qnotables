@@ -25,14 +25,7 @@ export default async function NewArchivePage() {
       </div>
 
       <div className="px-6 py-8">
-        <ArchiveEditor
-          onSave={() => {
-            // Navigate to archives list or show success
-          }}
-          onPublish={() => {
-            // Navigate to published post
-          }}
-        />
+        <ArchiveEditor />
       </div>
     </div>
   )
