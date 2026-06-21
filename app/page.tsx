@@ -3,6 +3,7 @@ import { FeaturedStory } from "@/components/featured-story"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
 import { BriefSignup } from "@/components/brief-signup"
+import { GallerySection } from "@/components/gallery-section"
 import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
 import { DeskNav } from "@/components/desk-nav"
@@ -143,6 +144,11 @@ export default async function Page() {
             <SidebarAd />
             <BriefSignup />
           </aside>
+        </div>
+
+        {/* Gallery Section - Below Brief Signup */}
+        <div className="mt-12">
+          <GallerySection />
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
