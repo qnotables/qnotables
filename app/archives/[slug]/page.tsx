@@ -8,7 +8,7 @@ import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { isTiptapJson } from "@/lib/tiptap-utils"
 import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
-import { getVideoById, getPublishedVideos } from "@/app/actions/video-actions"
+import { getPublishedVideoById, getPublishedVideos } from "@/app/actions/video-actions"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   let video = null
   
   if (!post) {
-    video = await getVideoById(slug)
+    video = await getPublishedVideoById(slug)
     if (!video) return { title: "Not found — HOT AND FRESH" }
   }
 
@@ -79,7 +79,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
   
   if (!post) {
     // Try to fetch as video using the slug as video ID
-    video = await getVideoById(slug)
+    video = await getPublishedVideoById(slug)
     if (!video) {
       notFound()
     }
