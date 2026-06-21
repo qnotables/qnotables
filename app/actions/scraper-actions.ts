@@ -74,7 +74,7 @@ export async function getScrapedDrafts() {
 
   const { data, error } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, source_name, source_url, cover_image_url, imported_at, created_at, status, post_type")
+    .select("id, title, slug, excerpt, source_name, source_url, cover_image, imported_at, created_at, status, post_type")
     .eq("status", "draft")
     .not("imported_at", "is", null)
     .order("imported_at", { ascending: false })
