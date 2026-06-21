@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart } from "lucide-react"
+import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, NotebookPen } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -43,6 +43,12 @@ const SIGNAL_TOOLS = [
     description: "Follow the wire",
     icon: Rss,
     href: "/feed.xml",
+  },
+  {
+    label: "Qnotables",
+    description: "Research notes",
+    icon: NotebookPen,
+    href: "/qnotables",
   },
 ]
 

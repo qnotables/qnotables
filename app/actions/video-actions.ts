@@ -75,6 +75,7 @@ export async function getAllVideosAdmin(): Promise<Video[]> {
   return (data ?? []) as Video[]
 }
 
+/** Admin-only — requires dashboard auth. */
 export async function getVideoById(id: string): Promise<Video | null> {
   const hasAccess = await validateDashboardAccess()
   if (!hasAccess) throw new Error("Unauthorized")
@@ -83,6 +84,23 @@ export async function getVideoById(id: string): Promise<Video | null> {
   const { data, error } = await admin.from("videos").select("*").eq("id", id).single()
   if (error) return null
   return data as Video
+}
+
+/** Public — fetches a single published video by ID with no auth check. */
+export async function getPublishedVideoById(id: string): Promise<Video | null> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from("videos")
+      .select("*")
+      .eq("id", id)
+      .eq("published", true)
+      .single()
+    if (error) return null
+    return data as Video
+  } catch {
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------

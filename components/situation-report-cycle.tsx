@@ -40,13 +40,15 @@ export interface SituationBlogItem {
   category?: string
   tag?: string
   tags?: string[]
+  postType?: string
+  priority?: string
+  featured?: boolean
   coverImage?: string | null
+  sourceName?: string
   date: string
   readMinutes?: number
-  featured?: boolean
-  priority?: string
-  postType?: string
-  sourceName?: string
+  /** Raw Tiptap JSON string — used to extract inline videos for the card preview */
+  content?: string
 }
 
 export interface SituationArchiveItem {
@@ -88,6 +90,47 @@ function firstImageInBody(body: string): string | null {
   const plainMatch = body.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i)
   if (plainMatch) return plainMatch[0]
   return null
+}
+
+// ─── Video extraction from Tiptap JSON ───────────────────────────────────────
+
+interface TiptapNode {
+  type?: string
+  attrs?: Record<string, string>
+  content?: TiptapNode[]
+}
+
+interface ExtractedVideo {
+  kind: "upload" | "embed"
+  src: string   // direct URL for uploads; iframe embed URL for embeds
+  title?: string
+}
+
+function extractFirstVideo(content?: string): ExtractedVideo | null {
+  if (!content) return null
+  let doc: TiptapNode
+  try {
+    doc = JSON.parse(content)
+  } catch {
+    return null
+  }
+
+  function walk(nodes?: TiptapNode[]): ExtractedVideo | null {
+    if (!nodes) return null
+    for (const node of nodes) {
+      if (node.type === "videoBlock" && node.attrs?.src) {
+        return { kind: "upload", src: node.attrs.src, title: node.attrs.title }
+      }
+      if (node.type === "embedBlock" && node.attrs?.src) {
+        return { kind: "embed", src: node.attrs.src, title: node.attrs.title }
+      }
+      const found = walk(node.content)
+      if (found) return found
+    }
+    return null
+  }
+
+  return walk(doc.content)
 }
 
 // ─── Shared thumbnail component ───────────────────────────────────────────────
@@ -228,20 +271,54 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
     ...(item.tags?.filter((t) => t !== item.tag) ?? []),
   ].slice(0, 3)
 
+  const video = extractFirstVideo(item.content)
+
   return (
     <div className="flex flex-col gap-3 h-full">
-      <Thumbnail
-        src={item.coverImage}
-        alt={item.title}
-        label={item.postType ?? item.category ?? "DISPATCH"}
-        badge={
-          item.featured ? (
-            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+      {/* Video preview — shown instead of static thumbnail when post contains a video */}
+      {video ? (
+        <div
+          className="relative w-full overflow-hidden bg-black border-b border-border"
+          style={{ aspectRatio: "16/7" }}
+        >
+          {video.kind === "upload" ? (
+            <video
+              src={video.src}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-contain"
+              title={video.title ?? item.title}
+            />
+          ) : (
+            <iframe
+              src={video.src}
+              title={video.title ?? item.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full border-0"
+            />
+          )}
+          {item.featured && (
+            <span className="absolute left-2 top-2 label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
               FEATURED
             </span>
-          ) : undefined
-        }
-      />
+          )}
+        </div>
+      ) : (
+        <Thumbnail
+          src={item.coverImage}
+          alt={item.title}
+          label={item.postType ?? item.category ?? "DISPATCH"}
+          badge={
+            item.featured ? (
+              <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+                FEATURED
+              </span>
+            ) : undefined
+          }
+        />
+      )}
 
       {/* Label row */}
       <div className="flex items-center gap-2 flex-wrap px-4 pt-1">
@@ -313,7 +390,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
         className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <BookOpen className="h-3.5 w-3.5" />
-        READ DISPATCH →
+        {video ? "WATCH DISPATCH →" : "READ DISPATCH →"}
       </Link>
     </div>
   )
