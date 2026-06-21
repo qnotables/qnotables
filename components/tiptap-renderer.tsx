@@ -254,6 +254,27 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
       )
     }
 
+    case "videoBlock": {
+      const src = typeof node.attrs?.src === "string" ? node.attrs.src : ""
+      const title = typeof node.attrs?.title === "string" ? node.attrs.title : ""
+      if (!isSafeUrl(src)) return null
+      return (
+        <div key={key} className="my-4 overflow-hidden border border-border bg-card">
+          <div className="border-b border-border bg-muted/60 px-3 py-1.5">
+            <span className="label-mono text-xs text-muted-foreground">VIDEO</span>
+            {title && <span className="label-mono ml-2 truncate text-xs text-foreground">{title}</span>}
+          </div>
+          <video
+            src={src}
+            controls
+            playsInline
+            className="w-full max-h-[480px] bg-black"
+            title={title}
+          />
+        </div>
+      )
+    }
+
     default:
       // Unknown node — skip silently
       return null
