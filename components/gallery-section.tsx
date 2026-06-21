@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, LogIn } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchApprovedGalleryImages } from '@/app/actions/gallery-actions'
+import { fetchMediaLibraryImages } from '@/app/actions/gallery-actions'
 import { GalleryCarousel } from './gallery-carousel'
 import { GalleryUploadModal } from './gallery-upload-modal'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
@@ -33,7 +33,7 @@ export function GallerySection() {
   useEffect(() => {
     const loadImages = async () => {
       setIsLoading(true)
-      const data = await fetchApprovedGalleryImages(20, 0)
+      const data = await fetchMediaLibraryImages(40, 0)
       setImages(data)
       setIsLoading(false)
     }
@@ -42,8 +42,8 @@ export function GallerySection() {
   }, [])
 
   const handleUploadSuccess = async () => {
-    // Refresh gallery images after successful upload
-    const data = await fetchApprovedGalleryImages(20, 0)
+    // Refresh media library images after successful upload
+    const data = await fetchMediaLibraryImages(40, 0)
     setImages(data)
   }
 
@@ -51,10 +51,8 @@ export function GallerySection() {
     return (
       <section className="space-y-4 py-12">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Community Gallery</h2>
-          <p className="text-muted-foreground">
-            Loading gallery images...
-          </p>
+          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
+          <p className="text-muted-foreground">Loading media library...</p>
         </div>
         <div className="h-96 animate-pulse rounded-lg border border-border bg-muted" />
       </section>
@@ -66,11 +64,11 @@ export function GallerySection() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Community Gallery</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
           <p className="text-sm text-muted-foreground">
             {images.length > 0
-              ? `Curated contributions from our community (${images.length} images)`
-              : 'No gallery images yet. Be the first to contribute!'}
+              ? `${images.length} image${images.length === 1 ? '' : 's'} contributed by the community`
+              : 'No images yet. Be the first to contribute!'}
           </p>
         </div>
         {user && (
@@ -92,7 +90,7 @@ export function GallerySection() {
           <div className="text-center">
             <p className="text-sm font-medium">No images yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Sign in to contribute your first image to the gallery
+              Sign in to upload the first image to the media library
             </p>
           </div>
           {!user && (
