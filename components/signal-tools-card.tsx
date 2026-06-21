@@ -44,12 +44,6 @@ const SIGNAL_TOOLS = [
     icon: Rss,
     href: "/feed.xml",
   },
-  {
-    label: "Qnotables",
-    description: "Research notes",
-    icon: NotebookPen,
-    href: "/qnotables",
-  },
 ]
 
 const SIGNAL_TOOLS_SECONDARY = [
@@ -64,6 +58,12 @@ const SIGNAL_TOOLS_SECONDARY = [
     description: "Read the posts",
     icon: ShieldPlus,
     href: "https://www.qanon.pub",
+  },
+  {
+    label: "Qnotables",
+    description: "Research notes",
+    icon: NotebookPen,
+    href: "/qnotables",
   },
   {
     label: "bookmarks",
