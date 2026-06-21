@@ -1,9 +1,92 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ZoomIn, Play } from 'lucide-react'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
+
+interface LightboxProps {
+  images: GalleryImage[]
+  index: number
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+}
+
+function Lightbox({ images, index, onClose, onPrev, onNext }: LightboxProps) {
+  const item = images[index]
+  const isVideo = item.file_type?.startsWith('video/')
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.title}
+    >
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 z-10 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Prev */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Media */}
+      <div
+        className="relative max-h-[90vh] max-w-[90vw]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isVideo ? (
+          <video
+            src={item.image_url}
+            className="max-h-[85vh] max-w-[90vw] shadow-2xl"
+            controls
+            autoPlay
+            playsInline
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image_url}
+            alt={item.alt_text}
+            className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
+          />
+        )}
+        {item.title && (
+          <div className="mt-2 text-center font-mono text-sm text-white/70">
+            {item.title}
+            <span className="ml-3 text-white/40">{index + 1} / {images.length}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Next */}
+      {images.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded border border-white/20 bg-black/60 p-2 text-white hover:bg-black/90"
+          aria-label="Next"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      )}
+    </div>
+  )
+}
 
 interface GalleryCarouselProps {
   images: GalleryImage[]
@@ -12,6 +95,34 @@ interface GalleryCarouselProps {
 export function GalleryCarousel({ images }: GalleryCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(true)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index)
+    setIsAutoPlay(false)
+  }
+
+  const closeLightbox = () => setLightboxIndex(null)
+
+  const lightboxPrev = useCallback(() => {
+    setLightboxIndex((prev) => (prev === null ? null : (prev - 1 + images.length) % images.length))
+  }, [images.length])
+
+  const lightboxNext = useCallback(() => {
+    setLightboxIndex((prev) => (prev === null ? null : (prev + 1) % images.length))
+  }, [images.length])
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox()
+      if (e.key === 'ArrowLeft') lightboxPrev()
+      if (e.key === 'ArrowRight') lightboxNext()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxIndex, lightboxPrev, lightboxNext])
 
   // Auto-rotate carousel every 5 seconds
   useEffect(() => {
@@ -57,52 +168,93 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
         </button>
       )}
 
-      {/* Main image card */}
-      <div
-        className="relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black"
+      {/* Main media card */}
+      <button
+        onClick={() => openLightbox(currentIndex)}
+        className="group relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black"
         onMouseEnter={() => setIsAutoPlay(false)}
         onMouseLeave={() => setIsAutoPlay(true)}
+        aria-label={`${currentImage.file_type?.startsWith('video/') ? 'Play' : 'View'} ${currentImage.title}`}
       >
-        <Image
-          src={currentImage.image_url}
-          alt={currentImage.alt_text}
-          fill
-          className="object-cover"
-          sizes="160px"
-          priority
-        />
-
-        {/* Image counter */}
+        {currentImage.file_type?.startsWith('video/') ? (
+          <>
+            <video
+              src={currentImage.image_url}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <Play className="h-8 w-8 fill-white text-white drop-shadow" />
+            </div>
+          </>
+        ) : (
+          <>
+            <Image
+              src={currentImage.image_url}
+              alt={currentImage.alt_text}
+              fill
+              className="object-cover transition-transform duration-200 group-hover:scale-105"
+              sizes="160px"
+              priority
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+              <ZoomIn className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+          </>
+        )}
+        {/* Counter */}
         {images.length > 1 && (
           <div className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-xs font-mono text-white">
             {currentIndex + 1}/{images.length}
           </div>
         )}
-      </div>
+      </button>
 
       {/* Thumbnail strip — show up to 4 adjacent thumbnails */}
       <div className="flex flex-1 gap-2 overflow-hidden">
         {images
           .slice(currentIndex + 1, currentIndex + 5)
-          .map((img, i) => (
-            <button
-              key={img.id}
-              onClick={() => {
-                setCurrentIndex(currentIndex + 1 + i)
-                setIsAutoPlay(false)
-              }}
-              className="relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black opacity-60 transition-opacity hover:opacity-100"
-              aria-label={`View ${img.title}`}
-            >
-              <Image
-                src={img.image_url}
-                alt={img.alt_text}
-                fill
-                className="object-cover"
-                sizes="160px"
-              />
-            </button>
-          ))}
+          .map((img, i) => {
+            const absoluteIndex = currentIndex + 1 + i
+            return (
+              <button
+                key={img.id}
+                onClick={() => openLightbox(absoluteIndex)}
+                className="group relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black opacity-60 transition-opacity hover:opacity-100"
+                aria-label={`${img.file_type?.startsWith('video/') ? 'Play' : 'View'} ${img.title}`}
+              >
+                {img.file_type?.startsWith('video/') ? (
+                  <>
+                    <video
+                      src={img.image_url}
+                      className="h-full w-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <Play className="h-6 w-6 fill-white text-white drop-shadow" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Image
+                      src={img.image_url}
+                      alt={img.alt_text}
+                      fill
+                      className="object-cover"
+                      sizes="160px"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                      <ZoomIn className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </>
+                )}
+              </button>
+            )
+          })}
       </div>
 
       {/* Next button */}
@@ -114,6 +266,17 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
         >
           <ChevronRight className="h-4 w-4" />
         </button>
+      )}
+
+      {/* Lightbox overlay */}
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={images}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={lightboxPrev}
+          onNext={lightboxNext}
+        />
       )}
     </div>
   )
