@@ -33,7 +33,7 @@ export const RSS_SOURCES: RSSSource[] = [
     id: "bbc",
     name: "BBC News",
     url: "https://sys.8ch.net/qnotables/tripcode.xml",
-    enabled: true,
+    enabled: false,  // ← Disabled: causing redirect loop - causing production build to fail
   },
   {
     id: "fox",
@@ -47,9 +47,9 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://feeds.foxnews.com/foxnews/national",
     enabled: true,
   },
-    {
-    id: "foxn",
-    name: "FOX National",
+  {
+    id: "blog",
+    name: "QNotables Blog",
     url: "https://qnotables.com/blog-feed.xml",
     enabled: true,
   },
