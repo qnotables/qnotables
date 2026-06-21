@@ -1,9 +1,11 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Clock, MessageSquare, CornerDownRight, UserRound } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { DisplayNameEditor } from "@/components/display-name-editor"
+import { AvatarEditor } from "@/components/avatar-editor"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 
@@ -42,7 +44,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, created_at")
+    .select("id, display_name, avatar_url, created_at")
     .eq("id", id)
     .maybeSingle()
 
@@ -79,9 +81,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         {/* profile header */}
         <div className="corner-frame border border-border bg-card p-6 md:p-8">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center border border-border bg-secondary text-secondary-foreground">
-              <UserRound className="h-7 w-7" />
-            </span>
+            {isOwner ? (
+              <AvatarEditor
+                initialUrl={profile.avatar_url ?? null}
+                displayName={profile.display_name}
+              />
+            ) : (
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-border bg-secondary text-secondary-foreground">
+                {profile.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={`${profile.display_name} avatar`}
+                    fill
+                    className="object-cover"
+                    sizes="56px"
+                    unoptimized
+                  />
+                ) : (
+                  <UserRound className="h-7 w-7" />
+                )}
+              </div>
+            )}
             <div className="min-w-0">
               {isOwner ? (
                 <DisplayNameEditor initialName={profile.display_name} />
