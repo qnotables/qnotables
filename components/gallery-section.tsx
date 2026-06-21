@@ -49,25 +49,25 @@ export function GallerySection() {
 
   if (isCheckingAuth || isLoading) {
     return (
-      <section className="space-y-4 py-12">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
-          <p className="text-muted-foreground">Loading media library...</p>
+      <section className="space-y-3 py-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
+          <p className="text-sm text-muted-foreground">Loading media library...</p>
         </div>
-        <div className="h-96 animate-pulse rounded-lg border border-border bg-muted" />
+        <div className="h-[160px] animate-pulse border border-border bg-muted" />
       </section>
     )
   }
 
   return (
-    <section className="space-y-4 py-12">
+    <section className="space-y-3 py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-0.5">
+          <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
+          <p className="text-xs text-muted-foreground">
             {images.length > 0
-              ? `${images.length} image${images.length === 1 ? '' : 's'} contributed by the community`
+              ? `${images.length} image${images.length === 1 ? '' : 's'} from the community`
               : 'No images yet. Be the first to contribute!'}
           </p>
         </div>
@@ -86,7 +86,7 @@ export function GallerySection() {
       {images.length > 0 ? (
         <GalleryCarousel images={images} />
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-muted p-12">
+        <div className="flex h-[160px] flex-col items-center justify-center gap-3 border-2 border-dashed border-border bg-muted">
           <div className="text-center">
             <p className="text-sm font-medium">No images yet</p>
             <p className="text-xs text-muted-foreground mt-1">
