@@ -131,8 +131,8 @@ function priorityFor(minutesAgo: number, reports: number): Story["priority"] {
 function imageFrom(item: ParsedItem): string | undefined {
   const i = item as any
   // Try media namespace first (most common)
-  if (i.mediaThumbnail?.$?.url) return i.mediaThumbnail.$url
-  if (i.mediaContent?.$?.url) return i.mediaContent.$url
+  if (i.mediaThumbnail?.$?.url) return i.mediaThumbnail.$.url
+  if (i.mediaContent?.$?.url) return i.mediaContent.$.url
 
   // Try image field (some RSS feeds)
   if (i.image?.url) return i.image.url
@@ -142,9 +142,9 @@ function imageFrom(item: ParsedItem): string | undefined {
     const mediaEnclosure = i.enclosure.find((e: any) =>
       e.$?.type?.startsWith("image/")
     )
-    if (mediaEnclosure?.$?.url) return mediaEnclosure.$url
+    if (mediaEnclosure?.$?.url) return mediaEnclosure.$.url
   } else if (i.enclosure?.$?.type?.startsWith("image/")) {
-    return i.enclosure.$url
+    return i.enclosure.$.url
   }
 
   // Try description for img tag (last resort)

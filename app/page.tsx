@@ -92,6 +92,7 @@ export default async function Page() {
     summary: s.summary,
     source: s.source,
     url: s.url,
+    image: s.image,
   }))
 
   const desks = categories
