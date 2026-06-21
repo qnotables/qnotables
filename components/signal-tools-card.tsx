@@ -89,11 +89,13 @@ export function SignalToolsCard() {
       <div className="flex gap-3 mb-4">
         {SIGNAL_TOOLS.map((tool) => {
           const Icon = tool.icon
+          const isExternal = tool.href.startsWith("http") || tool.href.startsWith("mailto:")
           return (
             <Link
               key={tool.label}
               href={tool.href}
               title={tool.label}
+              {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="flex-shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             >
               <Icon className="h-6 w-6" aria-hidden="true" />
@@ -106,11 +108,13 @@ export function SignalToolsCard() {
         <div className="flex gap-3">
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
+            const isExternal = (tool.href || "").startsWith("http") || (tool.href || "").startsWith("mailto:")
             return (
               <Link
                 key={tool.label}
                 href={tool.href || "#"}
                 title={tool.label}
+                {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 className="flex-shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
               >
                 <Icon className="h-6 w-6" aria-hidden="true" />
