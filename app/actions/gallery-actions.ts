@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export interface GalleryImage {
   id: string
@@ -74,6 +74,46 @@ export async function uploadGalleryImage(
   }
 
   return { success: true, id: data?.id }
+}
+
+/**
+ * Fetch images from media_assets (the shared media library).
+ * Maps media_assets columns → GalleryImage shape so the carousel can render them.
+ */
+export async function fetchMediaLibraryImages(
+  limit: number = 40,
+  offset: number = 0
+): Promise<GalleryImage[]> {
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data, error } = await admin
+    .from('media_assets')
+    .select('id, file_name, file_url, alt_text, file_type, created_at')
+    .like('file_type', 'image/%')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    console.error('[gallery] Error fetching media library:', error)
+    return []
+  }
+
+  // Map media_assets row → GalleryImage
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    user_id: '',
+    title: row.file_name ?? 'Untitled',
+    description: undefined,
+    alt_text: row.alt_text ?? row.file_name ?? 'Media image',
+    image_url: row.file_url,
+    approved: true,
+    featured: false,
+    created_at: row.created_at,
+    updated_at: row.created_at,
+  }))
 }
 
 export async function deleteGalleryImage(
