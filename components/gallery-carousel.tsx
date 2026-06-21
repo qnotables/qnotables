@@ -45,74 +45,75 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
   }
 
   return (
-    <div
-      className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black"
-      onMouseEnter={() => setIsAutoPlay(false)}
-      onMouseLeave={() => setIsAutoPlay(true)}
-    >
-      {/* Main image */}
-      <Image
-        src={currentImage.image_url}
-        alt={currentImage.alt_text}
-        fill
-        className="object-contain"
-        priority
-      />
-
-      {/* Title overlay */}
-      {currentImage.title && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-4">
-          <h3 className="text-lg font-semibold text-white">{currentImage.title}</h3>
-          {currentImage.description && (
-            <p className="text-sm text-gray-300">{currentImage.description}</p>
-          )}
-        </div>
+    <div className="flex items-center gap-2">
+      {/* Prev button */}
+      {images.length > 1 && (
+        <button
+          onClick={goToPrevious}
+          className="shrink-0 rounded border border-border bg-secondary p-1 hover:bg-muted"
+          aria-label="Previous image"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
       )}
 
-      {/* Navigation buttons */}
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={goToPrevious}
-            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 hover:bg-black/75"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="h-5 w-5 text-white" />
-          </button>
-          <button
-            onClick={goToNext}
-            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 hover:bg-black/75"
-            aria-label="Next image"
-          >
-            <ChevronRight className="h-5 w-5 text-white" />
-          </button>
-        </>
-      )}
+      {/* Main image card */}
+      <div
+        className="relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black"
+        onMouseEnter={() => setIsAutoPlay(false)}
+        onMouseLeave={() => setIsAutoPlay(true)}
+      >
+        <Image
+          src={currentImage.image_url}
+          alt={currentImage.alt_text}
+          fill
+          className="object-cover"
+          sizes="160px"
+          priority
+        />
 
-      {/* Dot indicators */}
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-2">
-          {images.map((_, idx) => (
+        {/* Image counter */}
+        {images.length > 1 && (
+          <div className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-xs font-mono text-white">
+            {currentIndex + 1}/{images.length}
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnail strip — show up to 4 adjacent thumbnails */}
+      <div className="flex flex-1 gap-2 overflow-hidden">
+        {images
+          .slice(currentIndex + 1, currentIndex + 5)
+          .map((img, i) => (
             <button
-              key={idx}
+              key={img.id}
               onClick={() => {
-                setCurrentIndex(idx)
+                setCurrentIndex(currentIndex + 1 + i)
                 setIsAutoPlay(false)
               }}
-              className={`h-2 w-2 rounded-full transition-all ${
-                idx === currentIndex ? 'bg-white' : 'bg-white/50'
-              }`}
-              aria-label={`Go to image ${idx + 1}`}
-            />
+              className="relative h-[160px] w-[160px] shrink-0 overflow-hidden border border-border bg-black opacity-60 transition-opacity hover:opacity-100"
+              aria-label={`View ${img.title}`}
+            >
+              <Image
+                src={img.image_url}
+                alt={img.alt_text}
+                fill
+                className="object-cover"
+                sizes="160px"
+              />
+            </button>
           ))}
-        </div>
-      )}
+      </div>
 
-      {/* Image counter */}
+      {/* Next button */}
       {images.length > 1 && (
-        <div className="absolute right-4 top-4 rounded bg-black/60 px-3 py-1 text-sm font-mono text-white">
-          {currentIndex + 1} / {images.length}
-        </div>
+        <button
+          onClick={goToNext}
+          className="shrink-0 rounded border border-border bg-secondary p-1 hover:bg-muted"
+          aria-label="Next image"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       )}
     </div>
   )

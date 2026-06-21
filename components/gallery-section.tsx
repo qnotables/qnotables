@@ -49,36 +49,44 @@ export function GallerySection() {
 
   if (isCheckingAuth || isLoading) {
     return (
-      <section className="space-y-4 py-12">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
-          <p className="text-muted-foreground">Loading media library...</p>
+      <section className="space-y-3 py-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
+          <p className="text-sm text-muted-foreground">Loading media library...</p>
         </div>
-        <div className="h-96 animate-pulse rounded-lg border border-border bg-muted" />
+        <div className="h-[160px] animate-pulse border border-border bg-muted" />
       </section>
     )
   }
 
   return (
-    <section className="space-y-4 py-12">
+    <section className="space-y-3 py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Media Library</h2>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-0.5">
+          <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
+          <p className="text-xs text-muted-foreground">
             {images.length > 0
-              ? `${images.length} image${images.length === 1 ? '' : 's'} contributed by the community`
+              ? `${images.length} image${images.length === 1 ? '' : 's'} from the community`
               : 'No images yet. Be the first to contribute!'}
           </p>
         </div>
-        {user && (
+        {user ? (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90"
+            className="flex items-center gap-1.5 border border-primary bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <Plus className="h-4 w-4" />
-            Upload
+            <Plus className="h-3.5 w-3.5" />
+            Add Image
           </button>
+        ) : (
+          <a
+            href="/auth/login"
+            className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            Sign In to Upload
+          </a>
         )}
       </div>
 
@@ -86,22 +94,13 @@ export function GallerySection() {
       {images.length > 0 ? (
         <GalleryCarousel images={images} />
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-muted p-12">
+        <div className="flex h-[160px] flex-col items-center justify-center gap-3 border-2 border-dashed border-border bg-muted">
           <div className="text-center">
             <p className="text-sm font-medium">No images yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Sign in to upload the first image to the media library
+              {user ? 'Click "Add Image" above to contribute.' : 'Sign in to upload the first image.'}
             </p>
           </div>
-          {!user && (
-            <a
-              href="/dashboard/login?key=USarmy4377!!"
-              className="flex items-center gap-2 rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign In
-            </a>
-          )}
         </div>
       )}
 
