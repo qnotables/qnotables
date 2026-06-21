@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { X, ZoomIn, Play } from 'lucide-react'
+import { X, ZoomIn, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
 
 interface LightboxProps {
