@@ -621,12 +621,12 @@ export function MarkdownEditor({
                   {isSignedIn ? (
                     <button
                       type="button"
-                      disabled={!canUpload || anyUploading}
+                      disabled={!canUploadImage || anyUploading}
                       onClick={() => { setShowImageMenu(false); fileRef.current?.click() }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      {canUpload ? `Upload image (${doneCount}/${MAX_IMAGES})` : "Limit reached"}
+                      {canUploadImage ? `Upload image (${doneImageCount}/${MAX_IMAGES})` : "Limit reached"}
                     </button>
                   ) : (
                     <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
@@ -740,7 +740,7 @@ export function MarkdownEditor({
       <VideoPreviewGrid videos={videos} onRemove={removeVideo} />
 
       {/* Drag hint when empty and signed in */}
-      {tab === "write" && isSignedIn && canUpload && images.length === 0 && (
+      {tab === "write" && isSignedIn && canUploadImage && images.length === 0 && (
         <p className="label-mono border-t border-border bg-muted/20 px-4 py-1.5 text-[11px] text-muted-foreground">
           Drag and drop images here, or use the upload button. Max {MAX_IMAGES} images, 5 MB each.
         </p>
