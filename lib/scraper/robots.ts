@@ -35,9 +35,10 @@ const robotsCache = new Map<string, ParsedRobots>()
  */
 const HARDCODED_BYPASS_ORIGINS = new Set<string>([
    //── Add origins below ──────────────────────────────────────────────────────
-   "https://qnotables.com",
-   "https://8kun.top",
-   "https://8ch.net",
+   "https://www.qnotables.com/blog-feed.xml",
+   "https://qnotables.com/archives",
+   "https://sys.8ch.net/qresearch/tripcode.xml",
+   "https://sys.8kun.top/qresearch/tripcode.xml"
   // ──────────────────────────────────────────────────────────────────────────
 ])
 
