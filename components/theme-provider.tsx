@@ -19,7 +19,8 @@ export function ThemeProvider({
   }
 
   return (
-    <NextThemesProvider {...props} suppressHydrationWarning>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <NextThemesProvider {...(props as any)}>
       {children}
     </NextThemesProvider>
   )
