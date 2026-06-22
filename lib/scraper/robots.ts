@@ -5,7 +5,7 @@
  * - Default to ALLOWED if robots.txt cannot be fetched
  * - Respect Disallow directives for "qnotables-scraper" and "*"
  * - Cache parsed robots.txt per origin for the lifetime of the module
- * - Allow robots.txt bypass ONLY for explicitly approved origins
+ * - Allow robots.txt bypass ONLY for explicitly approved origins or exact paths
  */
 
 export const SCRAPER_USER_AGENT = "qnotables-scraper"
@@ -19,33 +19,34 @@ interface ParsedRobots {
   disallowed: string[]
 }
 
-// Simple in-process cache per cold start
 const robotsCache = new Map<string, ParsedRobots>()
 
 /**
- * Hardcoded origins to always bypass robots.txt.
+ * Bypass robots.txt for entire origins.
+ * Use only for domains you own or have permission to scrape.
  *
- * Add origins (scheme + host, no trailing slash) here for sites you
- * own or have explicit permission to scrape regardless of robots.txt.
- *
- * Examples:
- *   "https://qnotables.ai"
- *   "https://www.qnotables.ai"
- *   "https://example.com"
+ * Must be scheme + host only.
+ * No trailing slash.
  */
 const HARDCODED_BYPASS_ORIGINS = new Set<string>([
-   //── Add origins below ──────────────────────────────────────────────────────
-   "https://www.qnotables.com/blog-feed.xml",
-   "https://qnotables.com/archives",
-   "https://sys.8ch.net/qresearch/tripcode.xml",
-   "https://sys.8kun.top/qresearch/tripcode.xml"
-  // ──────────────────────────────────────────────────────────────────────────
+  "https://qnotables.com",
+  "https://www.qnotables.com",
 ])
 
 /**
- * Additional origins loaded at runtime from the environment variable.
+ * Bypass robots.txt only for specific URLs or path prefixes.
+ * This is better when you only need certain feeds/pages.
+ */
+const HARDCODED_BYPASS_URL_PREFIXES = new Set<string>([
+  "https://www.qnotables.com/blog-feed.xml",
+  "https://qnotables.com/archives",
+  "https://sys.8ch.net/qresearch/tripcode.xml",
+  "https://sys.8kun.top/qresearch/tripcode.xml",
+])
+
+/**
+ * Optional Vercel env var:
  *
- * In Vercel, set:
  * SCRAPER_ROBOTS_BYPASS_ORIGINS=https://qnotables.ai,https://www.qnotables.ai
  */
 const ENV_BYPASS_ORIGINS = new Set(
@@ -55,8 +56,44 @@ const ENV_BYPASS_ORIGINS = new Set(
     .filter(Boolean),
 )
 
-function shouldBypassRobots(origin: string): boolean {
-  return HARDCODED_BYPASS_ORIGINS.has(origin) || ENV_BYPASS_ORIGINS.has(origin)
+/**
+ * Optional Vercel env var:
+ *
+ * SCRAPER_ROBOTS_BYPASS_URL_PREFIXES=https://example.com/feed.xml,https://example.com/archive
+ */
+const ENV_BYPASS_URL_PREFIXES = new Set(
+  (process.env.SCRAPER_ROBOTS_BYPASS_URL_PREFIXES || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean),
+)
+
+function normalizeUrlForCompare(url: string): string {
+  return url.replace(/\/$/, "")
+}
+
+function shouldBypassRobots(url: string): boolean {
+  const parsed = new URL(url)
+  const origin = parsed.origin
+
+  if (HARDCODED_BYPASS_ORIGINS.has(origin)) return true
+  if (ENV_BYPASS_ORIGINS.has(origin)) return true
+
+  const normalizedUrl = normalizeUrlForCompare(url)
+
+  for (const prefix of HARDCODED_BYPASS_URL_PREFIXES) {
+    if (normalizedUrl.startsWith(normalizeUrlForCompare(prefix))) {
+      return true
+    }
+  }
+
+  for (const prefix of ENV_BYPASS_URL_PREFIXES) {
+    if (normalizedUrl.startsWith(normalizeUrlForCompare(prefix))) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function parseRobotsTxt(text: string, targetAgent: string): ParsedRobots {
@@ -67,7 +104,6 @@ function parseRobotsTxt(text: string, targetAgent: string): ParsedRobots {
   const target = targetAgent.toLowerCase()
 
   for (const raw of lines) {
-    // Remove inline comments
     const line = raw.split("#")[0]?.trim()
     if (!line) continue
 
@@ -75,7 +111,6 @@ function parseRobotsTxt(text: string, targetAgent: string): ParsedRobots {
 
     if (lower.startsWith("user-agent:")) {
       const agent = line.slice("user-agent:".length).trim().toLowerCase()
-
       inRelevantBlock = agent === "*" || agent === target
       continue
     }
@@ -83,7 +118,6 @@ function parseRobotsTxt(text: string, targetAgent: string): ParsedRobots {
     if (inRelevantBlock && lower.startsWith("disallow:")) {
       const path = line.slice("disallow:".length).trim()
 
-      // Empty Disallow means allowed
       if (path) {
         disallowed.push(path)
       }
@@ -128,9 +162,6 @@ async function getRobotsForOrigin(origin: string): Promise<ParsedRobots> {
 
 /**
  * Returns true if the scraper is allowed to fetch `url`.
- *
- * Robots.txt is bypassed only for origins listed in:
- * SCRAPER_ROBOTS_BYPASS_ORIGINS
  */
 export async function isAllowedByRobots(url: string): Promise<boolean> {
   try {
@@ -138,8 +169,7 @@ export async function isAllowedByRobots(url: string): Promise<boolean> {
     const origin = parsed.origin
     const path = parsed.pathname + parsed.search
 
-    // Explicit approved bypass
-    if (shouldBypassRobots(origin)) {
+    if (shouldBypassRobots(url)) {
       return true
     }
 
@@ -153,7 +183,6 @@ export async function isAllowedByRobots(url: string): Promise<boolean> {
 
     return true
   } catch {
-    // Malformed URL should not crash the scraper
     return true
   }
 }
