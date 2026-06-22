@@ -11,12 +11,12 @@ import type { ScraperSource } from "./types"
  */
 export const SCRAPER_SOURCES: ScraperSource[] = [
   // ── RSS examples ─────────────────────────────────────────────────────────
-  // {
-  //   name: "Example News",
-  //   url: "https://example.com/feed.xml",
-  //   type: "rss",
-  //   category: "News Brief",
-  // },
+  {
+   name: "Notable News",
+   url: "https://sys.8kun.top/qresearch/tripcode.xml",
+   type: "rss",
+    category: "News Brief",
+   },
 
   // ── HTML examples ─────────────────────────────────────────────────────────
   // {
