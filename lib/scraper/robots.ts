@@ -23,13 +23,30 @@ interface ParsedRobots {
 const robotsCache = new Map<string, ParsedRobots>()
 
 /**
- * Add only domains you own or have permission to scrape.
+ * Hardcoded origins to always bypass robots.txt.
  *
- * In Vercel, add this environment variable:
+ * Add origins (scheme + host, no trailing slash) here for sites you
+ * own or have explicit permission to scrape regardless of robots.txt.
  *
+ * Examples:
+ *   "https://qnotables.ai"
+ *   "https://www.qnotables.ai"
+ *   "https://example.com"
+ */
+const HARDCODED_BYPASS_ORIGINS = new Set<string>([
+  // ── Add origins below ──────────────────────────────────────────────────────
+  // "https://qnotables.ai",
+  // "https://www.qnotables.ai",
+  // ──────────────────────────────────────────────────────────────────────────
+])
+
+/**
+ * Additional origins loaded at runtime from the environment variable.
+ *
+ * In Vercel, set:
  * SCRAPER_ROBOTS_BYPASS_ORIGINS=https://qnotables.ai,https://www.qnotables.ai
  */
-const ROBOTS_BYPASS_ORIGINS = new Set(
+const ENV_BYPASS_ORIGINS = new Set(
   (process.env.SCRAPER_ROBOTS_BYPASS_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
@@ -37,7 +54,7 @@ const ROBOTS_BYPASS_ORIGINS = new Set(
 )
 
 function shouldBypassRobots(origin: string): boolean {
-  return ROBOTS_BYPASS_ORIGINS.has(origin)
+  return HARDCODED_BYPASS_ORIGINS.has(origin) || ENV_BYPASS_ORIGINS.has(origin)
 }
 
 function parseRobotsTxt(text: string, targetAgent: string): ParsedRobots {
