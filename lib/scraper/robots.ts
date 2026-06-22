@@ -37,7 +37,7 @@ const HARDCODED_BYPASS_ORIGINS = new Set<string>([
    //── Add origins below ──────────────────────────────────────────────────────
    "https://qnotables.com",
    "https://8kun.top",
-   "https://www.8ch.net",
+   "https://8ch.net",
   // ──────────────────────────────────────────────────────────────────────────
 ])
 

@@ -13,9 +13,15 @@ export const SCRAPER_SOURCES: ScraperSource[] = [
   // ── RSS examples ─────────────────────────────────────────────────────────
   {
    name: "Notable News",
-   url: "https://sys.8kun.top/qresearch/tripcode.xml",
+   url: "https://sys.8ch.net/qresearch/tripcode.xml",
    type: "rss",
     category: "News Brief",
+   },
+     {
+   name: "Qnotables",
+   url: "https://www.qnotables.com/blog-feed.xml",
+   type: "rss",
+    category: "Source Archive",
    },
 
   // ── HTML examples ─────────────────────────────────────────────────────────
