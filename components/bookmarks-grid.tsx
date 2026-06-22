@@ -59,7 +59,7 @@ export function BookmarksGrid({
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => setSelectedCategory(cat ?? null)}
                 className={`label-mono px-3 py-1 text-xs font-semibold border transition-colors ${
                   selectedCategory === cat
                     ? "bg-primary text-primary-foreground border-primary"

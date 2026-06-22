@@ -272,7 +272,7 @@ export function createVideoEmbed(
     embedUrl: sanitizeEmbedUrl(embedUrl) || embedUrl,
     title: options?.title,
     caption: options?.caption,
-    thumbnailUrl,
+    thumbnailUrl: thumbnailUrl ?? undefined,
   }
 }
 

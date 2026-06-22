@@ -86,7 +86,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
   }
 
   // Get related posts by tag or category (only if this is a blog post)
-  let relatedPosts = []
+  let relatedPosts: Awaited<ReturnType<typeof getAllArchives>> = []
   if (post) {
     const allPosts = await getAllArchives()
     relatedPosts = allPosts
@@ -205,8 +205,8 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
               {(post?.video_url || video?.video_url) && (
                 <div>
                   <video
-                    src={post?.video_url || video?.video_url!}
-                    poster={video?.thumbnail_url}
+                    src={(post?.video_url || video?.video_url || "")}
+                    poster={video?.thumbnail_url ?? undefined}
                     controls
                     playsInline
                     preload="metadata"
@@ -296,7 +296,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             <ShareButtons
               title={post?.title || video?.title}
               url={`${getSiteUrl()}/archives/${post?.slug || video?.id}`}
-              excerpt={post?.excerpt || post?.subtitle || video?.description}
+              excerpt={post?.excerpt || post?.subtitle || (video?.description ?? undefined)}
               hashtags={post?.tags}
             />
           </div>
@@ -314,9 +314,9 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                     href={`/archives/${relatedPost.slug}`}
                     className="group border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/30"
                   >
-                    {relatedPost.cover_image_url && (
+                    {!!relatedPost.cover_image_url && (
                       <img
-                        src={relatedPost.cover_image_url}
+                        src={relatedPost.cover_image_url || ""}
                         alt={relatedPost.title}
                         className="mb-3 h-32 w-full object-cover transition-transform group-hover:scale-105"
                       />

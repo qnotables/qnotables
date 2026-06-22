@@ -14,16 +14,16 @@ export interface ArchiveRecord {
   post_type: string
   tags: string[]
   published_at: string
-  source_name?: string
-  source_url?: string
+  source_name?: string | null
+  source_url?: string | null
   readMinutes: number
   media_type?: string
   featured: boolean
   author: string
   cover_image?: string | null
   type?: "blog" | "video"
-  video_url?: string
-  external_url?: string
+  video_url?: string | null
+  external_url?: string | null
 }
 
 /**
