@@ -163,6 +163,33 @@ export interface ResolvedImage {
 /** Extract the first usable image URL from a Markdown / HTML body. */
 export function firstImageFromBody(body?: string | null): string | undefined {
   if (!body || typeof body !== "string") return undefined
+
+  // Tiptap JSON: walk nodes for image/videoBlock src attrs
+  if (body.trimStart().startsWith("{")) {
+    try {
+      type TNode = { type?: string; attrs?: Record<string, string>; content?: TNode[] }
+      const doc: TNode = JSON.parse(body)
+      function walkTiptap(nodes?: TNode[]): string | undefined {
+        if (!nodes) return undefined
+        for (const node of nodes) {
+          if (node.type === "image" && node.attrs?.src && isSafeImageUrl(node.attrs.src)) {
+            return node.attrs.src
+          }
+          if (node.type === "videoBlock" && node.attrs?.src && isSafeImageUrl(node.attrs.src)) {
+            return node.attrs.src
+          }
+          const found = walkTiptap(node.content)
+          if (found) return found
+        }
+        return undefined
+      }
+      const tiptapImage = walkTiptap(doc.content)
+      if (tiptapImage) return tiptapImage
+    } catch {
+      // fall through to Markdown/HTML parsing below
+    }
+  }
+
   // Markdown image: ![alt](url)
   const md = body.match(/!\[[^\]]*\]\(([^)\s]+)/)
   if (md?.[1] && isSafeImageUrl(md[1])) return md[1]

@@ -22,7 +22,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const site = getSiteUrl()
   const canonical = `${site}/archives/${post.slug}`
   const description = post.subtitle || post.excerpt || "Archived HOT AND FRESH record."
-  const { url: ogImage } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
+  // Use cover image or first image from post body; fall back to site-wide default OG image
+  const { url: resolvedImage, source: imageSource } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
+  const ogImage = imageSource === "fallback" ? `${site}/images/og-default.png` : resolvedImage
   return {
     title: `${post.title} — HOT AND FRESH`,
     description,
@@ -31,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: post.title,
       description,
       url: canonical,
-      images: ogImage ? [{ url: ogImage }] : undefined,
+      images: [{ url: ogImage }],
       type: "article",
       publishedTime: post.publishedAt || post.date,
       modifiedTime: post.updatedAt,
@@ -40,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       card: "summary_large_image",
       title: post.title,
       description,
-      images: ogImage ? [ogImage] : undefined,
+      images: [ogImage],
     },
   }
 }
