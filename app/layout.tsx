@@ -16,6 +16,8 @@ const plexMono = IBM_Plex_Mono({
   weight: ['400', '500', '600'],
 })
 
+const DEFAULT_OG_IMAGE = '/images/og-default.png'
+
 export const metadata: Metadata = {
   title: 'Hot and Fresh — Global News Aggregator',
   description:
@@ -24,6 +26,28 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Hot and Fresh',
+    title: 'Hot and Fresh — Global News Aggregator',
+    description:
+      'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        width: 1316,
+        height: 877,
+        alt: 'Q Research — For God and Country',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Hot and Fresh — Global News Aggregator',
+    description:
+      'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
