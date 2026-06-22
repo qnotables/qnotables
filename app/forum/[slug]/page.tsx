@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
-import { getSiteUrl } from "@/lib/rss-utils"
+import { getSiteUrl, firstImageFromBody } from "@/lib/rss-utils"
 
 interface Thread {
   id: string
@@ -54,6 +54,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const canonical = `${site}/forum/${slug}`
   const description = data.body?.slice(0, 160).replace(/\s+/g, " ") ?? ""
 
+  // Use first image found in the post body, fall back to site default OG image
+  const bodyImage = firstImageFromBody(data.body)
+  const ogImage = bodyImage ?? `${site}/images/og-default.png`
+
   return {
     title: `${data.title} — HOT AND FRESH`,
     description,
@@ -64,11 +68,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: canonical,
       siteName: "HOT AND FRESH",
       type: "article",
+      images: [{ url: ogImage }],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: data.title,
       description,
+      images: [ogImage],
     },
   }
 }

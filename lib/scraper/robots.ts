@@ -40,8 +40,6 @@ const HARDCODED_BYPASS_ORIGINS = new Set<string>([
 const HARDCODED_BYPASS_URL_PREFIXES = new Set<string>([
   "https://www.qnotables.com/blog-feed.xml",
   "https://qnotables.com/archives",
-  "https://sys.8ch.net/qresearch/tripcode.xml",
-  "https://sys.8kun.top/qresearch/tripcode.xml",
 ])
 
 /**
