@@ -71,10 +71,13 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="label-mono text-muted-foreground">
-            HOT AND FRESH NEWS DESK // EST. 2026
+            HOT AND FRESH NEWS DESK // EST. 2019
           </span>
           <span className="label-mono text-muted-foreground">
-            AGGREGATED CONTENT LINKS TO ORIGINAL PUBLISHERS
+            NOTABLES DO NOT EQUAL ENDORSEMENTS
+          </span>
+          <span className="label-mono text-muted-foreground">
+            AGGREGATED CONTENT LINKS TO ORIGINAL PUBLISHERS 
           </span>
         </div>
       </div>
