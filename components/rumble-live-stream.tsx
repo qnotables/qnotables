@@ -9,7 +9,7 @@ interface RumbleLiveStreamProps {
 }
 
 export function RumbleLiveStream({
-  channelUrl = "https://rumble.com/c/Qnotables",
+  channelUrl = "https://rumble.com/c/Qnotables/live",
   channelName = "Qnotables",
 }: RumbleLiveStreamProps) {
   const [dismissed, setDismissed] = useState(false)
