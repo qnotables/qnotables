@@ -34,9 +34,10 @@ const robotsCache = new Map<string, ParsedRobots>()
  *   "https://example.com"
  */
 const HARDCODED_BYPASS_ORIGINS = new Set<string>([
-  // ── Add origins below ──────────────────────────────────────────────────────
-  // "https://qnotables.ai",
-  // "https://www.qnotables.ai",
+   //── Add origins below ──────────────────────────────────────────────────────
+   "https://qnotables.com",
+   "https://8kun.top"
+   "https://www.8ch.net",
   // ──────────────────────────────────────────────────────────────────────────
 ])
 
