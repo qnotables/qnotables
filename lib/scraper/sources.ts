@@ -19,11 +19,11 @@ export const SCRAPER_SOURCES: ScraperSource[] = [
    },
 
   // ── HTML examples ─────────────────────────────────────────────────────────
-  // {
-  //   name: "Example Blog",
-  //   url: "https://example.com/blog",
-  //   type: "html",
-  //   selector: "article",   // CSS selector for post elements
-  //   category: "Source Archive",
-  // },
+   {
+     name: "Qnotables",
+     url: "https://qnotables.com/archives",
+     type: "html",
+     selector: "article",   // CSS selector for post elements
+     category: "Source Archive",
+   },
 ]
