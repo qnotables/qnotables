@@ -28,6 +28,17 @@ export default async function ForumPage() {
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
 
+  // Fetch all thread votes in one query and aggregate scores
+  const threadIds = (threads ?? []).map((t: any) => t.id)
+  const { data: threadVotes } = threadIds.length
+    ? await supabase.from("thread_votes").select("thread_id, vote").in("thread_id", threadIds)
+    : { data: [] }
+
+  const scoreMap = new Map<string, number>()
+  for (const v of threadVotes ?? []) {
+    scoreMap.set(v.thread_id, (scoreMap.get(v.thread_id) ?? 0) + v.vote)
+  }
+
   const rows: ThreadListItem[] = (threads ?? []).map((t: any) => ({
     id: t.id,
     title: t.title,
@@ -38,6 +49,7 @@ export default async function ForumPage() {
     author_id: t.author_id,
     authorName: t.profiles?.display_name ?? "operator",
     replyCount: t.forum_replies?.[0]?.count ?? 0,
+    threadScore: scoreMap.get(t.id) ?? 0,
     is_pinned: Boolean(t.is_pinned),
     is_locked: Boolean(t.is_locked),
     is_featured: Boolean(t.is_featured),

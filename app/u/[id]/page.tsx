@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Clock, MessageSquare, CornerDownRight, UserRound } from "lucide-react"
+import { ArrowLeft, Clock, MessageSquare, CornerDownRight, UserRound, ChevronUp } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { DisplayNameEditor } from "@/components/display-name-editor"
@@ -44,7 +44,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, created_at")
+    .select("id, display_name, avatar_url, created_at, karma")
     .eq("id", id)
     .maybeSingle()
 
@@ -116,12 +116,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
               </p>
             </div>
           </div>
-          <div className="label-mono mt-6 flex gap-6 border-t border-border pt-4 text-muted-foreground">
+          <div className="label-mono mt-6 flex flex-wrap gap-6 border-t border-border pt-4 text-muted-foreground">
             <span>
               <span className="stencil text-lg text-primary">{threads.length}</span> THREADS
             </span>
             <span>
               <span className="stencil text-lg text-primary">{replies.length}</span> REPLIES
+            </span>
+            <span className="flex items-center gap-1">
+              <ChevronUp className="h-4 w-4 text-primary" />
+              <span
+                className={`stencil text-lg ${
+                  (profile.karma ?? 0) > 0
+                    ? "text-primary"
+                    : (profile.karma ?? 0) < 0
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {(profile.karma ?? 0) > 0 ? `+${profile.karma}` : (profile.karma ?? 0)}
+              </span>{" "}
+              KARMA
             </span>
           </div>
         </div>

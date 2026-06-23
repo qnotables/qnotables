@@ -7,6 +7,7 @@ import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
 import { Markdown } from "@/components/markdown"
 import { ReplyVotes } from "@/components/reply-votes"
+import { ThreadVotes } from "@/components/thread-votes"
 import { ReplyModControls } from "@/components/reply-mod-controls"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
@@ -116,7 +117,18 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const replies = (replyData ?? []) as unknown as Reply[]
 
-  // Votes
+  // Thread-level votes
+  const { data: threadVotesData } = await supabase
+    .from("thread_votes")
+    .select("vote, user_id")
+    .eq("thread_id", slug)
+
+  const threadScore = (threadVotesData ?? []).reduce((sum, v) => sum + v.vote, 0)
+  const userThreadVote = user
+    ? ((threadVotesData ?? []).find((v) => v.user_id === user.id)?.vote ?? null) as 1 | -1 | null
+    : null
+
+  // Reply-level votes
   const { data: allVotes } = await supabase
     .from("reply_votes")
     .select("reply_id, vote_type")
@@ -195,6 +207,19 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           is_soft_deleted={Boolean(t.is_soft_deleted)}
           shareUrl={`${getSiteUrl()}/forum/${t.id}`}
         />
+
+        {/* Thread vote bar */}
+        <div className="mt-4 flex items-center gap-3 border-t border-border pt-3">
+          <ThreadVotes
+            threadId={t.id}
+            initialScore={threadScore}
+            userVote={userThreadVote}
+            isSignedIn={!!user}
+          />
+          <span className="label-mono text-xs text-muted-foreground">
+            {!user && "Sign in to vote on this thread"}
+          </span>
+        </div>
 
         {/* Replies header */}
         <div className="mb-4 mt-10 flex items-center gap-3">

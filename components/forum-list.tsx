@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Share2,
   ExternalLink,
+  ChevronUp,
 } from "lucide-react"
 import { timeAgo } from "@/lib/time"
 import {
@@ -37,6 +38,7 @@ export interface ThreadListItem {
   author_id: string
   authorName: string
   replyCount: number
+  threadScore: number
   is_pinned: boolean
   is_locked: boolean
   is_featured: boolean
@@ -183,6 +185,16 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {timeAgo(t.created_at)}
+          </span>
+          {/* Karma score */}
+          <span
+            className={`flex items-center gap-0.5 ${
+              t.threadScore > 0 ? "text-primary" : t.threadScore < 0 ? "text-destructive" : "text-muted-foreground"
+            }`}
+            title="Thread score"
+          >
+            <ChevronUp className="h-3 w-3" />
+            {t.threadScore > 0 ? `+${t.threadScore}` : t.threadScore}
           </span>
         </div>
       </div>

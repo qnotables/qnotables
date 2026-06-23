@@ -592,7 +592,6 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to vote." }
 
-  // Check if user already voted
   const { data: existing } = await supabase
     .from("reply_votes")
     .select("id, vote_type")
@@ -603,16 +602,10 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
   let error = null
 
   if (existing) {
-    // Toggle or change vote
     if (existing.vote_type === voteType) {
-      // Remove vote
-      const { error: delError } = await supabase
-        .from("reply_votes")
-        .delete()
-        .eq("id", existing.id)
+      const { error: delError } = await supabase.from("reply_votes").delete().eq("id", existing.id)
       error = delError?.message || null
     } else {
-      // Change vote type
       const { error: updateError } = await supabase
         .from("reply_votes")
         .update({ vote_type: voteType })
@@ -620,7 +613,6 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
       error = updateError?.message || null
     }
   } else {
-    // Add new vote
     const { error: insertError } = await supabase
       .from("reply_votes")
       .insert({ reply_id: replyId, user_id: user.id, vote_type: voteType })
@@ -628,38 +620,49 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
   }
 
   if (error) return { error }
+  // Karma is updated automatically by the DB trigger (sync_reply_vote_karma)
+  revalidatePath(`/forum/[slug]`)
+  return { error: null }
+}
 
-  // Update author karma based on total votes on their reply
-  const { data: votes } = await supabase
-    .from("reply_votes")
-    .select("vote_type")
-    .eq("reply_id", replyId)
+export async function voteOnThread(threadId: string, vote: 1 | -1) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to vote." }
 
-  const upVotes = votes?.filter((v) => v.vote_type === "up").length ?? 0
-  const downVotes = votes?.filter((v) => v.vote_type === "down").length ?? 0
-  const karma = upVotes - downVotes
-
-  // Get reply author
-  const { data: reply } = await supabase
-    .from("forum_replies")
-    .select("author_id")
-    .eq("id", replyId)
+  const { data: existing } = await supabase
+    .from("thread_votes")
+    .select("id, vote")
+    .eq("thread_id", threadId)
+    .eq("user_id", user.id)
     .maybeSingle()
 
-  if (reply?.author_id) {
-    // Calculate total karma for this user across all their replies
-    const { data: allVotes } = await supabase
-      .from("reply_votes")
-      .select("vote_type, forum_replies(author_id)")
-      .eq("forum_replies.author_id", reply.author_id)
+  let error = null
 
-    const totalKarma =
-      allVotes?.filter((v) => v.vote_type === "up").length ?? 0 -
-      (allVotes?.filter((v) => v.vote_type === "down").length ?? 0)
-
-    await supabase.from("profiles").update({ karma: totalKarma }).eq("id", reply.author_id)
+  if (existing) {
+    if (existing.vote === vote) {
+      // Toggle off
+      const { error: delError } = await supabase.from("thread_votes").delete().eq("id", existing.id)
+      error = delError?.message || null
+    } else {
+      // Flip vote
+      const { error: updateError } = await supabase
+        .from("thread_votes")
+        .update({ vote })
+        .eq("id", existing.id)
+      error = updateError?.message || null
+    }
+  } else {
+    const { error: insertError } = await supabase
+      .from("thread_votes")
+      .insert({ thread_id: threadId, user_id: user.id, vote })
+    error = insertError?.message || null
   }
 
-  revalidatePath(`/forum/[slug]`)
+  if (error) return { error }
+  // Karma updated automatically by the DB trigger (sync_thread_vote_karma)
+  revalidatePath(`/forum/${threadId}`)
   return { error: null }
 }
