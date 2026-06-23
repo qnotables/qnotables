@@ -19,7 +19,12 @@ export function HeaderMusicPlayer() {
   // Fetch tracks from Blob on mount
   useEffect(() => {
     fetch("/api/audio")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        const ct = r.headers.get("content-type") || ""
+        if (!ct.includes("application/json")) throw new Error("Non-JSON response")
+        return r.json()
+      })
       .then((data) => {
         const fetched: Track[] = (data.tracks || []).map((t: any) => ({
           title: t.title,
