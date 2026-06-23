@@ -99,20 +99,22 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
 
   return (
     <div
-      className={`group relative flex gap-0 border bg-card transition-colors hover:border-primary ${
+      className={`group relative flex flex-col gap-0 border bg-card transition-colors hover:border-primary sm:flex-row ${
         t.is_pinned ? "border-primary/60" : "border-border"
       }`}
     >
-      {/* Thumbnail strip */}
+      {/* Landscape thumbnail — 16:9 on mobile full-width, fixed width on sm+ */}
       {thumb && (
-        <div className="hidden w-24 flex-shrink-0 overflow-hidden sm:block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={thumb}
-            alt=""
-            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-            loading="lazy"
-          />
+        <div className="w-full overflow-hidden sm:w-48 sm:flex-shrink-0">
+          <div className="relative aspect-video w-full sm:aspect-auto sm:h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumb}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              loading="lazy"
+            />
+          </div>
         </div>
       )}
 
