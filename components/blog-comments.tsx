@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { BlogComment } from "@/app/actions/blog-comment-actions"
+import { BlogComment, deleteBlogComment } from "@/app/actions/blog-comment-actions"
 import { formatRelativeTime, buildCommentTree, getChildComments } from "@/lib/blog-comments"
 import { BlogCommentForm } from "@/components/blog-comment-form"
 import { MessageCircle, Trash2 } from "lucide-react"
@@ -9,15 +9,14 @@ import { MessageCircle, Trash2 } from "lucide-react"
 interface BlogCommentsProps {
   postId: string
   initialComments: BlogComment[]
-  authorId?: string
+  currentUserId?: string | null
 }
 
-export function BlogComments({ postId, initialComments, authorId }: BlogCommentsProps) {
+export function BlogComments({ postId, initialComments, currentUserId }: BlogCommentsProps) {
   const [comments, setComments] = useState<BlogComment[]>(initialComments)
   const [showReplyForm, setShowReplyForm] = useState<string | null>(null)
 
   const handleCommentAdded = useCallback(() => {
-    // Refetch comments
     window.location.reload()
   }, [])
 
@@ -31,9 +30,9 @@ export function BlogComments({ postId, initialComments, authorId }: BlogComments
             <MessageCircle className="h-5 w-5" />
             COMMENTS
           </h2>
-          <p className="label-mono text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
+          <p className="label-mono mb-6 text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
         </div>
-        <BlogCommentForm postId={postId} authorId={authorId} onCommentAdded={handleCommentAdded} />
+        <BlogCommentForm postId={postId} currentUserId={currentUserId} onCommentAdded={handleCommentAdded} />
       </div>
     )
   }
@@ -49,7 +48,7 @@ export function BlogComments({ postId, initialComments, authorId }: BlogComments
 
         {/* Top-level comment form */}
         <div className="mb-8">
-          <BlogCommentForm postId={postId} authorId={authorId} onCommentAdded={handleCommentAdded} />
+          <BlogCommentForm postId={postId} currentUserId={currentUserId} onCommentAdded={handleCommentAdded} />
         </div>
       </div>
 
@@ -61,7 +60,7 @@ export function BlogComments({ postId, initialComments, authorId }: BlogComments
             comment={comment}
             allComments={comments}
             postId={postId}
-            currentUserId={authorId}
+            currentUserId={currentUserId}
             onReplyClick={() => setShowReplyForm(showReplyForm === comment.id ? null : comment.id)}
             showReplyForm={showReplyForm === comment.id}
             onCommentAdded={handleCommentAdded}
@@ -76,7 +75,7 @@ interface BlogCommentThreadProps {
   comment: BlogComment
   allComments: BlogComment[]
   postId: string
-  currentUserId?: string
+  currentUserId?: string | null
   onReplyClick: () => void
   showReplyForm: boolean
   onCommentAdded: () => void
@@ -92,6 +91,14 @@ function BlogCommentThread({
   onCommentAdded,
 }: BlogCommentThreadProps) {
   const replies = getChildComments(comment.id, allComments)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm("Delete this comment?")) return
+    setDeleting(true)
+    await deleteBlogComment(comment.id)
+    onCommentAdded() // reload
+  }
 
   return (
     <div className="space-y-4">
@@ -112,8 +119,13 @@ function BlogCommentThread({
           </div>
 
           {/* Delete button (if owner) */}
-          {currentUserId === comment.author_id && (
-            <button className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+          {currentUserId && currentUserId === comment.author_id && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-1 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+              title="Delete comment"
+            >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
@@ -137,7 +149,7 @@ function BlogCommentThread({
           <BlogCommentForm
             postId={postId}
             parentCommentId={comment.id}
-            authorId={currentUserId}
+            currentUserId={currentUserId}
             onCommentAdded={onCommentAdded}
             isReply
           />
@@ -154,7 +166,7 @@ function BlogCommentThread({
               allComments={allComments}
               postId={postId}
               currentUserId={currentUserId}
-              onReplyClick={() => {}}
+              onReplyClick={() => onCommentAdded()}
               showReplyForm={false}
               onCommentAdded={onCommentAdded}
             />

@@ -1,17 +1,14 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase/server"
 
-// Lazy-load Supabase client to avoid initialization errors during build
-function getSupabaseClient() {
+// Service-role client for reads (bypasses RLS — safe for SELECTs only)
+function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!url || !key) {
-    throw new Error("Supabase configuration missing")
-  }
-
-  return createClient(url, key)
+  if (!url || !key) throw new Error("Supabase configuration missing")
+  return createServiceClient(url, key)
 }
 
 export interface BlogComment {
@@ -27,49 +24,58 @@ export interface BlogComment {
 }
 
 /**
- * Create a new blog comment
+ * Create a new blog comment — requires an authenticated session.
+ * Uses the SSR client so RLS enforces auth.uid() = author_id.
  */
 export async function createBlogComment(
   postId: string,
-  authorName: string,
   body: string,
   parentCommentId?: string | null,
-  authorId?: string | null
 ): Promise<{ success: boolean; comment?: BlogComment; error?: string }> {
   try {
-    // Validate inputs
-    if (!postId || !authorName || !body) {
+    if (!postId || !body?.trim()) {
       return { success: false, error: "Missing required fields" }
     }
-
     if (body.trim().length < 2) {
       return { success: false, error: "Comment must be at least 2 characters" }
     }
 
-    if (authorName.trim().length < 2) {
-      return { success: false, error: "Author name must be at least 2 characters" }
+    // Get session user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: "You must be logged in to comment" }
     }
 
-    const { data, error } = await getSupabaseClient()
+    // Fetch display name from profiles
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, username")
+      .eq("id", user.id)
+      .single()
+
+    const authorName =
+      profile?.display_name ||
+      profile?.username ||
+      user.email?.split("@")[0] ||
+      "Anonymous"
+
+    const { data, error } = await supabase
       .from("blog_comments")
-      .insert([
-        {
-          post_id: postId,
-          parent_comment_id: parentCommentId || null,
-          author_id: authorId || null,
-          author_name: authorName.trim(),
-          body: body.trim(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_deleted: false,
-        },
-      ])
+      .insert([{
+        post_id: postId,
+        parent_comment_id: parentCommentId || null,
+        author_id: user.id,
+        author_name: authorName,
+        body: body.trim(),
+        is_deleted: false,
+      }])
       .select()
       .single()
 
     if (error) {
       console.error("[v0] Blog comment creation error:", error)
-      return { success: false, error: "Failed to create comment" }
+      return { success: false, error: "Failed to post comment" }
     }
 
     return { success: true, comment: data as BlogComment }
@@ -84,7 +90,7 @@ export async function createBlogComment(
  */
 export async function getBlogComments(postId: string): Promise<BlogComment[]> {
   try {
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await getServiceClient()
       .from("blog_comments")
       .select("*")
       .eq("post_id", postId)
@@ -144,37 +150,24 @@ export async function updateBlogComment(
 }
 
 /**
- * Soft delete a blog comment (marks as deleted, keeps record for audit)
+ * Soft-delete a comment — user session is used so RLS ensures ownership.
  */
 export async function deleteBlogComment(
   commentId: string,
-  authorId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // If authorId provided, verify ownership
-    if (authorId) {
-      const { data: comment, error: fetchError } = await getSupabaseClient()
-        .from("blog_comments")
-        .select("author_id")
-        .eq("id", commentId)
-        .single()
-
-      if (fetchError || !comment) {
-        return { success: false, error: "Comment not found" }
-      }
-
-      if (comment.author_id !== authorId) {
-        return { success: false, error: "You can only delete your own comments" }
-      }
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: "You must be logged in to delete a comment" }
     }
 
-    const { error } = await getSupabaseClient()
+    // RLS policy "comments_update_own" enforces auth.uid() = author_id
+    const { error } = await supabase
       .from("blog_comments")
-      .update({
-        is_deleted: true,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ is_deleted: true, updated_at: new Date().toISOString() })
       .eq("id", commentId)
+      .eq("author_id", user.id)
 
     if (error) {
       console.error("[v0] Blog comment delete error:", error)

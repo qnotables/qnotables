@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Send, AlertCircle, Loader2 } from "lucide-react"
+import { Send, AlertCircle, Loader2, LogIn } from "lucide-react"
 import { createBlogComment } from "@/app/actions/blog-comment-actions"
+import Link from "next/link"
 
 interface BlogCommentFormProps {
   postId: string
   parentCommentId?: string | null
-  authorId?: string
+  currentUserId?: string | null
   onCommentAdded?: () => void
   isReply?: boolean
 }
@@ -15,11 +16,10 @@ interface BlogCommentFormProps {
 export function BlogCommentForm({
   postId,
   parentCommentId = null,
-  authorId,
+  currentUserId,
   onCommentAdded,
   isReply = false,
 }: BlogCommentFormProps) {
-  const [authorName, setAuthorName] = useState("")
   const [body, setBody] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,21 +36,10 @@ export function BlogCommentForm({
         return
       }
 
-      if (!authorName.trim() && !authorId) {
-        setError("Please enter your name")
-        return
-      }
-
       setIsLoading(true)
 
       try {
-        const result = await createBlogComment(
-          postId,
-          authorName || "Anonymous",
-          body,
-          parentCommentId,
-          authorId
-        )
+        const result = await createBlogComment(postId, body, parentCommentId)
 
         if (result.success) {
           setBody("")
@@ -62,29 +51,33 @@ export function BlogCommentForm({
         }
       } catch (err) {
         setError("An error occurred. Please try again.")
-        console.error("[v0] Comment form error:", err)
       } finally {
         setIsLoading(false)
       }
     },
-    [postId, parentCommentId, authorId, authorName, body, onCommentAdded]
+    [postId, parentCommentId, body, onCommentAdded]
   )
+
+  // Not logged in — show gate
+  if (!currentUserId) {
+    return (
+      <div className={`border border-border bg-muted/20 p-4 ${isReply ? "ml-4 mt-3" : ""}`}>
+        <p className="label-mono mb-3 text-sm text-muted-foreground">
+          You must be logged in to leave a comment.
+        </p>
+        <Link
+          href="/auth/login"
+          className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-background hover:bg-primary/90 transition-colors"
+        >
+          <LogIn className="h-3 w-3" />
+          LOG IN TO COMMENT
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-3 ${isReply ? "ml-4 mt-3 pl-4 border-l border-border" : ""}`}>
-      {/* Author name (only if not authenticated) */}
-      {!authorId && (
-        <input
-          type="text"
-          placeholder="Your name"
-          value={authorName}
-          onChange={(e) => setAuthorName(e.target.value)}
-          maxLength={100}
-          className="label-mono w-full border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          disabled={isLoading}
-        />
-      )}
-
       {/* Comment body */}
       <textarea
         placeholder={isReply ? "Add a reply..." : "Add your comment..."}
@@ -99,19 +92,17 @@ export function BlogCommentForm({
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">{body.length}/1000</div>
 
-        {/* Error message */}
-        {error && (
-          <div className="flex items-center gap-1 text-xs text-red-500">
-            <AlertCircle className="h-3 w-3" />
-            {error}
-          </div>
-        )}
-
-        {/* Success message */}
-        {success && <div className="text-xs text-green-600">Comment posted!</div>}
+        <div className="flex items-center gap-3">
+          {error && (
+            <div className="flex items-center gap-1 text-xs text-red-500">
+              <AlertCircle className="h-3 w-3" />
+              {error}
+            </div>
+          )}
+          {success && <div className="label-mono text-xs text-green-600">POSTED</div>}
+        </div>
       </div>
 
-      {/* Submit button */}
       <button
         type="submit"
         disabled={isLoading || !body.trim()}
@@ -125,7 +116,7 @@ export function BlogCommentForm({
         ) : (
           <>
             <Send className="h-3 w-3" />
-            POST COMMENT
+            {isReply ? "POST REPLY" : "POST COMMENT"}
           </>
         )}
       </button>
