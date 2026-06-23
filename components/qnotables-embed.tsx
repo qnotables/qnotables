@@ -17,14 +17,30 @@ interface EmbedSwitcherProps {
 }
 
 /**
- * Validates if a URL is safe for embedding in an iframe
+ * Validates if a URL is safe for embedding in an iframe.
+ * Direct video files (mp4/webm) are always allowed.
  */
 function isValidEmbedUrl(url: string): boolean {
+  if (!url) return false
+
+  // Allow direct video files (e.g. Vercel Blob URLs)
+  const lower = url.toLowerCase()
+  if (
+    lower.endsWith(".mp4") ||
+    lower.endsWith(".webm") ||
+    lower.endsWith(".mov") ||
+    lower.includes(".mp4?") ||
+    lower.includes(".webm?")
+  ) {
+    return true
+  }
+
   try {
     const urlObj = new URL(url)
-    // Whitelist allowed embed sources
+    // Whitelist allowed embed sources — include all known embed subdomains
     const allowedHosts = [
-      "youtube.com",
+      "youtube.com",        // includes www.youtube.com
+      "youtube-nocookie.com", // privacy-enhanced YouTube embeds
       "youtu.be",
       "rumble.com",
       "odysee.com",
@@ -32,6 +48,7 @@ function isValidEmbedUrl(url: string): boolean {
       "twitter.com",
       "truthsocial.com",
       "vimeo.com",
+      "player.vimeo.com",
       "dailymotion.com",
       "8kun.top",
       "bitchute.com",
@@ -43,6 +60,20 @@ function isValidEmbedUrl(url: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Returns true if the URL points to a direct video file that needs a <video> element
+ */
+function isDirectVideo(url: string): boolean {
+  const lower = url.toLowerCase()
+  return (
+    lower.endsWith(".mp4") ||
+    lower.endsWith(".webm") ||
+    lower.endsWith(".mov") ||
+    lower.includes(".mp4?") ||
+    lower.includes(".webm?")
+  )
 }
 
 /**
@@ -110,20 +141,31 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
           ))}
         </div>
 
-        {/* Right side - iframe player */}
+        {/* Right side - iframe/video player */}
         <div className="flex-1 flex flex-col">
-          <div className="relative w-full flex-1 min-h-96 lg:min-h-full bg-background">
+          <div className="relative w-full flex-1 min-h-96 lg:min-h-full bg-background" style={{ minHeight: "480px" }}>
             {isValidUrl && activeItem?.embedUrl ? (
-              <iframe
-                key={activeItem.id}
-                src={activeItem.embedUrl}
-                title={activeItem.title}
-                className="absolute inset-0 h-full w-full border-0"
-                loading="lazy"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              />
+              isDirectVideo(activeItem.embedUrl) ? (
+                <video
+                  key={activeItem.id}
+                  src={activeItem.embedUrl}
+                  title={activeItem.title}
+                  className="absolute inset-0 h-full w-full object-contain"
+                  controls
+                  preload="metadata"
+                />
+              ) : (
+                <iframe
+                  key={activeItem.id}
+                  src={activeItem.embedUrl}
+                  title={activeItem.title}
+                  className="absolute inset-0 h-full w-full border-0"
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-full p-4">
                 <p className="text-muted-foreground text-center">
