@@ -79,7 +79,7 @@ const SIGNAL_TOOLS_SECONDARY = [
   },
   {
     label: "Contact",
-    description: "Configure link",
+    description: "Send a message",
     icon: Mail,
     href: "mailto:contact@qnotables.ai",
   },
