@@ -129,7 +129,7 @@ export function ArchiveEditor({ initialPost, onSave, onPublish }: ArchiveEditorP
     }
   }
 
-  // Publish
+  // Publish — uses post-dated published_at if set, otherwise defaults to now
   const handlePublish = async () => {
     try {
       setLoading(true)
@@ -137,7 +137,7 @@ export function ArchiveEditor({ initialPost, onSave, onPublish }: ArchiveEditorP
       const published = await saveArchivePost({
         ...formData,
         status: "published",
-        published_at: new Date().toISOString(),
+        published_at: formData.published_at || new Date().toISOString(),
       })
       setUnsavedChanges(false)
       setSuccess("Archive published successfully")
@@ -725,6 +725,37 @@ function ArchiveEditorSettings({ formData, onFieldChange, onSchedule }: any) {
         <label htmlFor="public_archive" className="text-sm font-semibold cursor-pointer">
           Include in Public Archive
         </label>
+      </div>
+
+      {/* Published Date — allows post-dating (backdating) a published notable */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">Published Date</label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Set a custom publish date to post-date or backdate this notable. Leave blank to use the current date/time when publishing.
+        </p>
+        <input
+          type="datetime-local"
+          value={
+            formData.published_at
+              ? new Date(formData.published_at).toISOString().slice(0, 16)
+              : ""
+          }
+          onChange={e =>
+            onFieldChange(
+              "published_at",
+              e.target.value ? new Date(e.target.value).toISOString() : null
+            )
+          }
+          className="w-full px-3 py-2 border border-border bg-background"
+        />
+        {formData.published_at && (
+          <button
+            onClick={() => onFieldChange("published_at", null)}
+            className="mt-1 text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Clear (use current time on publish)
+          </button>
+        )}
       </div>
 
       {formData.status === "scheduled" && (
