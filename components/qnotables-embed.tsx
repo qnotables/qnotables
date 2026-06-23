@@ -145,32 +145,4 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
   )
 }
 
-/**
- * Starter data array for embed items - replace URLs as needed
- */
-export const STARTER_EMBED_DATA: EmbedItem[] = [
-  {
-    id: "embed-1",
-    title: "Sample Video One",
-    source: "YouTube",
-    description: "First video example",
-    embedUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    externalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  },
-  {
-    id: "embed-2",
-    title: "Sample Video Two",
-    source: "Rumble",
-    description: "Second video example",
-    embedUrl: "https://rumble.com/embed/XXXXXXX",
-    externalUrl: "https://rumble.com/vXXXXXX",
-  },
-  {
-    id: "embed-3",
-    title: "Sample Video Three",
-    source: "Odysee",
-    description: "Third video example",
-    embedUrl: "https://odysee.com/$/embed/XXXXXXX",
-    externalUrl: "https://odysee.com/@example",
-  },
-]
+

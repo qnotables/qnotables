@@ -3,7 +3,8 @@ import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import { VideosClient } from "./videos-client"
-import { EmbedSwitcher, STARTER_EMBED_DATA } from "@/components/qnotables-embed"
+import { EmbedSwitcher, type EmbedItem } from "@/components/qnotables-embed"
+import { generateEmbedUrl, detectVideoPlatform } from "@/lib/video-embed-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -18,6 +19,25 @@ export const metadata = {
 
 export default async function VideosPage() {
   const videos = await getPublishedVideos()
+  
+  // Convert videos to embed items for the switcher
+  // Only include videos that have either an external URL or video URL
+  const embedItems: EmbedItem[] = videos
+    .filter(video => video.external_url || video.video_url)
+    .map(video => {
+      const sourceUrl = video.external_url || video.video_url || ""
+      const platform = detectVideoPlatform(sourceUrl)
+      const platformName = platform.charAt(0).toUpperCase() + platform.slice(1)
+      
+      return {
+        id: video.id,
+        title: video.title,
+        source: platformName,
+        description: video.description || "No description",
+        embedUrl: generateEmbedUrl(sourceUrl),
+        externalUrl: video.external_url || video.video_url,
+      }
+    })
 
   return (
     <div id="top" className="min-h-screen tactical-grid flex flex-col">
@@ -40,21 +60,23 @@ export default async function VideosPage() {
         </div>
 
         {/* Embed switcher section */}
-        <div className="border-b border-border bg-background">
-          <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-12">
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="h-2 w-2 bg-primary" aria-hidden="true" />
-                <span className="label-mono text-xs text-primary">FEATURED</span>
+        {embedItems.length > 0 && (
+          <div className="border-b border-border bg-background">
+            <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-12">
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="h-2 w-2 bg-primary" aria-hidden="true" />
+                  <span className="label-mono text-xs text-primary">LIBRARY</span>
+                </div>
+                <h2 className="stencil text-3xl md:text-4xl text-foreground text-balance">Video Switcher</h2>
+                <p className="label-mono mt-2 text-sm text-muted-foreground max-w-2xl">
+                  Click items below to switch between different videos and platforms.
+                </p>
               </div>
-              <h2 className="stencil text-3xl md:text-4xl text-foreground text-balance">Embed Library</h2>
-              <p className="label-mono mt-2 text-sm text-muted-foreground max-w-2xl">
-                Click items below to switch between different video sources and platforms.
-              </p>
+              <EmbedSwitcher items={embedItems} />
             </div>
-            <EmbedSwitcher items={STARTER_EMBED_DATA} />
           </div>
-        </div>
+        )}
 
         <VideosClient videos={videos} />
       </main>
