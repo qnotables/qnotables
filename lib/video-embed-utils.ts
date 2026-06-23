@@ -106,11 +106,20 @@ function extractYouTubeId(url: string): string | null {
 }
 
 /**
- * Extract video ID from Rumble URL
+ * Extract video ID from Rumble URL.
+ * Handles both watch URLs (rumble.com/v123abc-title.html) and
+ * already-embedded URLs (rumble.com/embed/v123abc/?pub=xxx).
  */
 function extractRumbleId(url: string): string | null {
-  const match = url.match(/rumble\.com\/([a-zA-Z0-9]+)/i)
-  return match?.[1] || null
+  // Already an embed URL — extract the ID from /embed/<id>/
+  const embedMatch = url.match(/rumble\.com\/embed\/([a-zA-Z0-9]+)/i)
+  if (embedMatch?.[1]) return embedMatch[1]
+
+  // Watch page URL — e.g. rumble.com/v123abc-title.html
+  const watchMatch = url.match(/rumble\.com\/(v[a-zA-Z0-9]+)/i)
+  if (watchMatch?.[1]) return watchMatch[1]
+
+  return null
 }
 
 /**
@@ -156,6 +165,10 @@ export function generateEmbedUrl(url: string, platform?: VideoPlatform): string 
     }
 
     case "rumble": {
+      // If it's already a valid embed URL, use it directly (preserves ?pub= param)
+      if (url.includes("rumble.com/embed/")) {
+        return url
+      }
       const videoId = extractRumbleId(url)
       if (videoId) {
         return `https://rumble.com/embed/${videoId}/`

@@ -37,8 +37,6 @@ export default async function VideosPage() {
   const embedItems: EmbedItem[] = videos
     .filter(video => video.external_url || video.video_url)
     .map(video => {
-      // Prefer external_url for platform detection & embed generation.
-      // Fall back to video_url (direct blob file) when there is no external_url.
       const sourceUrl = video.external_url || video.video_url || ""
       const platform = detectVideoPlatform(sourceUrl)
       const embedUrl = generateEmbedUrl(sourceUrl, platform)
@@ -48,8 +46,6 @@ export default async function VideosPage() {
         title: video.title,
         source: platformLabels[platform] ?? "Video",
         description: video.description || "",
-        // For X/Twitter (cannot be iframed), fall back to the original URL so
-        // the embed component can render a link instead of a broken iframe.
         embedUrl: embedUrl,
         externalUrl: video.external_url || video.video_url || undefined,
       }

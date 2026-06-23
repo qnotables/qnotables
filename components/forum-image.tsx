@@ -38,7 +38,7 @@ export function ForumImage({ src, alt }: ForumImageProps) {
         alt={alt}
         onClick={openLightbox}
         loading="lazy"
-        className="my-2 block max-h-[500px] max-w-full cursor-zoom-in rounded border border-border bg-muted/30 object-contain transition-opacity hover:opacity-90"
+        className="my-2 block w-full max-h-[700px] cursor-zoom-in rounded border border-border bg-muted/30 object-contain transition-opacity hover:opacity-90"
         title="Click to enlarge"
       />
 
