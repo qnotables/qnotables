@@ -83,10 +83,13 @@ export function ShareButtons({
   const shareExcerpt = excerpt || source
 
   useEffect(() => {
-    if (url) {
-      setShareUrl(url)
-    } else if (typeof window !== "undefined") {
-      setShareUrl(window.location.href)
+    if (typeof window !== "undefined") {
+      let finalUrl = url || window.location.href
+      // Convert relative paths to absolute URLs
+      if (finalUrl && !finalUrl.startsWith("http")) {
+        finalUrl = `${window.location.origin}${finalUrl}`
+      }
+      setShareUrl(finalUrl)
     }
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       setCanNativeShare(true)
