@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, NotebookPen, Clapperboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, NotebookPen, Clapperboard } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -21,10 +21,10 @@ const SIGNAL_TOOLS = [
     href: "/forum",
   },
   {
-    label: "Field Notes",
-    description: "Read the dispatches",
-    icon: FileText,
-    href: "/blog",
+    label: "Revolution Radio",
+    description: "Tune in live",
+    icon: Radio,
+    href: "https://revolution.radio",
   },
   {
     label: "Shop",
