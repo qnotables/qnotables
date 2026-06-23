@@ -12,6 +12,7 @@ import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 import { BlogComments } from "@/components/blog-comments"
 import { getBlogComments } from "@/app/actions/blog-comment-actions"
+import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
@@ -59,6 +60,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
   const comments = post.id ? await getBlogComments(post.id) : []
+
+  // Fetch current user for comment form
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const currentUserId = user?.id ?? null
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -154,7 +160,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {/* Comments section */}
         {post.id && (
           <div className="mt-12">
-            <BlogComments postId={post.id} initialComments={comments} />
+            <BlogComments postId={post.id} initialComments={comments} currentUserId={currentUserId} />
           </div>
         )}
       </main>
