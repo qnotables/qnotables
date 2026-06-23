@@ -40,11 +40,10 @@ function getEmbedUrl(url: string): string | null {
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return null
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  // Use UTC methods to avoid timezone-driven server/client mismatch
+  const d = new Date(dateStr)
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
 }
 
 // ---------------------------------------------------------------------------

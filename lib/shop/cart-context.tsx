@@ -25,6 +25,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [mounted, setMounted] = useState(false)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -36,12 +37,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load cart:", e)
       }
     }
+    setMounted(true)
   }, [])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("shop_cart", JSON.stringify(items))
-  }, [items])
+    if (mounted) {
+      localStorage.setItem("shop_cart", JSON.stringify(items))
+    }
+  }, [items, mounted])
 
   const addItem = (newItem: CartItem) => {
     setItems((prevItems) => {
@@ -84,6 +88,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const count = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  // Prevent hydration mismatch by only rendering when mounted
+  if (!mounted) {
+    return <>{children}</>
+  }
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clear, total, count }}>
