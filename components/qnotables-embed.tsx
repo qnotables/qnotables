@@ -91,9 +91,10 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
     )
   }
 
-  const isValidUrl = activeItem?.embedUrl && isValidEmbedUrl(activeItem.embedUrl)
-  const isXEmbed = activeItem?.embedUrl &&
-    (activeItem.embedUrl.includes("x.com") || activeItem.embedUrl.includes("twitter.com"))
+  const embedUrl = activeItem?.embedUrl ?? ""
+  const isValidUrl = embedUrl ? isValidEmbedUrl(embedUrl) : false
+  const isXEmbed = embedUrl.includes("x.com") || embedUrl.includes("twitter.com")
+  const isVideoFile = embedUrl ? isDirectVideo(embedUrl) : false
 
   return (
     <div className="flex flex-col gap-0 border border-border bg-card overflow-hidden">
@@ -162,11 +163,11 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
                   OPEN ON X
                 </a>
               </div>
-            ) : isValidUrl && activeItem?.embedUrl ? (
-              isDirectVideo(activeItem.embedUrl) ? (
+            ) : isValidUrl && embedUrl ? (
+              isVideoFile ? (
                 <video
-                  key={activeItem.id}
-                  src={activeItem.embedUrl}
+                  key={activeItem!.id}
+                  src={embedUrl}
                   title={activeItem.title}
                   className="absolute inset-0 h-full w-full object-contain"
                   controls
@@ -174,8 +175,8 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
                 />
               ) : (
                 <iframe
-                  key={activeItem.id}
-                  src={activeItem.embedUrl}
+                  key={activeItem!.id}
+                  src={embedUrl}
                   title={activeItem.title}
                   className="absolute inset-0 h-full w-full border-0"
                   loading="lazy"
