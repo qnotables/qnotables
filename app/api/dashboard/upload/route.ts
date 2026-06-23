@@ -2,6 +2,19 @@ import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
+// Raise the Next.js body-parser limit so large audio/video files (up to 500 MB)
+// are not rejected with 413 before the route handler is reached.
+export const maxDuration = 60
+export const dynamic = "force-dynamic"
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "500mb",
+    },
+  },
+}
+
 export async function POST(request: NextRequest) {
   const hasAccess = await validateDashboardAccess()
   if (!hasAccess) {
