@@ -480,7 +480,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
   )
 }
 
-// ─── Empty state card ──���─────────────────────────────────────────────────────
+// ─── Empty state card ──�����─────────────────────────────────────────────────────
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
@@ -569,8 +569,8 @@ function StoryCarousel({ items, emptyLabel, emptyIcon }: StoryCarouselProps) {
 interface SituationReportCycleProps {
   forumItems: SituationForumItem[]
   blogItems: SituationBlogItem[]
-  archiveItems: SituationArchiveItem[]
-  /** @deprecated pass arrays via forumItems/blogItems/archiveItems instead */
+  archiveItems?: SituationArchiveItem[]
+  /** @deprecated */
   forumItem?: SituationForumItem | null
   /** @deprecated */
   blogItem?: SituationBlogItem | null
@@ -581,8 +581,7 @@ interface SituationReportCycleProps {
 const CYCLE_INTERVAL = 10000 // 10 seconds
 const TABS = [
   { key: "forum", label: "FORUM", icon: Users },
-  { key: "blog", label: "DISPATCH", icon: BookOpen },
-  { key: "archive", label: "ARCHIVE", icon: Archive },
+  { key: "notables", label: "NOTABLES", icon: BookOpen },
 ] as const
 
 type TabKey = (typeof TABS)[number]["key"]
@@ -590,15 +589,22 @@ type TabKey = (typeof TABS)[number]["key"]
 export function SituationReportCycle({
   forumItems,
   blogItems,
-  archiveItems,
+  archiveItems = [],
   forumItem,
   blogItem,
   archiveItem,
 }: SituationReportCycleProps) {
-  // Support legacy single-item props
-  const resolvedForum  = forumItems.length  ? forumItems  : forumItem  ? [forumItem]  : []
-  const resolvedBlog   = blogItems.length   ? blogItems   : blogItem   ? [blogItem]   : []
-  const resolvedArchive = archiveItems.length ? archiveItems : archiveItem ? [archiveItem] : []
+  // Merge blog + archive into a single "notables" list, interleaved by date
+  const blogMapped: SituationBlogItem[] = blogItems.length ? blogItems : blogItem ? [blogItem] : []
+  const archiveMapped: SituationArchiveItem[] = archiveItems.length ? archiveItems : archiveItem ? [archiveItem] : []
+
+  const resolvedForum = forumItems.length ? forumItems : forumItem ? [forumItem] : []
+  const resolvedNotables: (SituationBlogItem | SituationArchiveItem)[] = [
+    ...blogMapped,
+    ...archiveMapped,
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 3)
 
   const [active, setActive] = useState<TabKey>("forum")
   const [isPaused, setIsPaused] = useState(false)
@@ -640,21 +646,17 @@ export function SituationReportCycle({
 
   const activeIdx = TABS.findIndex((t) => t.key === active)
 
-  // Count labels (e.g. "FORUM 3")
   const counts: Record<TabKey, number> = {
     forum: resolvedForum.length,
-    blog: resolvedBlog.length,
-    archive: resolvedArchive.length,
+    notables: resolvedNotables.length,
   }
 
   function renderCarousel() {
     switch (active) {
       case "forum":
         return <StoryCarousel items={resolvedForum} emptyLabel="FORUM ACTIVITY" emptyIcon={Users} />
-      case "blog":
-        return <StoryCarousel items={resolvedBlog} emptyLabel="BLOG DISPATCH" emptyIcon={BookOpen} />
-      case "archive":
-        return <StoryCarousel items={resolvedArchive} emptyLabel="ARCHIVE RECORD" emptyIcon={Archive} />
+      case "notables":
+        return <StoryCarousel items={resolvedNotables} emptyLabel="NOTABLES" emptyIcon={BookOpen} />
     }
   }
 
