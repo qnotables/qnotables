@@ -2,7 +2,7 @@ import { list, del } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
-// GET — list all audio tracks
+// GET — list all audio tracks (public, no auth required for the music player)
 export async function GET() {
   try {
     const { blobs } = await list({ prefix: "audio/" })
@@ -13,17 +13,19 @@ export async function GET() {
         title: b.pathname
           .replace(/^audio\//, "")
           .replace(/\.[^.]+$/, "")
-          .replace(/^\d+-[a-z0-9]+-/, "") // strip timestamp prefix
           .replace(/[-_]/g, " ")
           .toUpperCase(),
         pathname: b.pathname,
         size: b.size,
         uploadedAt: b.uploadedAt,
       }))
-    return NextResponse.json({ tracks })
+    return NextResponse.json({ tracks }, {
+      headers: { "Content-Type": "application/json" },
+    })
   } catch (err) {
     console.error("[v0] audio list error", err)
-    return NextResponse.json({ error: "Failed to list audio" }, { status: 500 })
+    // Always return valid JSON so the player doesn't crash
+    return NextResponse.json({ tracks: [], error: "Failed to list audio" }, { status: 200 })
   }
 }
 
