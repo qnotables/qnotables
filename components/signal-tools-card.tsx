@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, FileText, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, NotebookPen, Clapperboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -21,10 +21,10 @@ const SIGNAL_TOOLS = [
     href: "/forum",
   },
   {
-    label: "Field Notes",
-    description: "Read the dispatches",
-    icon: FileText,
-    href: "/blog",
+    label: "Revolution Radio",
+    description: "Tune in live",
+    icon: Radio,
+    href: "https://revolution.radio",
   },
   {
     label: "Shop",
@@ -60,12 +60,6 @@ const SIGNAL_TOOLS_SECONDARY = [
     href: "https://www.qanon.pub",
   },
   {
-    label: "Qnotables",
-    description: "Research notes",
-    icon: NotebookPen,
-    href: "/qnotables",
-  },
-  {
     label: "bookmarks",
     description: "Share a resource",
     icon: Bookmark,
@@ -85,7 +79,7 @@ const SIGNAL_TOOLS_SECONDARY = [
   },
   {
     label: "Contact",
-    description: "Configure link",
+    description: "Send a message",
     icon: Mail,
     href: "mailto:contact@qnotables.ai",
   },
