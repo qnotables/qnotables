@@ -10,29 +10,41 @@ interface EmbedSite {
 }
 
 const SITES: EmbedSite[] = [
+   {
+    id: "qresearch-latest",
+    label: "QResearch Latest",
+    tag: "",
+    url: "https://8kun.top/qresearch/res/24671999.html#bottom",
+  },
   {
     id: "qresearch-catalog",
     label: "QResearch Catalog",
-    tag: "8KUN",
+    tag: "",
     url: "https://8kun.top/qresearch/catalog.html",
-  },
-  {
-    id: "qresearch-latest",
-    label: "QResearch Latest",
-    tag: "8KUN",
-    url: "https://8kun.top/qresearch/res/24671999.html#bottom",
   },
   {
     id: "qalerts",
     label: "QAlerts",
-    tag: "QALERTS",
+    tag: "",
     url: "https://qalerts.app",
   },
   {
-    id: "qmap",
-    label: "QMap",
-    tag: "QMAP",
-    url: "https://qmap.pub",
+    id: "projectDComms",
+    label: "ProjectDComms",
+    tag: "",
+    url: "https://8kun.top/projectdcomms/catalog.html",
+  },
+ {
+    id: "Jiffy",
+    label: "Jiffy",
+    tag: "",
+    url: "https://jiffy.news/",
+  },
+ {
+    id: "You Are The News",
+    label: "You Are The News",
+    tag: "",
+    url: "https://youarethe.news/",
   },
 ]
 

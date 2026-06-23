@@ -264,6 +264,46 @@ export async function getHottestArchivePost(): Promise<BlogPost | undefined> {
   return scored[0]?.post
 }
 
+/**
+ * Returns the top N blog posts (not archive types), sorted by hotness score.
+ */
+export async function getTopBlogPosts(limit = 3): Promise<BlogPost[]> {
+  const posts = await getAllPosts()
+  const blogPosts = posts.filter(
+    (p) => !p.postType || !["Field Note", "Archive Record", "Source Record"].includes(p.postType)
+  )
+  const pool = blogPosts.length > 0 ? blogPosts : posts
+  const scored = pool.map((p) => ({
+    post: p,
+    score:
+      (p.featured ? 100 : 0) +
+      (p.priority === "critical" ? 50 : p.priority === "high" ? 30 : p.priority === "medium" ? 10 : 0) +
+      Math.max(0, 30 - Math.floor((Date.now() - new Date(p.date).getTime()) / 86400000)),
+  }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored.slice(0, limit).map((s) => s.post)
+}
+
+/**
+ * Returns the top N archive / field note posts, sorted by hotness score.
+ */
+export async function getTopArchivePosts(limit = 3): Promise<BlogPost[]> {
+  const posts = await getAllPosts()
+  const archivePosts = posts.filter(
+    (p) => p.postType && ["Field Note", "Archive Record", "Source Record"].includes(p.postType)
+  )
+  const pool = archivePosts.length > 0 ? archivePosts : posts
+  const scored = pool.map((p) => ({
+    post: p,
+    score:
+      (p.featured ? 100 : 0) +
+      (p.priority === "critical" ? 50 : p.priority === "high" ? 30 : p.priority === "medium" ? 10 : 0) +
+      Math.max(0, 30 - Math.floor((Date.now() - new Date(p.date).getTime()) / 86400000)),
+  }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored.slice(0, limit).map((s) => s.post)
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",

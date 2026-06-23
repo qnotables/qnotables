@@ -65,6 +65,54 @@ export async function getHottestForumThread(): Promise<ForumThread | null> {
   }
 }
 
+/**
+ * Returns the top N forum threads, scored by featured/pinned/replies/recency.
+ */
+export async function getTopForumThreads(limit = 3): Promise<ForumThread[]> {
+  try {
+    const supabase = await createClient()
+
+    const { data: threads } = await supabase
+      .from("forum_threads")
+      .select(
+        "id, title, body, created_at, category, is_pinned, is_featured, profiles(display_name), forum_replies(count)"
+      )
+      .eq("is_soft_deleted", false)
+      .order("created_at", { ascending: false })
+      .limit(50)
+
+    if (!threads || threads.length === 0) return []
+
+    const scored = threads.map((t: any) => {
+      const replies = t.forum_replies?.[0]?.count ?? 0
+      const recencyBonus = Math.max(0, 30 - Math.floor((Date.now() - new Date(t.created_at).getTime()) / 86400000))
+      const score =
+        (t.is_featured ? 100 : 0) +
+        (t.is_pinned ? 20 : 0) +
+        replies * 3 +
+        recencyBonus
+      return { t, score }
+    })
+
+    scored.sort((a, b) => b.score - a.score)
+
+    return scored.slice(0, limit).map(({ t }) => ({
+      id: t.id,
+      title: t.title,
+      body: t.body,
+      authorName: t.profiles?.display_name || "Anonymous",
+      createdAt: t.created_at,
+      replyCount: (t.forum_replies?.[0]?.count ?? 0) as number,
+      category: t.category || undefined,
+      isPinned: t.is_pinned || false,
+      isFeatured: t.is_featured || false,
+    }))
+  } catch (error) {
+    console.error("[v0] Failed to fetch top forum threads:", error)
+    return []
+  }
+}
+
 export async function getLatestForumThread(): Promise<ForumThread | null> {
   try {
     const supabase = await createClient()
