@@ -107,8 +107,33 @@ export default async function Page() {
       <TopAd />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
-        {/* Rumble Live Stream */}
-        <RumbleLiveStream />
+        {/* 8kun QResearch Catalog Embed */}
+        <div className="mb-6 border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border bg-muted/60 px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 bg-primary flex-shrink-0" aria-hidden="true" />
+              <span className="label-mono text-xs font-bold text-primary tracking-widest">QRESEARCH</span>
+              <span className="label-mono text-xs text-muted-foreground hidden sm:inline">— 8kun Catalog</span>
+            </div>
+            <a
+              href="https://8kun.top/qresearch/catalog.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="label-mono text-xs text-primary hover:underline whitespace-nowrap"
+            >
+              OPEN IN NEW TAB →
+            </a>
+          </div>
+          <div className="relative w-full" style={{ height: "520px" }}>
+            <iframe
+              src="https://8kun.top/qresearch/catalog.html"
+              title="QResearch Catalog"
+              className="absolute inset-0 h-full w-full border-0"
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            />
+          </div>
+        </div>
 
         {/* section label */}
         <div className="mb-5 flex items-center gap-3">
@@ -146,6 +171,11 @@ export default async function Page() {
             <SidebarAd />
             <BriefSignup />
           </aside>
+        </div>
+
+        {/* Rumble Live Stream — compact flash card */}
+        <div className="mt-12">
+          <RumbleLiveStream />
         </div>
 
         {/* Gallery Section - Below Brief Signup */}
