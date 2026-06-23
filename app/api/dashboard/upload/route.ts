@@ -15,21 +15,22 @@ export async function POST(request: NextRequest) {
 
     const isImage = file.type.startsWith("image/")
     const isVideo = file.type.startsWith("video/")
-    if (!isImage && !isVideo) {
-      return NextResponse.json({ error: "Only image and video files are allowed" }, { status: 400 })
+    const isAudio = file.type.startsWith("audio/") || file.name.endsWith(".mp3")
+    if (!isImage && !isVideo && !isAudio) {
+      return NextResponse.json({ error: "Only image, video, and audio files are allowed" }, { status: 400 })
     }
 
-    const maxBytes = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : isAudio ? 50 * 1024 * 1024 : 10 * 1024 * 1024
     if (file.size > maxBytes) {
-      const limitLabel = isVideo ? "500 MB" : "10 MB"
+      const limitLabel = isVideo ? "500 MB" : isAudio ? "50 MB" : "10 MB"
       return NextResponse.json(
-        { error: `${isVideo ? "Video" : "Image"} must be under ${limitLabel}` },
+        { error: `File must be under ${limitLabel}` },
         { status: 400 },
       )
     }
 
     const folderRaw = String(formData.get("folder") ?? "media")
-    const folder = ["blog", "blog-videos", "media", "ads", "videos", "video-thumbnails"].includes(folderRaw) ? folderRaw : "media"
+    const folder = ["blog", "blog-videos", "media", "ads", "videos", "video-thumbnails", "audio"].includes(folderRaw) ? folderRaw : "media"
 
     const ext = file.name.split(".").pop() ?? "bin"
     const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`

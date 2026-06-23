@@ -8,23 +8,33 @@ interface Track {
   src: string
 }
 
-const TRACKS: Track[] = [
-  { title: "WWG1WGA", src: "/audio/wwg1wga.mp3" },
-  { title: "THE GREAT AWAKENING", src: "/audio/great-awakening.mp3" },
-  { title: "HOLD THE LINE", src: "/audio/hold-the-line.mp3" },
-]
-
 export function HeaderMusicPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [tracks, setTracks] = useState<Track[]>([])
   const [trackIdx, setTrackIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
   const [progress, setProgress] = useState(0) // 0–100
 
-  const track = TRACKS[trackIdx]
-
-  // Create audio element once
+  // Fetch tracks from Blob on mount
   useEffect(() => {
+    fetch("/api/audio")
+      .then((r) => r.json())
+      .then((data) => {
+        const fetched: Track[] = (data.tracks || []).map((t: any) => ({
+          title: t.title,
+          src: t.url,
+        }))
+        setTracks(fetched)
+      })
+      .catch(() => setTracks([]))
+  }, [])
+
+  const track = tracks[trackIdx]
+
+  // Create audio element once per track
+  useEffect(() => {
+    if (!track) return
     const audio = new Audio(track.src)
     audio.preload = "metadata"
     audio.muted = muted
@@ -36,7 +46,7 @@ export function HeaderMusicPlayer() {
     })
 
     audio.addEventListener("ended", () => {
-      setTrackIdx((i) => (i + 1) % TRACKS.length)
+      setTrackIdx((i) => (i + 1) % tracks.length)
     })
 
     audioRef.current = audio
@@ -72,13 +82,13 @@ export function HeaderMusicPlayer() {
   function prev() {
     setPlaying(false)
     setProgress(0)
-    setTrackIdx((i) => (i - 1 + TRACKS.length) % TRACKS.length)
+    setTrackIdx((i) => (i - 1 + tracks.length) % tracks.length)
   }
 
   function next() {
     setPlaying(false)
     setProgress(0)
-    setTrackIdx((i) => (i + 1) % TRACKS.length)
+    setTrackIdx((i) => (i + 1) % tracks.length)
   }
 
   function seek(e: React.MouseEvent<HTMLButtonElement>) {
@@ -89,6 +99,8 @@ export function HeaderMusicPlayer() {
     audio.currentTime = ratio * audio.duration
     setProgress(ratio * 100)
   }
+
+  if (tracks.length === 0) return null
 
   return (
     <div className="flex items-center gap-1.5 border border-border bg-card px-2 py-1">
