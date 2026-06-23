@@ -1,8 +1,9 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Home, ArrowLeft } from "lucide-react"
+import { Home } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { GoBackButton } from "@/components/go-back-button"
 
 export const metadata = {
   title: "404 — Page Not Found | Q Notables",
@@ -62,14 +63,7 @@ export default function NotFound() {
               <Home className="h-4 w-4" aria-hidden="true" />
               Return to Base
             </Link>
-            <button
-              type="button"
-              onClick={() => history.back()}
-              className="flex items-center gap-2 border border-border bg-card px-6 py-2.5 font-heading text-sm font-bold uppercase tracking-widest text-foreground transition-colors hover:bg-muted"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Go Back
-            </button>
+            <GoBackButton />
           </div>
         </div>
 
