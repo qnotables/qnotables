@@ -480,7 +480,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
   )
 }
 
-// ─── Empty state card ────────────────────────────────────────────────────────
+// ─── Empty state card ──���─────────────────────────────────────────────────────
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
@@ -491,12 +491,91 @@ function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementTy
   )
 }
 
-// ─── Main cycle component ────────────────────────────────────────────────────
+// ─── Inner story carousel (prev/next within a tab) ───────────────────────────
+
+interface StoryCarouselProps {
+  items: SituationItem[]
+  emptyLabel: string
+  emptyIcon: React.ElementType
+}
+
+function StoryCarousel({ items, emptyLabel, emptyIcon }: StoryCarouselProps) {
+  const [idx, setIdx] = useState(0)
+
+  // Reset when items change (tab switch)
+  useEffect(() => { setIdx(0) }, [items])
+
+  if (items.length === 0) return <EmptyCard label={emptyLabel} icon={emptyIcon} />
+
+  const item = items[idx]
+  const total = items.length
+
+  function prev() { setIdx((i) => (i - 1 + total) % total) }
+  function next() { setIdx((i) => (i + 1) % total) }
+
+  return (
+    <div className="flex flex-col">
+      {/* Story card */}
+      <div key={idx}>
+        {item.type === "forum" ? (
+          <ForumHotCard item={item as SituationForumItem} />
+        ) : item.type === "blog" ? (
+          <BlogHotCard item={item as SituationBlogItem} />
+        ) : (
+          <ArchiveHotCard item={item as SituationArchiveItem} />
+        )}
+      </div>
+
+      {/* Story pagination — only shown when there are multiple items */}
+      {total > 1 && (
+        <div className="flex items-center justify-between border-t border-border px-4 py-2 bg-muted/30">
+          <button
+            onClick={prev}
+            aria-label="Previous story"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {/* Dot indicators */}
+          <div className="flex items-center gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                aria-label={`Story ${i + 1} of ${total}`}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === idx ? "w-4 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground"
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={next}
+            aria-label="Next story"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main cycle component ─────────────────────────────────────────────────────
 
 interface SituationReportCycleProps {
-  forumItem: SituationForumItem | null
-  blogItem: SituationBlogItem | null
-  archiveItem: SituationArchiveItem | null
+  forumItems: SituationForumItem[]
+  blogItems: SituationBlogItem[]
+  archiveItems: SituationArchiveItem[]
+  /** @deprecated pass arrays via forumItems/blogItems/archiveItems instead */
+  forumItem?: SituationForumItem | null
+  /** @deprecated */
+  blogItem?: SituationBlogItem | null
+  /** @deprecated */
+  archiveItem?: SituationArchiveItem | null
 }
 
 const CYCLE_INTERVAL = 10000 // 10 seconds
@@ -509,16 +588,23 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"]
 
 export function SituationReportCycle({
+  forumItems,
+  blogItems,
+  archiveItems,
   forumItem,
   blogItem,
   archiveItem,
 }: SituationReportCycleProps) {
+  // Support legacy single-item props
+  const resolvedForum  = forumItems.length  ? forumItems  : forumItem  ? [forumItem]  : []
+  const resolvedBlog   = blogItems.length   ? blogItems   : blogItem   ? [blogItem]   : []
+  const resolvedArchive = archiveItems.length ? archiveItems : archiveItem ? [archiveItem] : []
+
   const [active, setActive] = useState<TabKey>("forum")
   const [isPaused, setIsPaused] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Detect reduced-motion preference
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
     setReducedMotion(mq.matches)
@@ -541,7 +627,6 @@ export function SituationReportCycle({
     })
   }, [])
 
-  // Auto-cycle (disabled for reduced-motion)
   useEffect(() => {
     if (reducedMotion || isPaused) {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -555,26 +640,21 @@ export function SituationReportCycle({
 
   const activeIdx = TABS.findIndex((t) => t.key === active)
 
-  function renderCard() {
+  // Count labels (e.g. "FORUM 3")
+  const counts: Record<TabKey, number> = {
+    forum: resolvedForum.length,
+    blog: resolvedBlog.length,
+    archive: resolvedArchive.length,
+  }
+
+  function renderCarousel() {
     switch (active) {
       case "forum":
-        return forumItem ? (
-          <ForumHotCard item={forumItem} />
-        ) : (
-          <EmptyCard label="FORUM ACTIVITY" icon={Users} />
-        )
+        return <StoryCarousel items={resolvedForum} emptyLabel="FORUM ACTIVITY" emptyIcon={Users} />
       case "blog":
-        return blogItem ? (
-          <BlogHotCard item={blogItem} />
-        ) : (
-          <EmptyCard label="BLOG DISPATCH" icon={BookOpen} />
-        )
+        return <StoryCarousel items={resolvedBlog} emptyLabel="BLOG DISPATCH" emptyIcon={BookOpen} />
       case "archive":
-        return archiveItem ? (
-          <ArchiveHotCard item={archiveItem} />
-        ) : (
-          <EmptyCard label="ARCHIVE RECORD" icon={Archive} />
-        )
+        return <StoryCarousel items={resolvedArchive} emptyLabel="ARCHIVE RECORD" emptyIcon={Archive} />
     }
   }
 
@@ -589,6 +669,7 @@ export function SituationReportCycle({
         {TABS.map((tab) => {
           const Icon = tab.icon
           const isActive = active === tab.key
+          const count = counts[tab.key]
           return (
             <button
               key={tab.key}
@@ -603,27 +684,31 @@ export function SituationReportCycle({
             >
               <Icon className="h-3 w-3" />
               {tab.label}
+              {count > 0 && (
+                <span className={`ml-1 px-1 py-0.5 text-[9px] rounded-sm font-bold ${isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  {count}
+                </span>
+              )}
             </button>
           )
         })}
 
-        {/* Spacer + controls */}
+        {/* Spacer + tab nav arrows */}
         <div className="ml-auto flex items-center gap-1 px-2">
           <button
             onClick={retreat}
-            aria-label="Previous"
+            aria-label="Previous tab"
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          {/* Dot indicators */}
           <div className="flex items-center gap-1 px-1">
             {TABS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setActive(TABS[i].key)}
-                aria-label={`Go to slide ${i + 1}`}
+                aria-label={`Go to tab ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === activeIdx
                     ? "w-4 bg-primary"
@@ -635,7 +720,7 @@ export function SituationReportCycle({
 
           <button
             onClick={advance}
-            aria-label="Next"
+            aria-label="Next tab"
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
@@ -643,10 +728,10 @@ export function SituationReportCycle({
         </div>
       </div>
 
-      {/* Card content */}
-      <div className="min-h-[320px]">{renderCard()}</div>
+      {/* Active tab carousel */}
+      <div className="min-h-[320px]">{renderCarousel()}</div>
 
-      {/* Progress bar (auto-cycle indicator) */}
+      {/* Progress bar (auto-cycle tab indicator) */}
       {!reducedMotion && !isPaused && (
         <div className="h-px bg-border">
           <div

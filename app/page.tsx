@@ -13,80 +13,75 @@ import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { SituationReportCycle } from "@/components/situation-report-cycle"
 import type { SituationForumItem, SituationBlogItem, SituationArchiveItem } from "@/components/situation-report-cycle"
+
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { getNews } from "@/lib/rss"
-import { getHottestBlogPost, getHottestArchivePost } from "@/lib/blog-posts"
-import { getHottestForumThread } from "@/lib/forum"
+import { getTopBlogPosts, getTopArchivePosts } from "@/lib/blog-posts"
+import { getTopForumThreads } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const [
     { featured, topStories, feed, trending, live },
-    hottestThread,
-    hottestBlog,
-    hottestArchive,
+    topThreads,
+    topBlogs,
+    topArchives,
   ] = await Promise.all([
     getNews(),
-    getHottestForumThread(),
-    getHottestBlogPost(),
-    getHottestArchivePost(),
+    getTopForumThreads(3),
+    getTopBlogPosts(3),
+    getTopArchivePosts(3),
   ])
 
   // Map to typed cycle props
-  const forumItem: SituationForumItem | null = hottestThread
-    ? {
-        type: "forum",
-        id: hottestThread.id,
-        title: hottestThread.title,
-        body: hottestThread.body,
-        authorName: hottestThread.authorName,
-        createdAt: hottestThread.createdAt,
-        replyCount: hottestThread.replyCount,
-        category: hottestThread.category,
-        isFeatured: hottestThread.isFeatured,
-      }
-    : null
+  const forumItems: SituationForumItem[] = topThreads.map((t) => ({
+    type: "forum",
+    id: t.id,
+    title: t.title,
+    body: t.body,
+    authorName: t.authorName,
+    createdAt: t.createdAt,
+    replyCount: t.replyCount,
+    category: t.category,
+    isFeatured: t.isFeatured,
+  }))
 
-  const blogItem: SituationBlogItem | null = hottestBlog
-    ? {
-        type: "blog",
-        id: hottestBlog.id,
-        slug: hottestBlog.slug,
-        title: hottestBlog.title,
-        excerpt: hottestBlog.excerpt,
-        category: hottestBlog.category,
-        tag: hottestBlog.tag,
-        tags: hottestBlog.tags,
-        coverImage: hottestBlog.coverImage,
-        date: hottestBlog.date,
-        readMinutes: hottestBlog.readMinutes,
-        featured: hottestBlog.featured,
-        priority: hottestBlog.priority,
-        postType: hottestBlog.postType,
-        sourceName: hottestBlog.sourceName,
-        content: hottestBlog.content,
-      }
-    : null
+  const blogItems: SituationBlogItem[] = topBlogs.map((p) => ({
+    type: "blog",
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    category: p.category,
+    tag: p.tag,
+    tags: p.tags,
+    coverImage: p.coverImage,
+    date: p.date,
+    readMinutes: p.readMinutes,
+    featured: p.featured,
+    priority: p.priority,
+    postType: p.postType,
+    sourceName: p.sourceName,
+    content: p.content,
+  }))
 
-  const archiveItem: SituationArchiveItem | null = hottestArchive
-    ? {
-        type: "archive",
-        id: hottestArchive.id,
-        slug: hottestArchive.slug,
-        title: hottestArchive.title,
-        excerpt: hottestArchive.excerpt,
-        category: hottestArchive.category,
-        tag: hottestArchive.tag,
-        postType: hottestArchive.postType,
-        priority: hottestArchive.priority,
-        featured: hottestArchive.featured,
-        coverImage: hottestArchive.coverImage,
-        sourceName: hottestArchive.sourceName,
-        date: hottestArchive.date,
-        readMinutes: hottestArchive.readMinutes,
-      }
-    : null
+  const archiveItems: SituationArchiveItem[] = topArchives.map((p) => ({
+    type: "archive",
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    category: p.category,
+    tag: p.tag,
+    postType: p.postType,
+    priority: p.priority,
+    featured: p.featured,
+    coverImage: p.coverImage,
+    sourceName: p.sourceName,
+    date: p.date,
+    readMinutes: p.readMinutes,
+  }))
   
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
@@ -127,9 +122,9 @@ export default async function Page() {
             {/* Situation Report cycle: Forum / Blog / Archive */}
             <div className="mt-6">
               <SituationReportCycle
-                forumItem={forumItem}
-                blogItem={blogItem}
-                archiveItem={archiveItem}
+                forumItems={forumItems}
+                blogItems={blogItems}
+                archiveItems={archiveItems}
               />
             </div>
             
