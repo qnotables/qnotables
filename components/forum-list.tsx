@@ -105,15 +105,16 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
         t.is_pinned ? "border-primary/60" : "border-border"
       }`}
     >
-      {/* Landscape thumbnail — 16:9 on mobile full-width, fixed width on sm+ */}
+      {/* Landscape thumbnail — full-width 16:9 on mobile, fixed 48 wide on sm+ */}
       {thumb && (
-        <div className="w-full overflow-hidden sm:w-48 sm:flex-shrink-0">
-          <div className="relative aspect-video w-full sm:aspect-auto sm:h-full">
+        <div className="w-full flex-shrink-0 overflow-hidden sm:w-48">
+          {/* aspect-video keeps a 16:9 ratio; on sm+ the col stretches to card height */}
+          <div className="aspect-video w-full sm:aspect-auto sm:min-h-[7rem] sm:h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={thumb}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               loading="lazy"
             />
           </div>
