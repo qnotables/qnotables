@@ -109,8 +109,8 @@ export default function BookmarksPage() {
             {!isSignedIn && (
               <div className="mb-8 p-4 md:p-6 border border-border bg-background/50">
                 <p className="label-mono text-sm text-muted-foreground">
-                  <a href="/auth/signin" className="text-primary hover:underline">
-                    Sign in
+                  <a href="/auth/login" className="text-primary hover:underline">
+                    Log in
                   </a>
                   {" to submit bookmarks or "}
                   <a href="/auth/signup" className="text-primary hover:underline">
