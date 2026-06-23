@@ -92,6 +92,8 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
   }
 
   const isValidUrl = activeItem?.embedUrl && isValidEmbedUrl(activeItem.embedUrl)
+  const isXEmbed = activeItem?.embedUrl &&
+    (activeItem.embedUrl.includes("x.com") || activeItem.embedUrl.includes("twitter.com"))
 
   return (
     <div className="flex flex-col gap-0 border border-border bg-card overflow-hidden">
@@ -144,7 +146,23 @@ export function EmbedSwitcher({ items }: EmbedSwitcherProps) {
         {/* Right side - iframe/video player */}
         <div className="flex-1 flex flex-col">
           <div className="relative w-full flex-1 min-h-96 lg:min-h-full bg-background" style={{ minHeight: "480px" }}>
-            {isValidUrl && activeItem?.embedUrl ? (
+            {isXEmbed ? (
+              // X/Twitter cannot be iframed — show an open link instead
+              <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+                <p className="label-mono text-sm text-muted-foreground text-center">
+                  X / Twitter content cannot be embedded directly.
+                </p>
+                <a
+                  href={activeItem!.externalUrl || activeItem!.embedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 label-mono text-sm text-primary border border-primary px-4 py-2 hover:bg-primary/10 transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  OPEN ON X
+                </a>
+              </div>
+            ) : isValidUrl && activeItem?.embedUrl ? (
               isDirectVideo(activeItem.embedUrl) ? (
                 <video
                   key={activeItem.id}

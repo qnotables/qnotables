@@ -20,22 +20,38 @@ export const metadata = {
 export default async function VideosPage() {
   const videos = await getPublishedVideos()
   
-  // Convert videos to embed items for the switcher
-  // Only include videos that have either an external URL or video URL
+  // Platform display name map
+  const platformLabels: Record<string, string> = {
+    youtube: "YouTube",
+    rumble: "Rumble",
+    odysee: "Odysee",
+    vimeo: "Vimeo",
+    x: "X / Twitter",
+    direct: "Video",
+    external: "Video",
+  }
+
+  // Convert videos to embed items for the switcher.
+  // Priority: external_url (platform link) → video_url (blob file).
+  // Only include videos that have at least one embeddable URL.
   const embedItems: EmbedItem[] = videos
     .filter(video => video.external_url || video.video_url)
     .map(video => {
+      // Prefer external_url for platform detection & embed generation.
+      // Fall back to video_url (direct blob file) when there is no external_url.
       const sourceUrl = video.external_url || video.video_url || ""
       const platform = detectVideoPlatform(sourceUrl)
-      const platformName = platform.charAt(0).toUpperCase() + platform.slice(1)
-      
+      const embedUrl = generateEmbedUrl(sourceUrl, platform)
+
       return {
         id: video.id,
         title: video.title,
-        source: platformName,
-        description: video.description || "No description",
-        embedUrl: generateEmbedUrl(sourceUrl),
-        externalUrl: video.external_url || video.video_url,
+        source: platformLabels[platform] ?? "Video",
+        description: video.description || "",
+        // For X/Twitter (cannot be iframed), fall back to the original URL so
+        // the embed component can render a link instead of a broken iframe.
+        embedUrl: embedUrl,
+        externalUrl: video.external_url || video.video_url || undefined,
       }
     })
 
