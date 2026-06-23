@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, Search, ShoppingBag } from "lucide-react"
+import { HeaderMusicPlayer } from "@/components/header-music-player"
 import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HeaderAuth } from "@/components/header-auth"
@@ -124,7 +125,10 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           <span className="label-mono text-foreground hover:text-primary">LIVE FEED</span>
           <span className="label-mono hidden sm:inline">// 17 SOURCES MONITORED</span>
         </button>
-        <span className="label-mono tabular-nums">{now || "--:--:-- EST"}</span>
+        <div className="flex items-center gap-3">
+          <HeaderMusicPlayer />
+          <span className="label-mono tabular-nums">{now || "--:--:-- EST"}</span>
+        </div>
       </div>
 
       {/* masthead */}

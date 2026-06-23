@@ -227,9 +227,11 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
-        {item.title}
-      </h3>
+      <Link href={`/forum/${item.id}`}>
+        <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4 hover:text-primary transition-colors cursor-pointer">
+          {item.title}
+        </h3>
+      </Link>
 
       {/* Body preview */}
       {preview && (
@@ -335,9 +337,11 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
-        {item.title}
-      </h3>
+      <Link href={`/blog/${item.slug}`}>
+        <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4 hover:text-primary transition-colors cursor-pointer">
+          {item.title}
+        </h3>
+      </Link>
 
       {/* Excerpt */}
       {item.excerpt && (
@@ -433,9 +437,11 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
       </div>
 
       {/* Title */}
-      <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4">
-        {item.title}
-      </h3>
+      <Link href={`/archives/${item.slug}`}>
+        <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4 hover:text-primary transition-colors cursor-pointer">
+          {item.title}
+        </h3>
+      </Link>
 
       {/* Excerpt */}
       {item.excerpt && (
@@ -480,7 +486,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
   )
 }
 
-// ─── Empty state card ──�����─────────────────────────────────────────────────────
+// ─── Empty state card ──�������─────────────────────────────────────────────────────
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
