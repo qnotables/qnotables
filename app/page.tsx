@@ -123,8 +123,8 @@ export default async function Page() {
             <div className="mt-6">
               <SituationReportCycle
                 forumItems={forumItems}
-                blogItems={blogItems}
-                archiveItems={archiveItems}
+                blogItems={[...blogItems, ...archiveItems]}
+                archiveItems={[]}
               />
             </div>
             
