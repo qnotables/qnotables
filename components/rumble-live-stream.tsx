@@ -44,7 +44,7 @@ export function RumbleLiveStream({
       </div>
 
       {/* Compact embed — flash story card size */}
-      <div className="relative w-full" style={{ height: "240px" }}>
+      <div className="relative w-full" style={{ height: "600px" }}>
         <iframe
           src={embedUrl}
           title={`${channelName} Live Stream on Rumble`}

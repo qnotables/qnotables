@@ -124,7 +124,7 @@ export default async function Page() {
               OPEN IN NEW TAB →
             </a>
           </div>
-          <div className="relative w-full" style={{ height: "520px" }}>
+          <div className="relative w-full" style={{ height: "1300px" }}>
             <iframe
               src="https://8kun.top/qresearch/catalog.html"
               title="QResearch Catalog"
