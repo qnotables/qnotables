@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import { VideosClient } from "./videos-client"
+import { EmbedSwitcher, STARTER_EMBED_DATA } from "@/components/qnotables-embed"
 
 export const dynamic = "force-dynamic"
 
@@ -35,6 +36,23 @@ export default async function VideosPage() {
             <p className="label-mono mt-3 text-sm text-muted-foreground max-w-2xl">
               Watch Qnotables video reports, updates, and featured media.
             </p>
+          </div>
+        </div>
+
+        {/* Embed switcher section */}
+        <div className="border-b border-border bg-background">
+          <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-12">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="h-2 w-2 bg-primary" aria-hidden="true" />
+                <span className="label-mono text-xs text-primary">FEATURED</span>
+              </div>
+              <h2 className="stencil text-3xl md:text-4xl text-foreground text-balance">Embed Library</h2>
+              <p className="label-mono mt-2 text-sm text-muted-foreground max-w-2xl">
+                Click items below to switch between different video sources and platforms.
+              </p>
+            </div>
+            <EmbedSwitcher items={STARTER_EMBED_DATA} />
           </div>
         </div>
 
