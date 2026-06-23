@@ -37,9 +37,16 @@ export function HeaderMusicPlayer() {
 
   const track = tracks[trackIdx]
 
-  // Create audio element once per track
+  // Rebuild audio element whenever the track changes
   useEffect(() => {
     if (!track) return
+
+    // Clean up previous element
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = ""
+    }
+
     const audio = new Audio(track.src)
     audio.preload = "metadata"
     audio.muted = muted
@@ -51,20 +58,26 @@ export function HeaderMusicPlayer() {
     })
 
     audio.addEventListener("ended", () => {
+      setProgress(0)
       setTrackIdx((i) => (i + 1) % tracks.length)
     })
 
     audioRef.current = audio
 
+    // If already playing, start the new track immediately
+    if (playing) {
+      audio.play().catch(() => setPlaying(false))
+    }
+
     return () => {
       audio.pause()
       audio.src = ""
-      audioRef.current = null
     }
+    // playing intentionally excluded — handled inline above
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackIdx])
+  }, [track?.src])
 
-  // Sync mute
+  // Sync mute whenever it changes
   useEffect(() => {
     if (audioRef.current) audioRef.current.muted = muted
   }, [muted])
@@ -109,13 +122,6 @@ export function HeaderMusicPlayer() {
 
   return (
     <div className="flex items-center gap-1.5 border border-border bg-card px-2 py-1">
-      {/* Track label */}
-      <span className="label-mono hidden max-w-[120px] truncate text-[10px] text-muted-foreground sm:block">
-        {track.title}
-      </span>
-
-      <span className="hidden h-3 w-px bg-border sm:block" aria-hidden="true" />
-
       {/* Prev */}
       <button
         onClick={prev}

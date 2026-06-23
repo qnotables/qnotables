@@ -49,7 +49,13 @@ export default function AudioManagerPage() {
       form.append("file", file)
       form.append("folder", "audio")
       const res = await fetch("/api/dashboard/upload", { method: "POST", body: form })
-      const data = await res.json()
+      const text = await res.text()
+      let data: any = {}
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error(res.ok ? "Upload failed: unexpected server response" : `Upload failed (${res.status})`)
+      }
       if (!res.ok) throw new Error(data.error || "Upload failed")
       setUploadSuccess(true)
       await fetchTracks()
