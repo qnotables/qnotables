@@ -63,6 +63,40 @@ function checkIsXEmbed(url: string): boolean {
   return url.includes("x.com") || url.includes("twitter.com")
 }
 
+const QNOTABLES_URL = "https://8kun.top/qresearch/res/24671999.html#bottom"
+
+/**
+ * Single-URL embed for the /qnotables page — preserved for backwards compatibility.
+ */
+export function QnotablesEmbed() {
+  return (
+    <div className="flex flex-col gap-0 border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border bg-muted/60 px-4 py-2.5">
+        <span className="label-mono text-sm font-semibold text-foreground">Qnotables</span>
+        <a
+          href={QNOTABLES_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 label-mono text-xs text-muted-foreground transition-colors hover:text-primary"
+          aria-label="Open Qnotables in a new tab"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">OPEN IN NEW TAB</span>
+        </a>
+      </div>
+      <div className="relative w-full" style={{ height: "80vh", minHeight: "600px" }}>
+        <iframe
+          src={QNOTABLES_URL}
+          title="Qnotables"
+          className="absolute inset-0 h-full w-full border-0"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        />
+      </div>
+    </div>
+  )
+}
+
 /**
  * Reusable EmbedSwitcher component for displaying iframe/video embeds with a sidebar list.
  */

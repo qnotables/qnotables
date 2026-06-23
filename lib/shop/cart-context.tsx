@@ -89,11 +89,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const count = items.reduce((sum, item) => sum + item.quantity, 0)
 
-  // Prevent hydration mismatch by only rendering when mounted
-  if (!mounted) {
-    return <>{children}</>
-  }
-
+  // Always render the Provider so useCart() never throws during prerendering.
+  // Before mount, items is empty (matches SSR) which avoids hydration mismatches.
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clear, total, count }}>
       {children}
