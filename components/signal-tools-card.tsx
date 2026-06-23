@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, NotebookPen, Clapperboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -58,12 +58,6 @@ const SIGNAL_TOOLS_SECONDARY = [
     description: "Read the posts",
     icon: ShieldPlus,
     href: "https://www.qanon.pub",
-  },
-  {
-    label: "Qnotables",
-    description: "Research notes",
-    icon: NotebookPen,
-    href: "/qnotables",
   },
   {
     label: "bookmarks",
