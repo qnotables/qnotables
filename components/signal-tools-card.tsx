@@ -39,12 +39,6 @@ const SIGNAL_TOOLS = [
     href: "/archives/timeline",
   }, 
   {
-    label: "Videos",
-    description: "Watch the feed",
-    icon: Clapperboard,
-    href: "/videos",
-  },
-  {
     label: "RSS Feed",
     description: "Follow the wire",
     icon: Rss,
@@ -76,6 +70,12 @@ const SIGNAL_TOOLS_SECONDARY = [
     description: "Share a resource",
     icon: Bookmark,
     href: "/bookmarks",
+  },
+  {
+    label: "Videos",
+    description: "Watch the feed",
+    icon: Clapperboard,
+    href: "/videos",
   },
   {
     label: "Donate",

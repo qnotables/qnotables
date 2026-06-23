@@ -49,7 +49,7 @@ export default async function ForumPage() {
       <SiteHeader />
       <TopAd />
 
-      <main className="mx-auto max-w-4xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
           <h1 className="stencil text-3xl text-foreground md:text-4xl">The Town Hall</h1>
