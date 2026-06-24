@@ -98,13 +98,13 @@ export function HeaderMusicPlayer() {
   }
 
   function prev() {
-    setPlaying(false)
+    setPlaying(true)
     setProgress(0)
     setTrackIdx((i) => (i - 1 + tracks.length) % tracks.length)
   }
 
   function next() {
-    setPlaying(false)
+    setPlaying(true)
     setProgress(0)
     setTrackIdx((i) => (i + 1) % tracks.length)
   }
