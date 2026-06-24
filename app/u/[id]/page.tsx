@@ -32,6 +32,15 @@ interface MediaRow {
   created_at: string
 }
 
+interface AssetRow {
+  id: string
+  file_url: string
+  file_name: string
+  alt_text: string | null
+  file_type: string | null
+  created_at: string
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -51,38 +60,73 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: profile }, { data: threadData }, { data: replyData }, { data: mediaData }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url, created_at, karma")
-        .eq("id", id)
-        .maybeSingle(),
-      supabase
-        .from("forum_threads")
-        .select("id, title, created_at")
-        .eq("author_id", id)
-        .eq("is_soft_deleted", false)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("forum_replies")
-        .select("id, body, created_at, thread_id, forum_threads(title)")
-        .eq("author_id", id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("gallery_images")
-        .select("id, image_url, title, alt_text, file_type, created_at")
-        .eq("user_id", id)
-        .eq("approved", true)
-        .order("created_at", { ascending: false }),
-    ])
+  const [
+    { data: profile },
+    { data: threadData },
+    { data: replyData },
+    { data: mediaData },
+    { data: assetData },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url, created_at, karma")
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("forum_threads")
+      .select("id, title, created_at")
+      .eq("author_id", id)
+      .eq("is_soft_deleted", false)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("forum_replies")
+      .select("id, body, created_at, thread_id, forum_threads(title)")
+      .eq("author_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("gallery_images")
+      .select("id, image_url, title, alt_text, file_type, created_at")
+      .eq("user_id", id)
+      .eq("approved", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("media_assets")
+      .select("id, file_url, file_name, alt_text, file_type, created_at")
+      .eq("uploaded_by", id)
+      .order("created_at", { ascending: false }),
+  ])
 
   if (!profile) notFound()
 
   const isOwner = user?.id === profile.id
   const threads = (threadData ?? []) as unknown as ThreadRow[]
   const replies = (replyData ?? []) as unknown as ReplyRow[]
-  const media = (mediaData ?? []) as unknown as MediaRow[]
+
+  // Normalise gallery_images rows
+  const galleryMedia: MediaRow[] = (mediaData ?? []).map((m: any) => ({
+    id: m.id,
+    image_url: m.image_url,
+    title: m.title,
+    alt_text: m.alt_text,
+    file_type: m.file_type,
+    created_at: m.created_at,
+  }))
+
+  // Normalise media_assets rows (dashboard uploads)
+  const assetMedia: MediaRow[] = ((assetData ?? []) as AssetRow[]).map((a) => ({
+    id: a.id,
+    image_url: a.file_url,
+    title: a.file_name,
+    alt_text: a.alt_text ?? a.file_name,
+    file_type: a.file_type ?? undefined,
+    created_at: a.created_at,
+  }))
+
+  // Merge and sort newest-first
+  const media: MediaRow[] = [...galleryMedia, ...assetMedia].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
   const karma = (profile as any).karma ?? 0
 
   return (
