@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { X, ZoomIn, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { GalleryImage } from '@/app/actions/gallery-actions'
+
+const PAGE_SIZE = 7
 
 interface LightboxProps {
   images: GalleryImage[]
@@ -93,15 +95,17 @@ interface GalleryCarouselProps {
 }
 
 export function GalleryCarousel({ images }: GalleryCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isAutoPlay, setIsAutoPlay] = useState(true)
+  const [page, setPage] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
-  const openLightbox = (index: number) => {
-    setLightboxIndex(index)
-    setIsAutoPlay(false)
-  }
+  const totalPages = useMemo(() => Math.ceil(images.length / PAGE_SIZE), [images.length])
 
+  const pageImages = useMemo(
+    () => images.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [images, page]
+  )
+
+  const openLightbox = (globalIndex: number) => setLightboxIndex(globalIndex)
   const closeLightbox = () => setLightboxIndex(null)
 
   const lightboxPrev = useCallback(() => {
@@ -111,6 +115,9 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
   const lightboxNext = useCallback(() => {
     setLightboxIndex((prev) => (prev === null ? null : (prev + 1) % images.length))
   }, [images.length])
+
+  const prevPage = () => setPage((p) => Math.max(0, p - 1))
+  const nextPage = () => setPage((p) => Math.min(totalPages - 1, p + 1))
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -124,82 +131,143 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [lightboxIndex, lightboxPrev, lightboxNext])
 
-  // Auto-rotate carousel every 5 seconds
-  useEffect(() => {
-    if (!isAutoPlay || images.length === 0) return
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length)
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [isAutoPlay, images.length])
-
   if (!images.length) {
     return (
-      <div className="flex h-96 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted">
+      <div className="flex h-48 items-center justify-center border-2 border-dashed border-border bg-muted">
         <p className="text-sm text-muted-foreground">No gallery images yet. Upload one to get started!</p>
       </div>
     )
   }
 
-  const currentImage = images[currentIndex]
-
   return (
-    <div className="w-full">
-      {/* Full-width thumbnail grid */}
-      <div className="grid auto-cols-fr grid-flow-col gap-1.5 overflow-x-auto">
-        {images.map((img, i) => {
-          const isVideo = img.file_type?.startsWith('video/')
-          const isActive = i === currentIndex
-          return (
-            <button
-              key={img.id}
-              onClick={() => openLightbox(i)}
-              onMouseEnter={() => { setCurrentIndex(i); setIsAutoPlay(false) }}
-              onMouseLeave={() => setIsAutoPlay(true)}
-              className={`group relative h-[160px] min-w-[120px] overflow-hidden border bg-black transition-opacity ${
-                isActive ? 'border-primary opacity-100' : 'border-border opacity-70 hover:opacity-100'
-              }`}
-              aria-label={`${isVideo ? 'Play' : 'View'} ${img.title}`}
-            >
-              {isVideo ? (
-                <>
-                  <video
-                    src={img.image_url}
-                    className="h-full w-full object-cover"
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <Play className={`fill-white text-white drop-shadow ${isActive ? 'h-8 w-8' : 'h-6 w-6'}`} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Image
-                    src={img.image_url}
-                    alt={img.alt_text}
-                    fill
-                    className="object-cover transition-transform duration-200 group-hover:scale-105"
-                    sizes="(max-width: 768px) 33vw, 160px"
-                    priority={i < 6}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                    <ZoomIn className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                </>
-              )}
-              {isActive && (
-                <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-xs font-mono text-white">
-                  {i + 1}/{images.length}
-                </div>
-              )}
-            </button>
-          )
-        })}
+    <div className="w-full space-y-3">
+      {/* 7-image grid with prev/next arrows */}
+      <div className="relative flex items-center gap-1.5">
+        {/* Prev arrow */}
+        <button
+          onClick={prevPage}
+          disabled={page === 0}
+          className="flex-shrink-0 rounded border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        {/* Thumbnail strip — always 7 slots */}
+        <div className="grid flex-1 gap-1" style={{ gridTemplateColumns: `repeat(${PAGE_SIZE}, minmax(0, 1fr))` }}>
+          {Array.from({ length: PAGE_SIZE }).map((_, slotIdx) => {
+            const img = pageImages[slotIdx]
+            const globalIndex = page * PAGE_SIZE + slotIdx
+
+            if (!img) {
+              // Empty slot filler
+              return (
+                <div
+                  key={`empty-${slotIdx}`}
+                  className="relative h-[130px] border border-dashed border-border bg-muted/30"
+                />
+              )
+            }
+
+            const isVideo = img.file_type?.startsWith('video/')
+            return (
+              <button
+                key={img.id}
+                onClick={() => openLightbox(globalIndex)}
+                className="group relative h-[130px] overflow-hidden border border-border bg-black transition-all hover:border-primary hover:opacity-100"
+                aria-label={`${isVideo ? 'Play' : 'View'} ${img.title}`}
+              >
+                {isVideo ? (
+                  <>
+                    <video
+                      src={img.image_url}
+                      className="h-full w-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <Play className="h-6 w-6 fill-white text-white drop-shadow" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Image
+                      src={img.image_url}
+                      alt={img.alt_text}
+                      fill
+                      className="object-cover transition-transform duration-200 group-hover:scale-105"
+                      sizes="14vw"
+                      priority={globalIndex < PAGE_SIZE}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                      <ZoomIn className="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Next arrow */}
+        <button
+          onClick={nextPage}
+          disabled={page >= totalPages - 1}
+          className="flex-shrink-0 rounded border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+          aria-label="Next page"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
+
+      {/* Pagination dots + counter */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          {/* Prev arrow (mirrored below strip) */}
+          <button
+            onClick={prevPage}
+            disabled={page === 0}
+            className="text-muted-foreground transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Dot slider */}
+          <div className="flex items-center gap-1.5" role="tablist" aria-label="Carousel pages">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === page}
+                aria-label={`Page ${i + 1}`}
+                onClick={() => setPage(i)}
+                className={`rounded-full transition-all duration-200 ${
+                  i === page
+                    ? 'h-2 w-6 bg-primary'
+                    : 'h-1.5 w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Next arrow */}
+          <button
+            onClick={nextPage}
+            disabled={page >= totalPages - 1}
+            className="text-muted-foreground transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Image counter */}
+      <p className="text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        {page * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE + PAGE_SIZE, images.length)} of {images.length}
+      </p>
 
       {/* Lightbox overlay */}
       {lightboxIndex !== null && (
