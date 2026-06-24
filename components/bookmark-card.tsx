@@ -81,12 +81,7 @@ export function BookmarkCard({ bookmark, isOwner = false, isAdmin = false, onDel
             </span>
           )}
 
-          {/* Submitted by */}
-          {bookmark.submitted_by_name && (
-            <span className="label-mono text-xs text-muted-foreground">
-              by {bookmark.submitted_by_name}
-            </span>
-          )}
+
         </div>
 
         {/* Timestamp */}
