@@ -1,124 +1,18 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
 import { Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react"
-
-interface Track {
-  title: string
-  src: string
-}
+import { useMusicPlayer } from "@/lib/music-player-context"
 
 export function HeaderMusicPlayer() {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [tracks, setTracks] = useState<Track[]>([])
-  const [trackIdx, setTrackIdx] = useState(0)
-  const [playing, setPlaying] = useState(false)
-  const [muted, setMuted] = useState(false)
-  const [progress, setProgress] = useState(0) // 0–100
-
-  // Fetch tracks from Blob on mount
-  useEffect(() => {
-    fetch("/api/audio")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        const ct = r.headers.get("content-type") || ""
-        if (!ct.includes("application/json")) throw new Error("Non-JSON response")
-        return r.json()
-      })
-      .then((data) => {
-        const fetched: Track[] = (data.tracks || []).map((t: any) => ({
-          title: t.title,
-          src: t.url,
-        }))
-        setTracks(fetched)
-      })
-      .catch(() => setTracks([]))
-  }, [])
-
-  const track = tracks[trackIdx]
-
-  // Rebuild audio element whenever the track changes
-  useEffect(() => {
-    if (!track) return
-
-    // Clean up previous element
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ""
-    }
-
-    const audio = new Audio(track.src)
-    audio.preload = "metadata"
-    audio.muted = muted
-
-    audio.addEventListener("timeupdate", () => {
-      if (audio.duration) {
-        setProgress((audio.currentTime / audio.duration) * 100)
-      }
-    })
-
-    audio.addEventListener("ended", () => {
-      setProgress(0)
-      setTrackIdx((i) => (i + 1) % tracks.length)
-    })
-
-    audioRef.current = audio
-
-    // If already playing, start the new track immediately
-    if (playing) {
-      audio.play().catch(() => setPlaying(false))
-    }
-
-    return () => {
-      audio.pause()
-      audio.src = ""
-    }
-    // playing intentionally excluded — handled inline above
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [track?.src])
-
-  // Sync mute whenever it changes
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.muted = muted
-  }, [muted])
-
-  // Play / pause
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (playing) {
-      audio.play().catch(() => setPlaying(false))
-    } else {
-      audio.pause()
-    }
-  }, [playing])
-
-  function togglePlay() {
-    setPlaying((p) => !p)
-  }
-
-  function prev() {
-    setPlaying(true)
-    setProgress(0)
-    setTrackIdx((i) => (i - 1 + tracks.length) % tracks.length)
-  }
-
-  function next() {
-    setPlaying(true)
-    setProgress(0)
-    setTrackIdx((i) => (i + 1) % tracks.length)
-  }
-
-  function seek(e: React.MouseEvent<HTMLButtonElement>) {
-    const audio = audioRef.current
-    if (!audio || !audio.duration) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    audio.currentTime = ratio * audio.duration
-    setProgress(ratio * 100)
-  }
+  const { tracks, playing, muted, progress, togglePlay, prev, next, seek } = useMusicPlayer()
 
   if (tracks.length === 0) return null
+
+  function handleSeek(e: React.MouseEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const ratio = (e.clientX - rect.left) / rect.width
+    seek(ratio)
+  }
 
   return (
     <div className="flex items-center gap-1.5 border border-border bg-card px-2 py-1">
@@ -151,7 +45,7 @@ export function HeaderMusicPlayer() {
 
       {/* Progress bar — clickable */}
       <button
-        onClick={seek}
+        onClick={handleSeek}
         aria-label="Seek"
         className="relative h-1 w-16 bg-border hover:h-1.5 transition-all"
       >

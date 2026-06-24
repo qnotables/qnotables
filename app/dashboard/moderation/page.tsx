@@ -4,7 +4,8 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { ModerationQueue, type FlagRow } from "@/components/dashboard/moderation-queue"
 import { PendingPostsQueue, type PendingThread, type PendingReply } from "@/components/dashboard/pending-posts-queue"
-import { ShieldAlert, Inbox, CheckCircle2, Clock } from "lucide-react"
+import { PendingBookmarksQueue, type PendingBookmark } from "@/components/dashboard/pending-bookmarks-queue"
+import { ShieldAlert, Inbox, CheckCircle2, Clock, Bookmark } from "lucide-react"
 
 export const metadata = {
   title: "Moderation — Admin Dashboard",
@@ -17,8 +18,8 @@ export default async function ModerationPage() {
 
   const admin = createAdminClient()
 
-  // Fetch moderation flags, pending threads, and pending replies in parallel
-  const [flagsResult, pendingThreadsResult, pendingRepliesResult] = await Promise.all([
+  // Fetch moderation flags, pending threads, pending replies, and pending bookmarks in parallel
+  const [flagsResult, pendingThreadsResult, pendingRepliesResult, pendingBookmarksResult] = await Promise.all([
     admin
       .from("moderation_flags")
       .select("id, content_type, content_id, reason, reported_by, status, created_at")
@@ -34,6 +35,11 @@ export default async function ModerationPage() {
       .select("id, body, created_at, author_id, thread_id, profiles(display_name), forum_threads(title)")
       .eq("is_pending", true)
       .eq("is_hidden", false)
+      .order("created_at", { ascending: false }),
+    admin
+      .from("bookmarks")
+      .select("id, title, url, description, category, submitted_by_name, created_at")
+      .eq("is_approved", false)
       .order("created_at", { ascending: false }),
   ])
 
@@ -57,6 +63,16 @@ export default async function ModerationPage() {
     created_at: f.created_at,
   }))
 
+  const pendingBookmarks: PendingBookmark[] = (pendingBookmarksResult.data ?? []).map((b: any) => ({
+    id: b.id,
+    title: b.title,
+    url: b.url,
+    description: b.description,
+    category: b.category,
+    submitted_by_name: b.submitted_by_name,
+    created_at: b.created_at,
+  }))
+
   const pendingThreads: PendingThread[] = (pendingThreadsResult.data ?? []).map((t: any) => ({
     id: t.id,
     title: t.title,
@@ -76,7 +92,7 @@ export default async function ModerationPage() {
     authorName: r.profiles?.display_name ?? "operator",
   }))
 
-  const pendingCount = pendingThreads.length + pendingReplies.length
+  const pendingCount = pendingThreads.length + pendingReplies.length + pendingBookmarks.length
   const open = flags.filter((f) => f.status === "open").length
   const resolved = flags.filter((f) => f.status === "actioned" || f.status === "dismissed").length
 
@@ -96,7 +112,7 @@ export default async function ModerationPage() {
       </div>
 
       {pendingCount > 0 && (
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-6">
           <div className="flex items-center gap-3">
             <Clock className="h-4 w-4 text-amber-400" />
             <h2 className="stencil text-lg text-foreground">
@@ -106,7 +122,27 @@ export default async function ModerationPage() {
               </span>
             </h2>
           </div>
-          <PendingPostsQueue threads={pendingThreads} replies={pendingReplies} />
+
+          {pendingBookmarks.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="label-mono text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                  Bookmarks ({pendingBookmarks.length})
+                </h3>
+              </div>
+              <PendingBookmarksQueue bookmarks={pendingBookmarks} />
+            </div>
+          )}
+
+          {(pendingThreads.length > 0 || pendingReplies.length > 0) && (
+            <div className="flex flex-col gap-3">
+              <h3 className="label-mono text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                Forum Posts ({pendingThreads.length + pendingReplies.length})
+              </h3>
+              <PendingPostsQueue threads={pendingThreads} replies={pendingReplies} />
+            </div>
+          )}
         </section>
       )}
 
