@@ -27,12 +27,6 @@ const SIGNAL_TOOLS = [
     href: "https://revolution.radio",
   },
   {
-    label: "Shop",
-    description: "Support the desk",
-    icon: ShoppingBag,
-    href: "https://shop.qnotables.ai",
-  },
-  {
     label: "Timeline",
     description: "Track the sequence",
     icon: Clock,
@@ -54,18 +48,6 @@ const SIGNAL_TOOLS_SECONDARY = [
     href: "https://fullchan.net",
   },
   {
-    label: "Qresearch",
-    description: "Join the fight",
-    icon: Shield,
-    href: "https://8ch.net/qresearch/catalog.html",
-  },
-  {
-    label: "Q posts",
-    description: "Read the posts",
-    icon: ShieldPlus,
-    href: "https://www.qanon.pub",
-  },
-  {
     label: "bookmarks",
     description: "Share a resource",
     icon: Bookmark,
@@ -76,6 +58,12 @@ const SIGNAL_TOOLS_SECONDARY = [
     description: "Watch the feed",
     icon: Clapperboard,
     href: "/videos",
+  },
+{
+    label: "Shop",
+    description: "Support the desk",
+    icon: ShoppingBag,
+    href: "https://shop.qnotables.ai",
   },
   {
     label: "Donate",
@@ -98,7 +86,7 @@ export function SignalToolsCard() {
         <h2 className="stencil text-sm font-bold text-foreground">SIGNAL TOOLS</h2>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex justify-center gap-3 mb-4">
         {SIGNAL_TOOLS.map((tool) => {
           const Icon = tool.icon
           const isExternal = tool.href.startsWith("http") || tool.href.startsWith("mailto:")
@@ -117,7 +105,7 @@ export function SignalToolsCard() {
       </div>
 
       <div>
-        <div className="flex gap-3">
+        <div className="flex justify-center gap-3">
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
             const isExternal = (tool.href || "").startsWith("http") || (tool.href || "").startsWith("mailto:")
