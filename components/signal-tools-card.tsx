@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, NotebookPen } from "lucide-react"
 
 const SIGNAL_TOOLS = [
   {
@@ -47,6 +47,12 @@ const SIGNAL_TOOLS = [
 ]
 
 const SIGNAL_TOOLS_SECONDARY = [
+  {
+    label: "Fullchan",
+    description: "Open the board",
+    icon: NotebookPen,
+    href: "https://fullchan.net",
+  },
   {
     label: "Qresearch",
     description: "Join the fight",
