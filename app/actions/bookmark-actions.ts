@@ -31,6 +31,11 @@ export async function submitBookmark(
       return { success: false, error: "Title must be at least 3 characters" }
     }
 
+    // Normalize: prepend https:// if no protocol is present
+    if (url && !url.match(/^https?:\/\//i)) {
+      url = `https://${url}`
+    }
+
     if (!url || !isValidUrl(url)) {
       return { success: false, error: "Please enter a valid HTTP/HTTPS URL" }
     }
@@ -58,7 +63,7 @@ export async function submitBookmark(
         description: description ? description.trim() : null,
         category: category ? category.trim() : null,
         submitted_by_id: user.id,
-        submitted_by_name: user.email || user.user_metadata?.name || "Anonymous",
+        submitted_by_name: user.user_metadata?.display_name || user.user_metadata?.name || user.user_metadata?.full_name || "Anonymous",
         is_approved: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
