@@ -36,7 +36,7 @@ export function BookmarkCard({ bookmark, isOwner = false, isAdmin = false, onDel
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <a
-            href={bookmark.url}
+            href={bookmark.url.match(/^https?:\/\//i) ? bookmark.url : `https://${bookmark.url}`}
             target="_blank"
             rel="noopener noreferrer"
             className="group/link flex items-start gap-2 hover:text-primary transition-colors"

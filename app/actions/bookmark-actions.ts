@@ -31,6 +31,11 @@ export async function submitBookmark(
       return { success: false, error: "Title must be at least 3 characters" }
     }
 
+    // Normalize: prepend https:// if no protocol is present
+    if (url && !url.match(/^https?:\/\//i)) {
+      url = `https://${url}`
+    }
+
     if (!url || !isValidUrl(url)) {
       return { success: false, error: "Please enter a valid HTTP/HTTPS URL" }
     }
