@@ -585,6 +585,82 @@ export async function restoreThread(threadId: string) {
   return { error: null }
 }
 
+export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to vote." }
+
+  // Check for existing vote
+  const { data: existing } = await supabase
+    .from("thread_votes")
+    .select("id, vote")
+    .eq("thread_id", threadId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  let error = null
+
+  if (existing) {
+    if (existing.vote === voteValue) {
+      // Remove vote (toggle off)
+      const { error: delError } = await supabase
+        .from("thread_votes")
+        .delete()
+        .eq("id", existing.id)
+      error = delError?.message ?? null
+    } else {
+      // Change vote
+      const { error: updateError } = await supabase
+        .from("thread_votes")
+        .update({ vote: voteValue })
+        .eq("id", existing.id)
+      error = updateError?.message ?? null
+    }
+  } else {
+    // New vote
+    const { error: insertError } = await supabase
+      .from("thread_votes")
+      .insert({ thread_id: threadId, user_id: user.id, vote: voteValue })
+    error = insertError?.message ?? null
+  }
+
+  if (error) return { error }
+
+  // Update author karma
+  const { data: thread } = await supabase
+    .from("forum_threads")
+    .select("author_id")
+    .eq("id", threadId)
+    .maybeSingle()
+
+  if (thread?.author_id) {
+    const { data: votes } = await supabase
+      .from("thread_votes")
+      .select("vote")
+      .eq("thread_id", threadId)
+
+    const netThreadKarma = (votes ?? []).reduce((sum, v) => sum + (v.vote as number), 0)
+
+    // Get existing karma and add the net for this thread
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("karma")
+      .eq("id", thread.author_id)
+      .maybeSingle()
+
+    const currentKarma = (profile as any)?.karma ?? 0
+    await supabase
+      .from("profiles")
+      .update({ karma: currentKarma + netThreadKarma })
+      .eq("id", thread.author_id)
+  }
+
+  revalidatePath(`/forum/${threadId}`)
+  return { error: null }
+}
+
 export async function voteOnReply(replyId: string, voteType: "up" | "down") {
   const supabase = await createClient()
   const {
