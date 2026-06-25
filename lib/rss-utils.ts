@@ -453,7 +453,7 @@ async function getSupabase() {
 }
 
 const SELECT_COLUMNS =
-  "id, slug, title, subtitle, excerpt, body, tag, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, media_image_url, author_name, published_at, created_at, updated_at, blog_post_tags(tag)"
+      "id, slug, title, subtitle, excerpt, body, tag, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, author_name, published_at, created_at, updated_at, blog_post_tags(tag)"
 
 /**
  * Fetch published, RSS-eligible records and map them into FeedItems.
