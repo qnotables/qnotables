@@ -11,7 +11,7 @@ import {
   extractExcerpt,
   parseDate,
 } from "@/lib/import-utils"
-import type { ImportPostInput } from "@/app/actions/import-posts"
+import type { ImportPostInput, ImportResult } from "@/app/actions/import-posts"
 import { importPosts } from "@/app/actions/import-posts"
 
 export function ImportForm() {
@@ -20,7 +20,7 @@ export function ImportForm() {
   const [content, setContent] = useState("")
   const [parsed, setParsed] = useState<ImportPostInput[]>([])
   const [error, setError] = useState("")
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<ImportResult[]>([])
 
   const handleParse = () => {
     setError("")
@@ -113,12 +113,23 @@ export function ImportForm() {
 
     setLoading(true)
     setError("")
+    setResults([])
+
+    // Server Actions have a ~1MB request body limit. Large feeds (e.g. 100 posts
+    // with full bodies) exceed it, so import in chunks and aggregate the results.
+    const CHUNK_SIZE = 20
+    const allResults: ImportResult[] = []
 
     try {
-      const res = await importPosts(parsed)
-      setResults(res)
+      for (let i = 0; i < parsed.length; i += CHUNK_SIZE) {
+        const chunk = parsed.slice(i, i + CHUNK_SIZE)
+        const res = await importPosts(chunk)
+        allResults.push(...res)
+        // Show progress as each chunk completes
+        setResults([...allResults])
+      }
 
-      const failCount = res.filter((r) => !r.success).length
+      const failCount = allResults.filter((r) => !r.success).length
       if (failCount === 0) {
         setContent("")
         setParsed([])

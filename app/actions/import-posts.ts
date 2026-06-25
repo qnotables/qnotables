@@ -96,7 +96,6 @@ export async function importPosts(posts: ImportPostInput[]): Promise<ImportResul
           source_name: post.sourceName,
           source_url: post.sourceUrl,
           cover_image: post.coverImage || null,
-          media_image_url: post.coverImage || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -252,7 +251,6 @@ export async function batchImportPosts(posts: ImportedPost[]): Promise<BatchImpo
       source_name: post.source_name,
       original_source_url: post.original_source_url,
       cover_image: post.cover_image_url || null,
-      media_image_url: post.cover_image_url || null,
       author_name: post.author_name || "HOT AND FRESH",
       imported_at: new Date().toISOString(),
       read_minutes: Math.ceil(post.body.split(/\s+/).length / 200),
