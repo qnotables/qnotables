@@ -12,7 +12,7 @@ export default function ForumError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("[v0] Forum route error:", error)
+    console.error("[forum/page] render error:", error)
   }, [error])
 
   return (
