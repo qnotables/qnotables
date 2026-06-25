@@ -1,41 +1,61 @@
 import { createClient } from "@/lib/supabase/server"
 
+export type TeamRole = "owner" | "admin" | "moderator"
+
 export interface TeamMember {
   id: string
-  username: string
   display_name: string
+  role: TeamRole
   avatar_url: string | null
-  title: string | null
-  team_sort_order: number
-  website_url: string | null
-  twitter_url: string | null
-  truth_social_url: string | null
-  public_email: string | null
-  show_email_publicly: boolean
+  karma: number
+  post_count: number
+  created_at: string
 }
 
-export async function getTeamMembers(groupFilter?: string): Promise<TeamMember[]> {
+const ROLE_ORDER: Record<TeamRole, number> = {
+  owner: 0,
+  admin: 1,
+  moderator: 2,
+}
+
+const ROLE_LABELS: Record<TeamRole, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  moderator: "Moderator",
+}
+
+export function getRoleLabel(role: TeamRole): string {
+  return ROLE_LABELS[role] ?? role
+}
+
+export async function getTeamMembers(roleFilter?: string): Promise<TeamMember[]> {
   const supabase = await createClient()
 
   let query = supabase
     .from("profiles")
-    .select(
-      "id, username, display_name, avatar_url, title, team_sort_order, website_url, twitter_url, truth_social_url, public_email, show_email_publicly"
-    )
-    .eq("show_on_team_page", true)
-    .order("team_sort_order", { ascending: true })
-    .order("display_name", { ascending: true })
+    .select("id, display_name, role, avatar_url, karma, post_count, created_at")
+    .in("role", ["owner", "admin", "moderator"])
+    .eq("status", "active")
+
+  if (roleFilter && ["owner", "admin", "moderator"].includes(roleFilter)) {
+    query = query.eq("role", roleFilter)
+  }
 
   const { data, error } = await query
 
   if (error) {
-    console.error("Error fetching team members:", error)
+    console.error("[team] fetch error:", error.message)
     return []
   }
 
-  return (data || []) as TeamMember[]
+  // Sort: owner → admin → moderator, then by display_name
+  return ((data ?? []) as TeamMember[]).sort((a, b) => {
+    const ro = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99)
+    if (ro !== 0) return ro
+    return (a.display_name ?? "").localeCompare(b.display_name ?? "")
+  })
 }
 
 export async function getTeamGroups(): Promise<string[]> {
-  return []
+  return ["owner", "admin", "moderator"]
 }

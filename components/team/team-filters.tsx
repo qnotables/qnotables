@@ -51,7 +51,7 @@ export function TeamFilters({ groups, selectedGroup }: TeamFiltersProps) {
               : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
           }`}
         >
-          {group}
+          {group.charAt(0).toUpperCase() + group.slice(1)}
           {selectedGroup === group && <X className="h-3 w-3" />}
         </button>
       ))}
