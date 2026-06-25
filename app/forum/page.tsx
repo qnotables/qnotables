@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
@@ -25,38 +27,44 @@ export default async function ForumPage({
   } = await supabase.auth.getUser()
 
   // Fetch threads with author profiles and reply counts
-  const { data: threads } = await supabase
-    .from("forum_threads")
-    .select(
-      "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
-    )
-    .eq("is_soft_deleted", false)
-    .eq("is_pending", false)
-    .order("is_pinned", { ascending: false })
-    .order("created_at", { ascending: false })
+  let threads: any[] = []
+  let lastActivityMap = new Map<string, string>()
+  let memberCount = 0
 
-  // Last-activity map: latest visible reply timestamp per thread
-  const { data: replyTimes } = await supabase
-    .from("forum_replies")
-    .select("thread_id, created_at")
-    .eq("is_pending", false)
-    .eq("is_hidden", false)
-    .order("created_at", { ascending: false })
+  try {
+    const [threadResult, replyResult, memberResult] = await Promise.all([
+      supabase
+        .from("forum_threads")
+        .select(
+          "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
+        )
+        .eq("is_soft_deleted", false)
+        .eq("is_pending", false)
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("forum_replies")
+        .select("thread_id, created_at")
+        .eq("is_pending", false)
+        .eq("is_hidden", false)
+        .order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+    ])
 
-  const lastActivityMap = new Map<string, string>()
-  for (const r of replyTimes ?? []) {
-    // rows are sorted desc, so the first one seen per thread is the latest
-    if (!lastActivityMap.has(r.thread_id)) {
-      lastActivityMap.set(r.thread_id, r.created_at)
+    if (threadResult.error) throw new Error(threadResult.error.message)
+    threads = threadResult.data ?? []
+
+    for (const r of replyResult.data ?? []) {
+      if (!lastActivityMap.has(r.thread_id)) lastActivityMap.set(r.thread_id, r.created_at)
     }
+
+    memberCount = memberResult.count ?? 0
+  } catch (err) {
+    console.error("[forum/page] data fetch error:", err)
+    // degrade gracefully — renders with empty list rather than crashing
   }
 
-  // Member count
-  const { count: memberCount } = await supabase
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-
-  const rows: ThreadListItem[] = (threads ?? []).map((t: any) => {
+  const rows: ThreadListItem[] = threads.map((t: any) => {
     const replyCount = t.forum_replies?.[0]?.count ?? 0
     return {
       id: t.id,

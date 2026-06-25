@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight, Clock, CornerDownRight, Lock } from "lucide-react"
@@ -41,42 +43,45 @@ interface Reply {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("forum_threads")
-    .select("title, body, category")
-    .eq("id", slug)
-    .maybeSingle()
+  try {
+    const { slug } = await params
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from("forum_threads")
+      .select("title, body, category")
+      .eq("id", slug)
+      .maybeSingle()
 
-  if (!data) return { title: "Thread — HOT AND FRESH" }
+    if (!data) return { title: "Thread — HOT AND FRESH" }
 
-  const site = getSiteUrl()
-  const canonical = `${site}/forum/${slug}`
-  const description = data.body?.slice(0, 160).replace(/\s+/g, " ") ?? ""
+    const site = getSiteUrl()
+    const canonical = `${site}/forum/${slug}`
+    const description = data.body?.slice(0, 160).replace(/\s+/g, " ") ?? ""
 
-  // Use first image found in the post body, fall back to site default OG image
-  const bodyImage = firstImageFromBody(data.body)
-  const ogImage = bodyImage ?? `${site}/images/og-default.png`
+    const bodyImage = firstImageFromBody(data.body)
+    const ogImage = bodyImage ?? `${site}/images/og-default.png`
 
-  return {
-    title: `${data.title} — HOT AND FRESH`,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      title: data.title,
+    return {
+      title: `${data.title} — HOT AND FRESH`,
       description,
-      url: canonical,
-      siteName: "HOT AND FRESH",
-      type: "article",
-      images: [{ url: ogImage }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: data.title,
-      description,
-      images: [ogImage],
-    },
+      alternates: { canonical },
+      openGraph: {
+        title: data.title,
+        description,
+        url: canonical,
+        siteName: "HOT AND FRESH",
+        type: "article",
+        images: [{ url: ogImage }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: data.title,
+        description,
+        images: [ogImage],
+      },
+    }
+  } catch {
+    return { title: "Thread — HOT AND FRESH" }
   }
 }
 
@@ -90,63 +95,74 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const isAdmin = user ? await checkAdminAccess() : false
 
-  const { data: thread } = await supabase
-    .from("forum_threads")
-    .select(
-      "id, title, body, created_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, category, tags, profiles(display_name)",
-    )
-    .eq("id", slug)
-    .maybeSingle()
+  // --- Thread fetch (fatal: 404 if missing, throws to error boundary on DB error) ---
+  let thread: Thread | null = null
+  try {
+    const { data, error } = await supabase
+      .from("forum_threads")
+      .select(
+        "id, title, body, created_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, category, tags, profiles(display_name)",
+      )
+      .eq("id", slug)
+      .maybeSingle()
+
+    if (error) throw new Error(`Thread fetch failed: ${error.message}`)
+    thread = data as unknown as Thread | null
+  } catch (err) {
+    console.error("[forum/[slug]] thread fetch error:", err)
+    throw err // re-throw so error.tsx catches it
+  }
 
   if (!thread || thread.is_soft_deleted) notFound()
-  const t = thread as unknown as Thread
+  const t = thread
 
-  const repliesQuery = supabase
-    .from("forum_replies")
-    .select("id, body, created_at, author_id, parent_reply_id, is_hidden, profiles(display_name)")
-    .eq("thread_id", slug)
-    .eq("is_pending", false)
-    .order("created_at", { ascending: true })
+  // --- Replies (non-fatal: degrade to empty list) ---
+  let replies: Reply[] = []
+  try {
+    const repliesQuery = supabase
+      .from("forum_replies")
+      .select("id, body, created_at, author_id, parent_reply_id, is_hidden, profiles(display_name)")
+      .eq("thread_id", slug)
+      .eq("is_pending", false)
+      .order("created_at", { ascending: true })
 
-  // Non-admins only see visible replies
-  if (!isAdmin) {
-    repliesQuery.eq("is_hidden", false)
+    if (!isAdmin) repliesQuery.eq("is_hidden", false)
+
+    const { data, error } = await repliesQuery
+    if (error) throw new Error(error.message)
+    replies = (data ?? []) as unknown as Reply[]
+  } catch (err) {
+    console.error("[forum/[slug]] replies fetch error:", err)
+    // non-fatal — thread still renders, replies section shows empty
   }
 
-  const { data: replyData } = await repliesQuery
-
-  const replies = (replyData ?? []) as unknown as Reply[]
-
-  // Votes
-  const { data: allVotes } = await supabase
-    .from("reply_votes")
-    .select("reply_id, vote_type")
-    .in(
-      "reply_id",
-      replies.map((r) => r.id),
-    )
-
-  const { data: userVotes } = user
-    ? await supabase
-        .from("reply_votes")
-        .select("reply_id, vote_type")
-        .eq("user_id", user.id)
-        .in(
-          "reply_id",
-          replies.map((r) => r.id),
-        )
-    : { data: [] }
-
+  // --- Votes (non-fatal: degrade to no votes shown) ---
   const voteMap = new Map<string, string[]>()
   const userVoteMap = new Map<string, string>()
-
-  for (const vote of allVotes ?? []) {
-    const votes = voteMap.get(vote.reply_id) ?? []
-    votes.push(vote.vote_type)
-    voteMap.set(vote.reply_id, votes)
-  }
-  for (const vote of userVotes ?? []) {
-    userVoteMap.set(vote.reply_id, vote.vote_type)
+  try {
+    const replyIds = replies.map((r) => r.id)
+    if (replyIds.length > 0) {
+      const [{ data: allVotes }, { data: userVotes }] = await Promise.all([
+        supabase.from("reply_votes").select("reply_id, vote_type").in("reply_id", replyIds),
+        user
+          ? supabase
+              .from("reply_votes")
+              .select("reply_id, vote_type")
+              .eq("user_id", user.id)
+              .in("reply_id", replyIds)
+          : Promise.resolve({ data: [] as { reply_id: string; vote_type: string }[] }),
+      ])
+      for (const vote of allVotes ?? []) {
+        const existing = voteMap.get(vote.reply_id) ?? []
+        existing.push(vote.vote_type)
+        voteMap.set(vote.reply_id, existing)
+      }
+      for (const vote of userVotes ?? []) {
+        userVoteMap.set(vote.reply_id, vote.vote_type)
+      }
+    }
+  } catch (err) {
+    console.error("[forum/[slug]] votes fetch error:", err)
   }
 
   const topLevelReplies = replies.filter((r) => !r.parent_reply_id)
@@ -155,27 +171,35 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const categoryName = normalizeCategoryName(t.category)
 
-  // Prev (newer) and next (older) threads for navigation
-  const [{ data: newerThread }, { data: olderThread }] = await Promise.all([
-    supabase
-      .from("forum_threads")
-      .select("id, title")
-      .eq("is_soft_deleted", false)
-      .eq("is_pending", false)
-      .gt("created_at", t.created_at)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("forum_threads")
-      .select("id, title")
-      .eq("is_soft_deleted", false)
-      .eq("is_pending", false)
-      .lt("created_at", t.created_at)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ])
+  // --- Prev/next threads (non-fatal: nav simply won't render) ---
+  let newerThread: { id: string; title: string } | null = null
+  let olderThread: { id: string; title: string } | null = null
+  try {
+    const [newerResult, olderResult] = await Promise.all([
+      supabase
+        .from("forum_threads")
+        .select("id, title")
+        .eq("is_soft_deleted", false)
+        .eq("is_pending", false)
+        .gt("created_at", t.created_at)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("forum_threads")
+        .select("id, title")
+        .eq("is_soft_deleted", false)
+        .eq("is_pending", false)
+        .lt("created_at", t.created_at)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+    newerThread = newerResult.data
+    olderThread = olderResult.data
+  } catch (err) {
+    console.error("[forum/[slug]] prev/next fetch error:", err)
+  }
 
   return (
     <div id="top" className="min-h-screen tactical-grid">

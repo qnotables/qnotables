@@ -12,7 +12,7 @@ export default function ThreadError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("[v0] Thread route error:", error)
+    console.error("[forum/thread] render error:", error)
   }, [error])
 
   return (
