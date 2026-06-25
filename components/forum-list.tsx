@@ -28,6 +28,7 @@ import {
   extractFirstImage,
   extractFirstVideo,
   normalizeCategoryName,
+  normalizeCategorySlug,
 } from "@/lib/forum-utils"
 
 export interface ThreadListItem {
@@ -340,13 +341,9 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
       )
     }
 
-    // Category filter
+    // Category filter — normalize both sides to slug so null→"other" is caught
     if (filterCategory) {
-      rows = rows.filter(
-        (t) =>
-          t.category?.toLowerCase() === filterCategory.toLowerCase() ||
-          normalizeCategoryName(t.category)?.toLowerCase() === filterCategory.toLowerCase(),
-      )
+      rows = rows.filter((t) => normalizeCategorySlug(t.category) === filterCategory.toLowerCase())
     }
 
     // Tag filter
@@ -405,7 +402,7 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
           />
         </div>
 
-        {/* Category filter */}
+        {/* Category filter — only show categories that have at least one thread */}
         <div className="relative">
           <select
             value={filterCategory}
@@ -413,11 +410,16 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
             className="label-mono appearance-none border border-border bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
           >
             <option value="">All Categories</option>
-            {FORUM_CATEGORIES.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
+            {FORUM_CATEGORIES.filter((c) =>
+              threads.some((t) => normalizeCategorySlug(t.category) === c.slug)
+            ).map((c) => {
+              const count = threads.filter((t) => normalizeCategorySlug(t.category) === c.slug).length
+              return (
+                <option key={c.slug} value={c.slug}>
+                  {c.name} ({count})
+                </option>
+              )
+            })}
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         </div>

@@ -8,7 +8,7 @@ import { ForumList, type ThreadListItem } from "@/components/forum-list"
 import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
-import { FORUM_CATEGORIES } from "@/lib/forum-utils"
+import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
 
 export const metadata = {
   title: "The Town Hall — Hot and Fresh",
@@ -89,9 +89,8 @@ export default async function ForumPage({
   const categoryCounts: Record<string, number> = {}
   for (const c of FORUM_CATEGORIES) categoryCounts[c.slug] = 0
   for (const r of rows) {
-    if (!r.category) continue
-    const slug = r.category.toLowerCase()
-    if (slug in categoryCounts) categoryCounts[slug] += 1
+    const slug = normalizeCategorySlug(r.category) // null → "other"
+    categoryCounts[slug] = (categoryCounts[slug] ?? 0) + 1
   }
 
   const pinned: PinnedThread[] = rows

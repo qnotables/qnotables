@@ -33,12 +33,19 @@ export function getCategoryBySlug(slug: string): ForumCategory | undefined {
   return FORUM_CATEGORIES.find((c) => c.slug === slug)
 }
 
-export function normalizeCategoryName(raw: string | null | undefined): string | null {
-  if (!raw) return null
+export function normalizeCategoryName(raw: string | null | undefined): string {
+  if (!raw || !raw.trim()) return "Other"
   const trimmed = raw.trim()
-  // Try exact match first
   const exact = FORUM_CATEGORIES.find((c) => c.name === trimmed || c.slug === trimmed.toLowerCase())
-  return exact?.name ?? trimmed
+  return exact?.name ?? "Other"
+}
+
+/** Canonical slug for a raw category value — null/unknown → "other". */
+export function normalizeCategorySlug(raw: string | null | undefined): string {
+  if (!raw || !raw.trim()) return "other"
+  const trimmed = raw.trim().toLowerCase()
+  const exact = FORUM_CATEGORIES.find((c) => c.slug === trimmed || c.name.toLowerCase() === trimmed)
+  return exact?.slug ?? "other"
 }
 
 // ─── Sort options ─────────────────────────────────────────────────────────────
