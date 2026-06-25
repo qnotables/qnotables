@@ -206,51 +206,46 @@ export async function parseMarkdown(markdownText: string): Promise<ImportedPost[
   }
 }
 
-// Parse RSS/XML feed (using simple XML parsing)
+// Parse RSS/XML feed — server-safe: uses rss-parser instead of DOMParser
 export async function parseRSSFeed(xmlText: string): Promise<ImportedPost[]> {
   try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(xmlText, 'application/xml')
+    // Dynamic import keeps the bundle tree-shakeable on the client.
+    const ParserCtor = (await import("rss-parser")).default
+    const parser = new ParserCtor()
+    const feed = await parser.parseString(xmlText)
 
-    if (doc.getElementsByTagName('parsererror').length > 0) {
-      throw new Error('Failed to parse XML')
-    }
-
+    const feedTitle = (feed.title || "RSS Import").trim()
     const posts: ImportedPost[] = []
-    const items = doc.querySelectorAll('item')
-    const feedTitle = doc.querySelector('channel > title')?.textContent || 'RSS Import'
 
-    items.forEach((item) => {
-      const title = item.querySelector('title')?.textContent || ''
-      const description = item.querySelector('description')?.textContent || ''
-      const link = item.querySelector('link')?.textContent || ''
-      const pubDate = item.querySelector('pubDate')?.textContent || ''
-      const category = item.querySelector('category')?.textContent || ''
-      const author = item.querySelector('author')?.textContent || ''
+    for (const item of feed.items ?? []) {
+      const title = (item.title || "").trim()
+      if (!title) continue
 
-      if (title) {
-        posts.push({
-          title,
-          slug: generateSlug(title),
-          excerpt: description.slice(0, 300),
-          body: description,
-          category,
-          tags: [],
-          post_type: 'RSS Import',
-          status: 'draft',
-          featured: false,
-          priority: 0,
-          published_at: parseDate(pubDate),
-          source_url: link,
-          source_name: feedTitle,
-          author_name: author,
-        })
-      }
-    })
+      // Prefer plain-text snippet; fall back to stripped HTML content/description
+      const rawDesc = item.contentSnippet || item.content || item.summary || ""
+      const description = rawDesc.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+
+      posts.push({
+        title,
+        slug: generateSlug(title),
+        excerpt: description.slice(0, 300),
+        body: item.content || item.contentSnippet || description,
+        category: (item.categories?.[0] || "").trim() || undefined,
+        tags: item.categories?.slice(1) ?? [],
+        post_type: "RSS Import",
+        status: "draft",
+        featured: false,
+        priority: 0,
+        published_at: parseDate(item.pubDate || item.isoDate || ""),
+        source_url: item.link,
+        source_name: feedTitle,
+        author_name: (item.creator || item.author || "").trim() || undefined,
+      })
+    }
 
     return posts
   } catch (error) {
-    throw new Error(`Failed to parse RSS: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(`Failed to parse RSS: ${error instanceof Error ? error.message : "Unknown error"}`)
   }
 }
 

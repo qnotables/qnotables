@@ -186,29 +186,46 @@ export function parseJSON(json: string): ParsedPost[] {
 }
 
 /**
- * Parse RSS feed items (basic XML extraction)
+ * Parse RSS feed items (regex-based XML extraction — server-safe, no DOMParser)
  */
 export function parseRSSItems(xml: string): ParsedPost[] {
   const items: ParsedPost[] = []
 
-  // Simple regex extraction (in production, use xml2js or similar)
   const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g)
 
   for (const match of itemMatches) {
     const content = match[1]
-    const title = content.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim()
-    const desc = content.match(/<description>([\s\S]*?)<\/description>/)?.[1]?.trim()
-    const pubDate = content.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim()
-    const link = content.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim()
+    const title = content.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.trim()
+    const desc = content.match(/<description[^>]*>([\s\S]*?)<\/description>/)?.[1]?.trim()
+    const pubDate = content.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/)?.[1]?.trim()
+    const link = content.match(/<link[^>]*>([\s\S]*?)<\/link>/)?.[1]?.trim()
+    const author =
+      content.match(/<dc:creator[^>]*>([\s\S]*?)<\/dc:creator>/)?.[1]?.trim() ||
+      content.match(/<author[^>]*>([\s\S]*?)<\/author>/)?.[1]?.trim()
+    const category = content.match(/<category[^>]*>([\s\S]*?)<\/category>/)?.[1]?.trim()
 
-    if (title && desc) {
+    // Image extraction — priority order: media:content, media:thumbnail,
+    // enclosure (image type), standalone image element, img in body HTML
+    const coverImage =
+      content.match(/media:content[^>]+url=["']([^"']+)["']/i)?.[1] ||
+      content.match(/media:thumbnail[^>]+url=["']([^"']+)["']/i)?.[1] ||
+      content.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image\/[^"']*["']/i)?.[1] ||
+      content.match(/<enclosure[^>]+type=["']image\/[^"']*["'][^>]+url=["']([^"']+)["']/i)?.[1] ||
+      content.match(/<image>\s*<url>([\s\S]*?)<\/url>/)?.[1]?.trim() ||
+      (desc || content).match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ||
+      undefined
+
+    if (title) {
+      const plainDesc = (desc || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
       items.push({
         title,
-        excerpt: desc.replace(/<[^>]*>/g, "").slice(0, 150),
-        content: desc,
-        author: "RSS Feed",
+        excerpt: plainDesc.slice(0, 150),
+        content: desc || "",
+        author: author || "RSS Feed",
         publishedAt: pubDate ? parseDate(pubDate) || undefined : undefined,
         sourceUrl: link,
+        category,
+        coverImage: coverImage || undefined,
       })
     }
   }
