@@ -585,6 +585,49 @@ export async function restoreThread(threadId: string) {
   return { error: null }
 }
 
+export async function reportContent(
+  contentType: "forum_thread" | "forum_reply",
+  contentId: string,
+  reason: string,
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to report content." }
+
+  const trimmed = reason.trim().slice(0, 500)
+  if (trimmed.length < 4) return { error: "Please provide a brief reason for the report." }
+
+  const admin = createAdminClient()
+
+  // Avoid duplicate open reports from the same user on the same content
+  const { data: existing } = await admin
+    .from("moderation_flags")
+    .select("id")
+    .eq("content_type", contentType)
+    .eq("content_id", contentId)
+    .eq("reported_by", user.id)
+    .eq("status", "open")
+    .maybeSingle()
+
+  if (existing) {
+    return { error: null, alreadyReported: true }
+  }
+
+  const { error } = await admin.from("moderation_flags").insert({
+    content_type: contentType,
+    content_id: contentId,
+    reason: `User report: ${trimmed}`,
+    status: "open",
+    auto_flagged: false,
+    reported_by: user.id,
+  })
+
+  if (error) return { error: error.message }
+  return { error: null }
+}
+
 export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
   const supabase = await createClient()
   const {

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import {
   MessageSquare,
@@ -13,17 +14,19 @@ import {
   Video,
   Search,
   ChevronDown,
-  Share2,
-  ExternalLink,
+  Activity,
+  Play,
 } from "lucide-react"
 import { timeAgo } from "@/lib/time"
 import {
   FORUM_CATEGORIES,
   SORT_OPTIONS,
   type SortOption,
+  type VideoEmbed,
   buildExcerpt,
   detectMediaBadges,
   extractFirstImage,
+  extractFirstVideo,
   normalizeCategoryName,
 } from "@/lib/forum-utils"
 
@@ -34,6 +37,7 @@ export interface ThreadListItem {
   category: string | null
   tags: string | null
   created_at: string
+  last_activity_at?: string
   author_id: string
   authorName: string
   replyCount: number
@@ -47,6 +51,8 @@ interface ForumListProps {
   threads: ThreadListItem[]
   isSignedIn: boolean
 }
+
+const PAGE_SIZE = 15
 
 function CategoryBadge({ category }: { category: string | null }) {
   if (!category) return null
@@ -91,9 +97,94 @@ function MediaBadgeRow({ body }: { body: string }) {
   )
 }
 
+function getEmbedSrc(video: VideoEmbed): string | null {
+  switch (video.type) {
+    case "youtube":
+      return `https://www.youtube.com/embed/${video.videoId}?autoplay=1&rel=0`
+    case "rumble":
+      // Rumble share slugs start with "v"; embed endpoint differs from share URL
+      return `https://rumble.com/embed/${video.embedId}/?pub=4`
+    case "odysee":
+      return `https://odysee.com/$/embed/${video.path}`
+    case "direct":
+      return null // rendered as <video> element, not iframe
+  }
+}
+
+function VideoPreview({ video }: { video: VideoEmbed }) {
+  const [active, setActive] = useState(false)
+
+  if (!active) {
+    return (
+      <button
+        onClick={(e) => { e.preventDefault(); setActive(true) }}
+        className="group/play relative mt-3 flex w-full items-center justify-center overflow-hidden border border-border bg-black/60 transition-colors hover:border-primary"
+        style={{ aspectRatio: "16/9" }}
+        aria-label="Play video"
+      >
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px),repeating-linear-gradient(90deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px)]" />
+        {/* Label */}
+        <span className="label-mono absolute left-3 top-2 text-[10px] text-muted-foreground opacity-70">
+          {video.type === "youtube"
+            ? "YOUTUBE"
+            : video.type === "rumble"
+            ? "RUMBLE"
+            : video.type === "odysee"
+            ? "ODYSEE"
+            : "VIDEO"}
+        </span>
+        {/* Play button */}
+        <span className="relative z-10 flex h-14 w-14 items-center justify-center border border-primary/60 bg-primary/20 transition-all group-hover/play:border-primary group-hover/play:bg-primary/40">
+          <Play className="h-6 w-6 fill-primary text-primary" />
+        </span>
+        <span className="label-mono absolute bottom-2 right-3 text-[10px] text-muted-foreground opacity-70">
+          CLICK TO PLAY
+        </span>
+      </button>
+    )
+  }
+
+  if (video.type === "direct") {
+    return (
+      <div className="mt-3 w-full overflow-hidden border border-primary/40" style={{ aspectRatio: "16/9" }}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          src={video.url}
+          controls
+          autoPlay
+          className="h-full w-full bg-black"
+          onClick={(e) => e.preventDefault()}
+        />
+      </div>
+    )
+  }
+
+  const src = getEmbedSrc(video)
+  if (!src) return null
+
+  return (
+    <div
+      className="mt-3 w-full overflow-hidden border border-primary/40"
+      style={{ aspectRatio: "16/9" }}
+      onClick={(e) => e.preventDefault()}
+    >
+      <iframe
+        src={src}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="Embedded video"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
 function ThreadCard({ t }: { t: ThreadListItem }) {
   const excerpt = buildExcerpt(t.body, 160)
   const thumb = extractFirstImage(t.body)
+  const video = extractFirstVideo(t.body)
   const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
   const categoryName = normalizeCategoryName(t.category)
 
@@ -105,12 +196,12 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
     >
       {/* Thumbnail strip */}
       {thumb && (
-        <div className="hidden w-24 flex-shrink-0 overflow-hidden sm:block">
+        <div className="w-28 flex-shrink-0 overflow-hidden sm:w-44 md:w-52">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={thumb}
             alt=""
-            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+            className="h-full min-h-[7rem] w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
             loading="lazy"
           />
         </div>
@@ -161,6 +252,9 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
           </p>
         )}
 
+        {/* Video preview */}
+        {video && <VideoPreview video={video} />}
+
         {/* Tags */}
         {tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
@@ -182,6 +276,12 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
             <Clock className="h-3 w-3" />
             {timeAgo(t.created_at)}
           </span>
+          {t.replyCount > 0 && t.last_activity_at && t.last_activity_at !== t.created_at && (
+            <span className="flex items-center gap-1 text-primary/80">
+              <Activity className="h-3 w-3" />
+              active {timeAgo(t.last_activity_at)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -200,10 +300,29 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
 }
 
 export function ForumList({ threads, isSignedIn }: ForumListProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortOption>("latest")
-  const [filterCategory, setFilterCategory] = useState("")
+  // Category is owned by the URL — sidebar links and the dropdown stay in sync
+  const filterCategory = searchParams.get("category") ?? ""
   const [filterTag, setFilterTag] = useState("")
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  function setFilterCategory(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value) {
+      params.set("category", value)
+    } else {
+      params.delete("category")
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  // Effective "last activity" timestamp for a thread (falls back to creation).
+  const activityTime = (t: ThreadListItem) =>
+    new Date(t.last_activity_at ?? t.created_at).getTime()
 
   const filtered = useMemo(() => {
     let rows = [...threads]
@@ -245,18 +364,28 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
         case "most-replies":
           return b.replyCount - a.replyCount
         case "featured":
-          return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || activityTime(b) - activityTime(a)
         case "pinned":
-          return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        case "latest":
+          return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || activityTime(b) - activityTime(a)
         case "newest":
-        default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case "latest":
+        default:
+          // Latest activity: most recent reply (or creation) first
+          return activityTime(b) - activityTime(a)
       }
     }
 
     return [...pinned.sort(sortFn), ...rest.sort(sortFn)]
   }, [threads, query, sort, filterCategory, filterTag])
+
+  // Reset visible window whenever the result set changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [query, sort, filterCategory, filterTag])
+
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = filtered.length > visibleCount
 
   const isEmpty = threads.length === 0
   const noResults = !isEmpty && filtered.length === 0
@@ -343,7 +472,7 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
         <div className="border border-border bg-card p-8 text-center">
           <p className="stencil text-lg text-foreground">No threads matched your filters.</p>
           <button
-            onClick={() => { setQuery(""); setFilterCategory(""); setFilterTag("") }}
+            onClick={() => { setQuery(""); setFilterTag(""); setFilterCategory("") }}
             className="label-mono mt-3 text-sm text-primary hover:underline"
           >
             Clear filters
@@ -354,9 +483,24 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
       {/* Thread list */}
       {filtered.length > 0 && (
         <div className="flex flex-col gap-2">
-          {filtered.map((t) => (
+          {visible.map((t) => (
             <ThreadCard key={t.id} t={t} />
           ))}
+        </div>
+      )}
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <button
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary sm:w-auto sm:px-8"
+          >
+            Load more threads
+          </button>
+          <span className="label-mono text-[10px] text-muted-foreground">
+            Showing {visible.length} of {filtered.length}
+          </span>
         </div>
       )}
     </div>

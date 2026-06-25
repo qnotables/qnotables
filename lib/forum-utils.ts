@@ -151,6 +151,50 @@ export function detectMediaBadges(body: string): MediaBadges {
   return { hasImages, hasLinks, hasSocialLinks, hasVideo }
 }
 
+export type VideoEmbed =
+  | { type: "youtube"; videoId: string }
+  | { type: "rumble"; embedId: string }
+  | { type: "odysee"; path: string }
+  | { type: "direct"; url: string }
+
+/**
+ * Extract the first embeddable video from a post body.
+ * Handles YouTube (youtube.com/watch, youtu.be, /embed/, youtube-nocookie.com),
+ * Rumble (rumble.com/embed/ and /v... share links),
+ * Odysee (odysee.com share links), and bare direct video files.
+ */
+export function extractFirstVideo(body: string): VideoEmbed | null {
+  // YouTube — covers all four URL shapes:
+  //   watch?v=ID  •  watch?feature=…&v=ID  •  /embed/ID  •  youtu.be/ID
+  //   also youtube-nocookie.com/embed/ID
+  const ytWatchRe = /https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/watch\?(?:[^\s"'<#]*&)?v=([A-Za-z0-9_-]{11})/
+  const ytEmbedRe = /https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})/
+  const ytShortRe = /https?:\/\/(?:www\.)?youtu\.be\/([A-Za-z0-9_-]{11})/
+
+  const ytMatch =
+    body.match(ytEmbedRe) ||  // prefer existing embed URLs first (keep ?rel=0 etc.)
+    body.match(ytWatchRe) ||
+    body.match(ytShortRe)
+  if (ytMatch) return { type: "youtube", videoId: ytMatch[1] }
+
+  // Rumble — embed URL first, then share URL
+  const rumbleEmbed = body.match(/https?:\/\/(?:www\.)?rumble\.com\/embed\/([A-Za-z0-9_-]+)(?:\/|\?|$|\s)/)
+  if (rumbleEmbed) return { type: "rumble", embedId: rumbleEmbed[1] }
+
+  const rumbleShare = body.match(/https?:\/\/(?:www\.)?rumble\.com\/(v[A-Za-z0-9]+)(?:[-/?#\s]|$)/)
+  if (rumbleShare) return { type: "rumble", embedId: rumbleShare[1] }
+
+  // Odysee
+  const odyseeMatch = body.match(/https?:\/\/(?:www\.)?odysee\.com\/([@A-Za-z0-9:_-]+\/[A-Za-z0-9:_-]+)/)
+  if (odyseeMatch) return { type: "odysee", path: odyseeMatch[1] }
+
+  // Direct video file
+  const directMatch = body.match(/https?:\/\/\S+\.(?:mp4|webm|ogg|mov|m4v)(?:\?[^\s]*)?/i)
+  if (directMatch) return { type: "direct", url: directMatch[0] }
+
+  return null
+}
+
 /** Extract the first direct-image URL from a post body (for thumbnails). */
 export function extractFirstImage(body: string): string | null {
   // Prefer markdown images
