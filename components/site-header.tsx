@@ -213,7 +213,6 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           { label: "ABOUT", href: "/about" },
           { label: "ARCHIVES", href: "/archives" },
           { label: "TOWN HALL", href: "/forum" },
-          { label: "QNOTABLES", href: "/qnotables" },
         ].map((link) => (
           <Link
             key={link.href}
