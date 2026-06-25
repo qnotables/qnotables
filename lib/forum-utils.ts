@@ -151,6 +151,43 @@ export function detectMediaBadges(body: string): MediaBadges {
   return { hasImages, hasLinks, hasSocialLinks, hasVideo }
 }
 
+export type VideoEmbed =
+  | { type: "youtube"; videoId: string }
+  | { type: "rumble"; embedId: string }
+  | { type: "odysee"; path: string }
+  | { type: "direct"; url: string }
+
+/**
+ * Extract the first embeddable video from a post body.
+ * Handles YouTube (youtube.com/watch, youtu.be, /embed/),
+ * Rumble (rumble.com/embed/ and /v... share links),
+ * Odysee (odysee.com share links), and bare direct video files.
+ */
+export function extractFirstVideo(body: string): VideoEmbed | null {
+  // YouTube — watch, short, embed
+  const ytRe = /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?(?:[^&\s]+&)*v=|youtube\.com\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/
+  const ytMatch = body.match(ytRe)
+  if (ytMatch) return { type: "youtube", videoId: ytMatch[1] }
+
+  // Rumble embed URL (already an embed)
+  const rumbleEmbed = body.match(/https?:\/\/(?:www\.)?rumble\.com\/embed\/([A-Za-z0-9_-]+)\/?/)
+  if (rumbleEmbed) return { type: "rumble", embedId: rumbleEmbed[1] }
+
+  // Rumble share URL — /v<id>-title.html or /v<id>
+  const rumbleShare = body.match(/https?:\/\/(?:www\.)?rumble\.com\/(v[A-Za-z0-9]+)(?:[^?\s]*)/)
+  if (rumbleShare) return { type: "rumble", embedId: rumbleShare[1] }
+
+  // Odysee
+  const odyseeMatch = body.match(/https?:\/\/(?:www\.)?odysee\.com\/([@A-Za-z0-9:_-]+\/[A-Za-z0-9:_-]+)/)
+  if (odyseeMatch) return { type: "odysee", path: odyseeMatch[1] }
+
+  // Direct video file
+  const directMatch = body.match(/https?:\/\/\S+\.(?:mp4|webm|ogg|mov|m4v)(?:\?[^\s]*)?/i)
+  if (directMatch) return { type: "direct", url: directMatch[0] }
+
+  return null
+}
+
 /** Extract the first direct-image URL from a post body (for thumbnails). */
 export function extractFirstImage(body: string): string | null {
   // Prefer markdown images

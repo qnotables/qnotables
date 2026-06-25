@@ -14,15 +14,18 @@ import {
   Search,
   ChevronDown,
   Activity,
+  Play,
 } from "lucide-react"
 import { timeAgo } from "@/lib/time"
 import {
   FORUM_CATEGORIES,
   SORT_OPTIONS,
   type SortOption,
+  type VideoEmbed,
   buildExcerpt,
   detectMediaBadges,
   extractFirstImage,
+  extractFirstVideo,
   normalizeCategoryName,
 } from "@/lib/forum-utils"
 
@@ -94,9 +97,94 @@ function MediaBadgeRow({ body }: { body: string }) {
   )
 }
 
+function getEmbedSrc(video: VideoEmbed): string | null {
+  switch (video.type) {
+    case "youtube":
+      return `https://www.youtube.com/embed/${video.videoId}?autoplay=1&rel=0`
+    case "rumble":
+      // Rumble share slugs start with "v"; embed endpoint differs from share URL
+      return `https://rumble.com/embed/${video.embedId}/?pub=4`
+    case "odysee":
+      return `https://odysee.com/$/embed/${video.path}`
+    case "direct":
+      return null // rendered as <video> element, not iframe
+  }
+}
+
+function VideoPreview({ video }: { video: VideoEmbed }) {
+  const [active, setActive] = useState(false)
+
+  if (!active) {
+    return (
+      <button
+        onClick={(e) => { e.preventDefault(); setActive(true) }}
+        className="group/play relative mt-3 flex w-full items-center justify-center overflow-hidden border border-border bg-black/60 transition-colors hover:border-primary"
+        style={{ aspectRatio: "16/9" }}
+        aria-label="Play video"
+      >
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px),repeating-linear-gradient(90deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px)]" />
+        {/* Label */}
+        <span className="label-mono absolute left-3 top-2 text-[10px] text-muted-foreground opacity-70">
+          {video.type === "youtube"
+            ? "YOUTUBE"
+            : video.type === "rumble"
+            ? "RUMBLE"
+            : video.type === "odysee"
+            ? "ODYSEE"
+            : "VIDEO"}
+        </span>
+        {/* Play button */}
+        <span className="relative z-10 flex h-14 w-14 items-center justify-center border border-primary/60 bg-primary/20 transition-all group-hover/play:border-primary group-hover/play:bg-primary/40">
+          <Play className="h-6 w-6 fill-primary text-primary" />
+        </span>
+        <span className="label-mono absolute bottom-2 right-3 text-[10px] text-muted-foreground opacity-70">
+          CLICK TO PLAY
+        </span>
+      </button>
+    )
+  }
+
+  if (video.type === "direct") {
+    return (
+      <div className="mt-3 w-full overflow-hidden border border-primary/40" style={{ aspectRatio: "16/9" }}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          src={video.url}
+          controls
+          autoPlay
+          className="h-full w-full bg-black"
+          onClick={(e) => e.preventDefault()}
+        />
+      </div>
+    )
+  }
+
+  const src = getEmbedSrc(video)
+  if (!src) return null
+
+  return (
+    <div
+      className="mt-3 w-full overflow-hidden border border-primary/40"
+      style={{ aspectRatio: "16/9" }}
+      onClick={(e) => e.preventDefault()}
+    >
+      <iframe
+        src={src}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="Embedded video"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
 function ThreadCard({ t }: { t: ThreadListItem }) {
   const excerpt = buildExcerpt(t.body, 160)
   const thumb = extractFirstImage(t.body)
+  const video = extractFirstVideo(t.body)
   const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
   const categoryName = normalizeCategoryName(t.category)
 
@@ -163,6 +251,9 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
             {excerpt}
           </p>
         )}
+
+        {/* Video preview */}
+        {video && <VideoPreview video={video} />}
 
         {/* Tags */}
         {tags.length > 0 && (
