@@ -1,6 +1,38 @@
 import DOMPurify from "isomorphic-dompurify"
 import { marked } from "marked"
 
+/** Shape returned by importPosts / batchImportPosts server actions. */
+export interface ImportResult {
+  success: boolean
+  slug?: string
+  id?: string
+  error?: string
+}
+
+/** Aggregate per-item ImportResult[] into a single summary object. */
+export function summarizeImportResults(results: ImportResult[]): {
+  total: number
+  imported: number
+  skipped: number
+  failed: number
+  errors: Array<{ index: number; error: string }>
+} {
+  const errors: Array<{ index: number; error: string }> = []
+  let imported = 0
+  let failed = 0
+
+  results.forEach((r, index) => {
+    if (r.success) {
+      imported++
+    } else {
+      failed++
+      errors.push({ index, error: r.error || "Unknown error" })
+    }
+  })
+
+  return { total: results.length, imported, skipped: 0, failed, errors }
+}
+
 export interface ParsedPost {
   title: string
   excerpt: string

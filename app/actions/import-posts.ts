@@ -6,6 +6,9 @@ import { isAdminEmail } from "@/lib/admin"
 import { generateSlug, deduplicateSlug } from "@/lib/import-utils"
 import { ImportedPost, validatePosts } from "@/lib/import-parsers"
 
+// Re-export so existing callers that import ImportResult from here keep working
+export type { ImportResult } from "@/lib/import-utils"
+
 export interface ImportPostInput {
   title: string
   excerpt: string
@@ -24,30 +27,6 @@ export interface ImportResult {
   slug?: string
   id?: string
   error?: string
-}
-
-/** Aggregate per-item ImportResult[] into a single summary object. */
-export function summarizeImportResults(results: ImportResult[]): {
-  total: number
-  imported: number
-  skipped: number
-  failed: number
-  errors: Array<{ index: number; error: string }>
-} {
-  const errors: Array<{ index: number; error: string }> = []
-  let imported = 0
-  let failed = 0
-
-  results.forEach((r, index) => {
-    if (r.success) {
-      imported++
-    } else {
-      failed++
-      errors.push({ index, error: r.error || "Unknown error" })
-    }
-  })
-
-  return { total: results.length, imported, skipped: 0, failed, errors }
 }
 
 /**
