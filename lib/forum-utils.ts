@@ -159,22 +159,29 @@ export type VideoEmbed =
 
 /**
  * Extract the first embeddable video from a post body.
- * Handles YouTube (youtube.com/watch, youtu.be, /embed/),
+ * Handles YouTube (youtube.com/watch, youtu.be, /embed/, youtube-nocookie.com),
  * Rumble (rumble.com/embed/ and /v... share links),
  * Odysee (odysee.com share links), and bare direct video files.
  */
 export function extractFirstVideo(body: string): VideoEmbed | null {
-  // YouTube — watch, short, embed
-  const ytRe = /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?(?:[^&\s]+&)*v=|youtube\.com\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/
-  const ytMatch = body.match(ytRe)
+  // YouTube — covers all four URL shapes:
+  //   watch?v=ID  •  watch?feature=…&v=ID  •  /embed/ID  •  youtu.be/ID
+  //   also youtube-nocookie.com/embed/ID
+  const ytWatchRe = /https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/watch\?(?:[^\s"'<#]*&)?v=([A-Za-z0-9_-]{11})/
+  const ytEmbedRe = /https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})/
+  const ytShortRe = /https?:\/\/(?:www\.)?youtu\.be\/([A-Za-z0-9_-]{11})/
+
+  const ytMatch =
+    body.match(ytEmbedRe) ||  // prefer existing embed URLs first (keep ?rel=0 etc.)
+    body.match(ytWatchRe) ||
+    body.match(ytShortRe)
   if (ytMatch) return { type: "youtube", videoId: ytMatch[1] }
 
-  // Rumble embed URL (already an embed)
-  const rumbleEmbed = body.match(/https?:\/\/(?:www\.)?rumble\.com\/embed\/([A-Za-z0-9_-]+)\/?/)
+  // Rumble — embed URL first, then share URL
+  const rumbleEmbed = body.match(/https?:\/\/(?:www\.)?rumble\.com\/embed\/([A-Za-z0-9_-]+)(?:\/|\?|$|\s)/)
   if (rumbleEmbed) return { type: "rumble", embedId: rumbleEmbed[1] }
 
-  // Rumble share URL — /v<id>-title.html or /v<id>
-  const rumbleShare = body.match(/https?:\/\/(?:www\.)?rumble\.com\/(v[A-Za-z0-9]+)(?:[^?\s]*)/)
+  const rumbleShare = body.match(/https?:\/\/(?:www\.)?rumble\.com\/(v[A-Za-z0-9]+)(?:[-/?#\s]|$)/)
   if (rumbleShare) return { type: "rumble", embedId: rumbleShare[1] }
 
   // Odysee
