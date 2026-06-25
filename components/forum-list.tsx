@@ -108,12 +108,12 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
     >
       {/* Thumbnail strip */}
       {thumb && (
-        <div className="hidden w-24 flex-shrink-0 overflow-hidden sm:block">
+        <div className="w-28 flex-shrink-0 overflow-hidden sm:w-44 md:w-52">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={thumb}
             alt=""
-            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+            className="h-full min-h-[7rem] w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
             loading="lazy"
           />
         </div>
