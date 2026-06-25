@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import {
   MessageSquare,
@@ -49,7 +50,6 @@ export interface ThreadListItem {
 interface ForumListProps {
   threads: ThreadListItem[]
   isSignedIn: boolean
-  initialCategory?: string
 }
 
 const PAGE_SIZE = 15
@@ -299,12 +299,26 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
   )
 }
 
-export function ForumList({ threads, isSignedIn, initialCategory = "" }: ForumListProps) {
+export function ForumList({ threads, isSignedIn }: ForumListProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortOption>("latest")
-  const [filterCategory, setFilterCategory] = useState(initialCategory)
+  // Category is owned by the URL — sidebar links and the dropdown stay in sync
+  const filterCategory = searchParams.get("category") ?? ""
   const [filterTag, setFilterTag] = useState("")
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  function setFilterCategory(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value) {
+      params.set("category", value)
+    } else {
+      params.delete("category")
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   // Effective "last activity" timestamp for a thread (falls back to creation).
   const activityTime = (t: ThreadListItem) =>
@@ -458,7 +472,7 @@ export function ForumList({ threads, isSignedIn, initialCategory = "" }: ForumLi
         <div className="border border-border bg-card p-8 text-center">
           <p className="stencil text-lg text-foreground">No threads matched your filters.</p>
           <button
-            onClick={() => { setQuery(""); setFilterCategory(""); setFilterTag("") }}
+            onClick={() => { setQuery(""); setFilterTag(""); setFilterCategory("") }}
             className="label-mono mt-3 text-sm text-primary hover:underline"
           >
             Clear filters

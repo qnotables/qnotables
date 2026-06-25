@@ -18,7 +18,7 @@ export default async function ForumPage({
 }: {
   searchParams: Promise<{ category?: string }>
 }) {
-  const { category: initialCategory = "" } = await searchParams
+  await searchParams // trigger Suspense boundary; category is read client-side via useSearchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -120,7 +120,7 @@ export default async function ForumPage({
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-          <ForumList threads={rows} isSignedIn={Boolean(user)} initialCategory={initialCategory} />
+          <ForumList threads={rows} isSignedIn={Boolean(user)} />
           <ForumSidebar
             stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
             pinned={pinned}
