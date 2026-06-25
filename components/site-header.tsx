@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Menu, Search, ShoppingBag } from "lucide-react"
 import { HeaderMusicPlayer } from "@/components/header-music-player"
+import { NewsTicker } from "@/components/news-ticker"
 import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HeaderAuth } from "@/components/header-auth"
@@ -60,11 +61,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   }, [initialWireStories])
 
   // Prepare ticker items from wire stories
-  const tickerItems = wireStories.length
-    ? wireStories.map((s) => ({ headline: s.headline, url: s.url }))
-    : []
-  const displayTickerItems: { headline: string; url?: string }[] = tickerItems.length ? tickerItems : [{ headline: "Awaiting live wire feed…" }]
-  const tickerLoop = [...displayTickerItems, ...displayTickerItems]
+  const tickerItems = wireStories.map((s) => ({ headline: s.headline, url: s.url }))
 
   return (
     <>
@@ -75,35 +72,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
       />
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         {/* ticker */}
-        <div className="flex items-stretch border-b border-border bg-card">
-          <div className="flex shrink-0 items-center gap-2 bg-primary px-3 py-2 text-primary-foreground">
-            <span className="label-mono font-semibold">BREAKING</span>
-          </div>
-          <div className="group relative flex-1 overflow-hidden">
-            <div className="flex w-max animate-[ticker_200s_linear_infinite] items-center gap-8 py-2 pl-4 group-hover:[animation-play-state:paused]">
-              {tickerLoop.map((item, i) => (
-                <span
-                  key={i}
-                  className="flex items-center gap-8 whitespace-nowrap text-sm italic text-muted-foreground"
-                >
-                  <span className="text-primary">+</span>
-                  {item.url ? (
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="transition-colors hover:text-foreground hover:underline"
-                    >
-                      {item.headline}
-                    </a>
-                  ) : (
-                    <span>{item.headline}</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+        <NewsTicker items={tickerItems} />
 
         {/* status bar */}
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-1.5 italic text-muted-foreground md:px-6">
