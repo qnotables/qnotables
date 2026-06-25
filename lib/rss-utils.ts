@@ -242,28 +242,47 @@ export function resolveFeedImage(record: FeedRecordLike): ResolvedImage {
  * Fails silently (returns undefined) on any error or timeout.
  */
 export async function fetchOpenGraphImage(sourceUrl?: string | null): Promise<string | undefined> {
-  if (!isValidUrl(sourceUrl)) return undefined
+  if (!isAbsoluteExternalUrl(sourceUrl)) return undefined
+
   try {
+    const parsed = new URL(sourceUrl as string)
+
+    // Basic SSRF protection: block obvious local/internal hosts
+    const blockedHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1"]
+    if (blockedHosts.includes(parsed.hostname.toLowerCase())) return undefined
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4000)
-    const res = await fetch(sourceUrl as string, {
+
+    const res = await fetch(parsed.toString(), {
       signal: controller.signal,
-      headers: { "user-agent": "Mozilla/5.0 (compatible; HotAndFreshBot/1.0)" },
+      headers: {
+        "user-agent": "Mozilla/5.0 (compatible; HotAndFreshBot/1.0)",
+        accept: "text/html,application/xhtml+xml",
+      },
     }).finally(() => clearTimeout(timeout))
 
     if (!res.ok) return undefined
+
+    const contentType = res.headers.get("content-type") || ""
+    if (!contentType.toLowerCase().includes("text/html")) return undefined
+
     const html = await res.text()
+
     const patterns = [
       /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
       /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
       /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
     ]
+
     for (const pattern of patterns) {
       const match = html.match(pattern)
       if (match?.[1] && isSafeImageUrl(match[1])) {
         return normalizeAbsoluteUrl(match[1])
       }
     }
+
     return undefined
   } catch (err) {
     console.error("[v0] fetchOpenGraphImage failed:", err instanceof Error ? err.message : err)
@@ -421,7 +440,7 @@ async function getSupabase() {
 }
 
 const SELECT_COLUMNS =
-  "id, slug, title, subtitle, excerpt, body, tag, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, author_name, published_at, created_at, updated_at, blog_post_tags(tag)"
+  "id, slug, title, subtitle, excerpt, body, tag, category, post_type, status, featured, priority, source_name, source_url, cover_image, og_image_url, media_image_url, author_name, published_at, created_at, updated_at, blog_post_tags(tag)"
 
 /**
  * Fetch published, RSS-eligible records and map them into FeedItems.
@@ -489,27 +508,27 @@ export async function getFeedItems(limit = 50): Promise<FeedItem[]> {
   if (needsOgFetch.length > 0) {
     const fetchBatch = needsOgFetch.slice(0, 10)
     const ogImages = await Promise.allSettled(
-      fetchBatch.map((item) => {
-        const row = rows.find((r) => r.slug === item.slug)
-        return fetchOpenGraphImage(row?.source_url)
-      })
-    )
+  fetchBatch.map((item) => {
+    const row = rows.find((r) => r.id === item.id)
+    return fetchOpenGraphImage(row?.source_url)
+  })
+)
 
-    ogImages.forEach((result, i) => {
-      if (result.status === "fulfilled" && result.value) {
-        const item = fetchBatch[i]
-        const idx = items.findIndex((it) => it.slug === item.slug)
-        if (idx !== -1) {
-          items[idx] = {
-            ...items[idx],
-            imageUrl: result.value,
-            imageSource: "source_og",
-            warnings: items[idx].warnings.filter((w) => !w.includes("default feed image")),
-          }
-        }
+ogImages.forEach((result, i) => {
+  if (result.status === "fulfilled" && result.value) {
+    const item = fetchBatch[i]
+    const idx = items.findIndex((it) => it.id === item.id)
+
+    if (idx !== -1) {
+      items[idx] = {
+        ...items[idx],
+        imageUrl: result.value,
+        imageSource: "source_og",
+        warnings: items[idx].warnings.filter((w) => !w.includes("default feed image")),
       }
-    })
+    }
   }
+})
 
   return items
 }
@@ -517,6 +536,21 @@ export async function getFeedItems(limit = 50): Promise<FeedItem[]> {
 /* ----------------------------- XML generation ----------------------------- */
 
 /** Build a single <item> block for a FeedItem. */
+function guessImageMimeType(url: string): string {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase()
+
+    if (pathname.endsWith(".png")) return "image/png"
+    if (pathname.endsWith(".webp")) return "image/webp"
+    if (pathname.endsWith(".gif")) return "image/gif"
+    if (pathname.endsWith(".svg")) return "image/svg+xml"
+    if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) return "image/jpeg"
+
+    return "image/jpeg"
+  } catch {
+    return "image/jpeg"
+  }
+}
 function feedItemToXml(item: FeedItem): string {
   const categories = [item.category, ...item.tags]
     .filter(Boolean)
@@ -524,10 +558,12 @@ function feedItemToXml(item: FeedItem): string {
     .join("\n")
 
   const media =
-    item.imageUrl && isSafeImageUrl(item.imageUrl)
-      ? `    <media:content url="${escapeXml(item.imageUrl)}" medium="image" />\n` +
-        `    <enclosure url="${escapeXml(item.imageUrl)}" type="image/jpeg" />`
-      : ""
+  item.imageUrl && isSafeImageUrl(item.imageUrl)
+    ? `    <media:content url="${escapeXml(item.imageUrl)}" medium="image" />\n` +
+      `    <enclosure url="${escapeXml(item.imageUrl)}" type="${escapeXml(
+        guessImageMimeType(item.imageUrl),
+      )}" />`
+    : ""
 
   const source = item.sourceUrl
     ? `    <source url="${escapeXml(item.sourceUrl)}">${escapeXml(item.sourceName)}</source>`

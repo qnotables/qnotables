@@ -10,10 +10,124 @@ import {
 } from "@/lib/news-data"
 import { getLatestPost } from "@/lib/blog-posts"
 
+import crypto from "crypto"
+
+export function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+}
+
+export function shortHash(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex").slice(0, 8)
+}
+
+export function makeImportedPostSlug(params: {
+  title?: string | null
+  sourceUrl?: string | null
+  guid?: string | null
+  pubDate?: string | null
+  sourceName?: string | null
+}): string {
+  const titleBase = slugify(params.title || "untitled")
+  const sourceHost = (() => {
+    try {
+      return params.sourceUrl ? slugify(new URL(params.sourceUrl).hostname.replace(/^www\./, "")) : ""
+    } catch {
+      return slugify(params.sourceName || "source")
+    }
+  })()
+
+  const datePart = (() => {
+    const d = params.pubDate ? new Date(params.pubDate) : null
+    if (!d || isNaN(d.getTime())) return "undated"
+    return d.toISOString().slice(0, 10)
+  })()
+
+  const hashBase = params.sourceUrl || params.guid || params.title || `${Date.now()}`
+  const hash = shortHash(hashBase)
+
+  return [titleBase, sourceHost, datePart, hash].filter(Boolean).join("-").slice(0, 140)
+}
+
 /**
  * RSS Source Configuration
  * Add new sources here to include them in the feed aggregation
  */
+
+export function extractRssImage(item: any): string | undefined {
+  const candidates: string[] = []
+
+  // media:content
+  const mediaContent = item["media:content"]
+  if (Array.isArray(mediaContent)) {
+    for (const media of mediaContent) {
+      if (media?.$?.url) candidates.push(media.$.url)
+      if (media?.url) candidates.push(media.url)
+    }
+  } else if (mediaContent?.$?.url) {
+    candidates.push(mediaContent.$.url)
+  } else if (mediaContent?.url) {
+    candidates.push(mediaContent.url)
+  }
+
+  // media:thumbnail
+  const mediaThumb = item["media:thumbnail"]
+  if (Array.isArray(mediaThumb)) {
+    for (const thumb of mediaThumb) {
+      if (thumb?.$?.url) candidates.push(thumb.$.url)
+      if (thumb?.url) candidates.push(thumb.url)
+    }
+  } else if (mediaThumb?.$?.url) {
+    candidates.push(mediaThumb.$.url)
+  } else if (mediaThumb?.url) {
+    candidates.push(mediaThumb.url)
+  }
+
+  // enclosure
+  const enclosure = item.enclosure
+  if (Array.isArray(enclosure)) {
+    for (const enc of enclosure) {
+      if (enc?.$?.url) candidates.push(enc.$.url)
+      if (enc?.url) candidates.push(enc.url)
+    }
+  } else if (enclosure?.$?.url) {
+    candidates.push(enclosure.$.url)
+  } else if (enclosure?.url) {
+    candidates.push(enclosure.url)
+  }
+
+  // image
+  if (typeof item.image === "string") candidates.push(item.image)
+  if (item.image?.url) candidates.push(item.image.url)
+
+  // content:encoded or description image
+  const htmlBodies = [
+    item["content:encoded"],
+    item.content,
+    item.description,
+    item.summary,
+  ].filter(Boolean)
+
+  for (const body of htmlBodies) {
+    const text = Array.isArray(body) ? body.join(" ") : String(body)
+    const match = text.match(/<img[^>]+src=["']([^"']+)["']/i)
+    if (match?.[1]) candidates.push(match[1])
+  }
+
+  for (const candidate of candidates) {
+    if (isSafeImageUrl(candidate)) {
+      return normalizeAbsoluteUrl(candidate)
+    }
+  }
+
+  return undefined
+}
+
 export interface RSSSource {
   id: string
   name: string
@@ -25,7 +139,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     id: "watkins",
     name: "/qr/",
-    url: "https://8ch.net/qresearch/tripcode.xml",
+    url: "https://8kun.top/qresearch/tripcode.xml",
     enabled: true,
   },
   // Add more sources below:
