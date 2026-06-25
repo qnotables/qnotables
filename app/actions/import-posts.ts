@@ -26,6 +26,30 @@ export interface ImportResult {
   error?: string
 }
 
+/** Aggregate per-item ImportResult[] into a single summary object. */
+export function summarizeImportResults(results: ImportResult[]): {
+  total: number
+  imported: number
+  skipped: number
+  failed: number
+  errors: Array<{ index: number; error: string }>
+} {
+  const errors: Array<{ index: number; error: string }> = []
+  let imported = 0
+  let failed = 0
+
+  results.forEach((r, index) => {
+    if (r.success) {
+      imported++
+    } else {
+      failed++
+      errors.push({ index, error: r.error || "Unknown error" })
+    }
+  })
+
+  return { total: results.length, imported, skipped: 0, failed, errors }
+}
+
 /**
  * Import a batch of posts to the database.
  * Validates each post, generates slugs with deduplication, and inserts into blog_posts table.
@@ -93,6 +117,7 @@ export async function importPosts(posts: ImportPostInput[]): Promise<ImportResul
           source_name: post.sourceName,
           source_url: post.sourceUrl,
           cover_image: post.coverImage || null,
+          media_image_url: post.coverImage || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -247,7 +272,8 @@ export async function batchImportPosts(posts: ImportedPost[]): Promise<BatchImpo
       source_url: post.source_url,
       source_name: post.source_name,
       original_source_url: post.original_source_url,
-      cover_image: post.cover_image_url,
+      cover_image: post.cover_image_url || null,
+      media_image_url: post.cover_image_url || null,
       author_name: post.author_name || "HOT AND FRESH",
       imported_at: new Date().toISOString(),
       read_minutes: Math.ceil(post.body.split(/\s+/).length / 200),

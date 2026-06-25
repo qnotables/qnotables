@@ -16,16 +16,51 @@ const rssParser = new Parser({
 })
 
 function extractImageFromItem(item: any): string | undefined {
-  // media:content
-  if (item.mediaContent?.$.url) return item.mediaContent.$.url
-  // media:thumbnail
-  if (item.mediaThumbnail?.$.url) return item.mediaThumbnail.$.url
-  // enclosure (podcast / image)
+  // media:content — handle both array (keepArray:true) and scalar
+  if (Array.isArray(item.mediaContent)) {
+    for (const mc of item.mediaContent) {
+      if (mc?.$?.url) return mc.$.url
+      if (mc?.url) return mc.url
+    }
+  } else if (item.mediaContent?.$?.url) {
+    return item.mediaContent.$.url
+  } else if (item.mediaContent?.url) {
+    return item.mediaContent.url
+  }
+
+  // media:thumbnail — same dual handling
+  if (Array.isArray(item.mediaThumbnail)) {
+    for (const mt of item.mediaThumbnail) {
+      if (mt?.$?.url) return mt.$.url
+      if (mt?.url) return mt.url
+    }
+  } else if (item.mediaThumbnail?.$?.url) {
+    return item.mediaThumbnail.$.url
+  } else if (item.mediaThumbnail?.url) {
+    return item.mediaThumbnail.url
+  }
+
+  // enclosure (podcast / image feeds)
   if (item.enclosure?.url && item.enclosure?.type?.startsWith("image/")) {
     return item.enclosure.url
   }
+
+  // Plain image field (e.g. some Atom/custom feeds)
+  if (typeof item.image === "string" && item.image) return item.image
+  if (item.image?.url) return item.image.url
+
   // itunes:image
   if (item["itunes:image"]?.href) return item["itunes:image"].href
+
+  // Extract first <img> from content:encoded, content, description, or summary
+  const bodies: string[] = [item["content:encoded"], item.content, item.description, item.summary].filter(
+    (b): b is string => typeof b === "string" && b.length > 0
+  )
+  for (const body of bodies) {
+    const match = body.match(/<img[^>]+src=["']([^"']+)["']/i)
+    if (match?.[1]) return match[1]
+  }
+
   return undefined
 }
 

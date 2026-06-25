@@ -247,9 +247,22 @@ export async function fetchOpenGraphImage(sourceUrl?: string | null): Promise<st
   try {
     const parsed = new URL(sourceUrl as string)
 
-    // Basic SSRF protection: block obvious local/internal hosts
-    const blockedHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1"]
-    if (blockedHosts.includes(parsed.hostname.toLowerCase())) return undefined
+    // SSRF protection: block loopback, link-local, and RFC-1918 private ranges
+    const hostname = parsed.hostname.toLowerCase()
+    const blockedHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1", "0000::1"]
+    if (blockedHosts.includes(hostname)) return undefined
+
+    const privateIpPatterns = [
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,           // 10.0.0.0/8
+      /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/, // 172.16.0.0/12
+      /^192\.168\.\d{1,3}\.\d{1,3}$/,                // 192.168.0.0/16
+      /^169\.254\.\d{1,3}\.\d{1,3}$/,                // link-local
+      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}$/, // shared addr
+      /^f[cd][0-9a-f]{2}:/i,                          // IPv6 ULA (fc00::/7)
+      /^fe80:/i,                                       // IPv6 link-local
+      /^\[?::1\]?$/,                                   // IPv6 loopback bracket form
+    ]
+    if (privateIpPatterns.some((re) => re.test(hostname))) return undefined
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4000)
@@ -508,27 +521,28 @@ export async function getFeedItems(limit = 50): Promise<FeedItem[]> {
   if (needsOgFetch.length > 0) {
     const fetchBatch = needsOgFetch.slice(0, 10)
     const ogImages = await Promise.allSettled(
-  fetchBatch.map((item) => {
-    const row = rows.find((r) => r.id === item.id)
-    return fetchOpenGraphImage(row?.source_url)
-  })
-)
+      fetchBatch.map((item) => {
+        const row = rows.find((r) => r.id === item.id)
+        return fetchOpenGraphImage(row?.source_url)
+      })
+    )
 
-ogImages.forEach((result, i) => {
-  if (result.status === "fulfilled" && result.value) {
-    const item = fetchBatch[i]
-    const idx = items.findIndex((it) => it.id === item.id)
+    ogImages.forEach((result, i) => {
+      if (result.status === "fulfilled" && result.value) {
+        const item = fetchBatch[i]
+        const idx = items.findIndex((it) => it.id === item.id)
 
-    if (idx !== -1) {
-      items[idx] = {
-        ...items[idx],
-        imageUrl: result.value,
-        imageSource: "source_og",
-        warnings: items[idx].warnings.filter((w) => !w.includes("default feed image")),
+        if (idx !== -1) {
+          items[idx] = {
+            ...items[idx],
+            imageUrl: result.value,
+            imageSource: "source_og",
+            warnings: items[idx].warnings.filter((w) => !w.includes("default feed image")),
+          }
+        }
       }
-    }
+    })
   }
-})
 
   return items
 }

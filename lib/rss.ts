@@ -9,6 +9,7 @@ import {
   trending as fallbackTrending,
 } from "@/lib/news-data"
 import { getLatestPost } from "@/lib/blog-posts"
+import { isSafeImageUrl, normalizeAbsoluteUrl } from "@/lib/rss-utils"
 
 import crypto from "crypto"
 
