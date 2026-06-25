@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import {
   MessageSquare,
@@ -13,8 +13,7 @@ import {
   Video,
   Search,
   ChevronDown,
-  Share2,
-  ExternalLink,
+  Activity,
 } from "lucide-react"
 import { timeAgo } from "@/lib/time"
 import {
@@ -34,6 +33,7 @@ export interface ThreadListItem {
   category: string | null
   tags: string | null
   created_at: string
+  last_activity_at?: string
   author_id: string
   authorName: string
   replyCount: number
@@ -46,7 +46,10 @@ export interface ThreadListItem {
 interface ForumListProps {
   threads: ThreadListItem[]
   isSignedIn: boolean
+  initialCategory?: string
 }
+
+const PAGE_SIZE = 15
 
 function CategoryBadge({ category }: { category: string | null }) {
   if (!category) return null
@@ -182,6 +185,12 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
             <Clock className="h-3 w-3" />
             {timeAgo(t.created_at)}
           </span>
+          {t.replyCount > 0 && t.last_activity_at && t.last_activity_at !== t.created_at && (
+            <span className="flex items-center gap-1 text-primary/80">
+              <Activity className="h-3 w-3" />
+              active {timeAgo(t.last_activity_at)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -199,11 +208,16 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
   )
 }
 
-export function ForumList({ threads, isSignedIn }: ForumListProps) {
+export function ForumList({ threads, isSignedIn, initialCategory = "" }: ForumListProps) {
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortOption>("latest")
-  const [filterCategory, setFilterCategory] = useState("")
+  const [filterCategory, setFilterCategory] = useState(initialCategory)
   const [filterTag, setFilterTag] = useState("")
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  // Effective "last activity" timestamp for a thread (falls back to creation).
+  const activityTime = (t: ThreadListItem) =>
+    new Date(t.last_activity_at ?? t.created_at).getTime()
 
   const filtered = useMemo(() => {
     let rows = [...threads]
@@ -245,18 +259,28 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
         case "most-replies":
           return b.replyCount - a.replyCount
         case "featured":
-          return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || activityTime(b) - activityTime(a)
         case "pinned":
-          return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        case "latest":
+          return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || activityTime(b) - activityTime(a)
         case "newest":
-        default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case "latest":
+        default:
+          // Latest activity: most recent reply (or creation) first
+          return activityTime(b) - activityTime(a)
       }
     }
 
     return [...pinned.sort(sortFn), ...rest.sort(sortFn)]
   }, [threads, query, sort, filterCategory, filterTag])
+
+  // Reset visible window whenever the result set changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [query, sort, filterCategory, filterTag])
+
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = filtered.length > visibleCount
 
   const isEmpty = threads.length === 0
   const noResults = !isEmpty && filtered.length === 0
@@ -354,9 +378,24 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
       {/* Thread list */}
       {filtered.length > 0 && (
         <div className="flex flex-col gap-2">
-          {filtered.map((t) => (
+          {visible.map((t) => (
             <ThreadCard key={t.id} t={t} />
           ))}
+        </div>
+      )}
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <button
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary sm:w-auto sm:px-8"
+          >
+            Load more threads
+          </button>
+          <span className="label-mono text-[10px] text-muted-foreground">
+            Showing {visible.length} of {filtered.length}
+          </span>
         </div>
       )}
     </div>

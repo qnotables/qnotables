@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Clock, CornerDownRight, Pin, Lock, Star } from "lucide-react"
+import { ArrowLeft, ArrowRight, Clock, CornerDownRight, Lock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
@@ -8,6 +8,7 @@ import { ThreadArticle } from "@/components/thread-article"
 import { Markdown } from "@/components/markdown"
 import { ReplyVotes } from "@/components/reply-votes"
 import { ReplyModControls } from "@/components/reply-mod-controls"
+import { ReportButton } from "@/components/report-button"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
@@ -154,6 +155,28 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   const categoryName = normalizeCategoryName(t.category)
 
+  // Prev (newer) and next (older) threads for navigation
+  const [{ data: newerThread }, { data: olderThread }] = await Promise.all([
+    supabase
+      .from("forum_threads")
+      .select("id, title")
+      .eq("is_soft_deleted", false)
+      .eq("is_pending", false)
+      .gt("created_at", t.created_at)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("forum_threads")
+      .select("id, title")
+      .eq("is_soft_deleted", false)
+      .eq("is_pending", false)
+      .lt("created_at", t.created_at)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
@@ -196,6 +219,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           shareUrl={`${getSiteUrl()}/forum/${t.id}`}
         />
 
+        {/* OP report */}
+        {user && user.id !== t.author_id && (
+          <div className="mt-2 flex justify-end">
+            <ReportButton contentType="forum_thread" contentId={t.id} isSignedIn={Boolean(user)} />
+          </div>
+        )}
+
         {/* Replies header */}
         <div className="mb-4 mt-10 flex items-center gap-3">
           <CornerDownRight className="h-4 w-4 text-primary" />
@@ -229,6 +259,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                   </div>
                   <div className="flex items-center gap-2">
                     {isAdmin && <ReplyModControls replyId={r.id} isHidden={r.is_hidden} />}
+                    {user && user.id !== r.author_id && (
+                      <ReportButton contentType="forum_reply" contentId={r.id} isSignedIn={Boolean(user)} compact />
+                    )}
                     <ReplyVotes
                       replyId={r.id}
                       initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
@@ -266,6 +299,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                         </div>
                         <div className="flex items-center gap-2">
                           {isAdmin && <ReplyModControls replyId={nested.id} isHidden={nested.is_hidden} />}
+                          {user && user.id !== nested.author_id && (
+                            <ReportButton contentType="forum_reply" contentId={nested.id} isSignedIn={Boolean(user)} compact />
+                          )}
                           <ReplyVotes
                             replyId={nested.id}
                             initialUpVotes={
@@ -314,6 +350,45 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
             </div>
           )}
         </div>
+
+        {/* Prev / next thread navigation */}
+        {(newerThread || olderThread) && (
+          <nav
+            className="mt-10 grid grid-cols-1 gap-2 border-t border-border pt-6 sm:grid-cols-2"
+            aria-label="Thread navigation"
+          >
+            {newerThread ? (
+              <Link
+                href={`/forum/${newerThread.id}`}
+                className="group flex items-center gap-3 border border-border bg-card p-4 transition-colors hover:border-primary"
+              >
+                <ArrowLeft className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                <span className="min-w-0">
+                  <span className="label-mono block text-[10px] text-muted-foreground">NEWER THREAD</span>
+                  <span className="line-clamp-1 text-sm text-foreground transition-colors group-hover:text-primary">
+                    {newerThread.title}
+                  </span>
+                </span>
+              </Link>
+            ) : (
+              <span className="hidden sm:block" />
+            )}
+            {olderThread && (
+              <Link
+                href={`/forum/${olderThread.id}`}
+                className="group flex items-center justify-end gap-3 border border-border bg-card p-4 text-right transition-colors hover:border-primary"
+              >
+                <span className="min-w-0">
+                  <span className="label-mono block text-[10px] text-muted-foreground">OLDER THREAD</span>
+                  <span className="line-clamp-1 text-sm text-foreground transition-colors group-hover:text-primary">
+                    {olderThread.title}
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+              </Link>
+            )}
+          </nav>
+        )}
       </main>
 
       <SiteFooter />

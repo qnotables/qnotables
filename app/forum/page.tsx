@@ -3,15 +3,22 @@ import { Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ForumList, type ThreadListItem } from "@/components/forum-list"
+import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
+import { FORUM_CATEGORIES } from "@/lib/forum-utils"
 
 export const metadata = {
   title: "The Town Hall — Hot and Fresh",
   description: "Open forum for operators. Start a thread, file a reply, argue the claim.",
 }
 
-export default async function ForumPage() {
+export default async function ForumPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>
+}) {
+  const { category: initialCategory = "" } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -28,21 +35,61 @@ export default async function ForumPage() {
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
 
-  const rows: ThreadListItem[] = (threads ?? []).map((t: any) => ({
-    id: t.id,
-    title: t.title,
-    body: t.body ?? "",
-    category: t.category ?? null,
-    tags: t.tags ?? null,
-    created_at: t.created_at,
-    author_id: t.author_id,
-    authorName: t.profiles?.display_name ?? "operator",
-    replyCount: t.forum_replies?.[0]?.count ?? 0,
-    is_pinned: Boolean(t.is_pinned),
-    is_locked: Boolean(t.is_locked),
-    is_featured: Boolean(t.is_featured),
-    is_soft_deleted: Boolean(t.is_soft_deleted),
-  }))
+  // Last-activity map: latest visible reply timestamp per thread
+  const { data: replyTimes } = await supabase
+    .from("forum_replies")
+    .select("thread_id, created_at")
+    .eq("is_pending", false)
+    .eq("is_hidden", false)
+    .order("created_at", { ascending: false })
+
+  const lastActivityMap = new Map<string, string>()
+  for (const r of replyTimes ?? []) {
+    // rows are sorted desc, so the first one seen per thread is the latest
+    if (!lastActivityMap.has(r.thread_id)) {
+      lastActivityMap.set(r.thread_id, r.created_at)
+    }
+  }
+
+  // Member count
+  const { count: memberCount } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+
+  const rows: ThreadListItem[] = (threads ?? []).map((t: any) => {
+    const replyCount = t.forum_replies?.[0]?.count ?? 0
+    return {
+      id: t.id,
+      title: t.title,
+      body: t.body ?? "",
+      category: t.category ?? null,
+      tags: t.tags ?? null,
+      created_at: t.created_at,
+      last_activity_at: lastActivityMap.get(t.id) ?? t.created_at,
+      author_id: t.author_id,
+      authorName: t.profiles?.display_name ?? "operator",
+      replyCount,
+      is_pinned: Boolean(t.is_pinned),
+      is_locked: Boolean(t.is_locked),
+      is_featured: Boolean(t.is_featured),
+      is_soft_deleted: Boolean(t.is_soft_deleted),
+    }
+  })
+
+  // Sidebar data
+  const totalReplies = rows.reduce((sum, r) => sum + r.replyCount, 0)
+  const categoryCounts: Record<string, number> = {}
+  for (const c of FORUM_CATEGORIES) categoryCounts[c.slug] = 0
+  for (const r of rows) {
+    if (!r.category) continue
+    const slug = r.category.toLowerCase()
+    if (slug in categoryCounts) categoryCounts[slug] += 1
+  }
+
+  const pinned: PinnedThread[] = rows
+    .filter((r) => r.is_pinned)
+    .slice(0, 5)
+    .map((r) => ({ id: r.id, title: r.title, replyCount: r.replyCount }))
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
@@ -53,9 +100,7 @@ export default async function ForumPage() {
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
           <h1 className="stencil text-3xl text-foreground md:text-4xl">The Town Hall</h1>
-          <span className="label-mono hidden text-muted-foreground sm:inline">
-            // OPEN FORUM
-          </span>
+          <span className="label-mono hidden text-muted-foreground sm:inline">// OPEN FORUM</span>
           <span className="ml-auto h-px flex-1 bg-border" />
           {user ? (
             <Link
@@ -74,7 +119,14 @@ export default async function ForumPage() {
           )}
         </div>
 
-        <ForumList threads={rows} isSignedIn={Boolean(user)} />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+          <ForumList threads={rows} isSignedIn={Boolean(user)} initialCategory={initialCategory} />
+          <ForumSidebar
+            stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
+            pinned={pinned}
+            categoryCounts={categoryCounts}
+          />
+        </div>
       </main>
 
       <BottomAd />
