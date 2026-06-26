@@ -197,9 +197,14 @@ function PriorityBadge({ priority }: { priority?: string }) {
 
 function ForumHotCard({ item }: { item: SituationForumItem }) {
   const reply = item.latestReply
-  // Prefer the latest reply body for the preview; fall back to the OP body
-  const previewText = stripMarkdown(reply?.body ?? item.body).slice(0, 160)
-  const thumbSrc = firstImageInBody(item.body)
+
+  // Prefer reply image for thumbnail; fall back to OP image
+  const replyImage = reply ? firstImageInBody(reply.body) : null
+  const thumbSrc = replyImage ?? firstImageInBody(item.body)
+
+  // Strip markdown for text preview — may be empty if body was image-only
+  const previewText = reply ? stripMarkdown(reply.body).trim().slice(0, 160) : ""
+  const fallbackText = !previewText ? stripMarkdown(item.body).trim().slice(0, 160) : ""
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -236,15 +241,24 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         </h3>
       </Link>
 
-      {/* Latest reply preview — labelled so it's clear it's a reply, not the OP */}
-      {previewText && (
+      {/* Latest reply preview */}
+      {reply && (
         <div className="mx-4 border-l-2 border-primary/40 pl-3">
-          {reply && (
-            <p className="label-mono text-[10px] text-primary mb-1">
-              {reply.authorName.toUpperCase()} · {timeAgo(reply.createdAt)}
-            </p>
-          )}
-          <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
+          <p className="label-mono text-[10px] text-primary mb-1">
+            {reply.authorName.toUpperCase()} · {timeAgo(reply.createdAt)}
+          </p>
+          {previewText ? (
+            <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
+          ) : replyImage ? (
+            /* Reply was image-only — show the image inline in the quote block */
+            <img
+              src={replyImage}
+              alt="Latest reply"
+              className="max-h-32 w-auto rounded border border-border object-cover"
+            />
+          ) : fallbackText ? (
+            <p className="text-sm text-muted-foreground line-clamp-2">{fallbackText}</p>
+          ) : null}
         </div>
       )}
 
