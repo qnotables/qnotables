@@ -405,18 +405,23 @@ export function MarkdownEditor({
     e.target.value = ""
   }
 
-  // Paste images from clipboard
+  // Paste images from clipboard — process ALL pasted image files, not just the first
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
     const items = e.clipboardData?.items
     if (!items) return
+
+    const imageFiles: File[] = []
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
       if (item.kind === "file" && item.type.startsWith("image/")) {
-        e.preventDefault()
         const file = item.getAsFile()
-        if (file && canUploadImage) uploadFile(file, "image")
-        break
+        if (file) imageFiles.push(file)
       }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault()
+      if (canUploadImage) handleImageFiles(imageFiles)
     }
   }
 
