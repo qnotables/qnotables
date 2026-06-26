@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 
+export interface ForumThreadLatestReply {
+  body: string
+  authorName: string
+  createdAt: string
+}
+
 export interface ForumThread {
   id: string
   title: string
@@ -11,6 +17,7 @@ export interface ForumThread {
   category?: string
   isPinned?: boolean
   isFeatured?: boolean
+  latestReply?: ForumThreadLatestReply | null
 }
 
 export async function getHottestForumThread(): Promise<ForumThread | null> {
@@ -95,8 +102,31 @@ export async function getTopForumThreads(limit = 3): Promise<ForumThread[]> {
     })
 
     scored.sort((a, b) => b.score - a.score)
+    const top = scored.slice(0, limit).map(({ t }) => t)
+    const topIds = top.map((t: any) => t.id)
 
-    return scored.slice(0, limit).map(({ t }) => ({
+    // Fetch the most recent visible reply for each top thread in one query
+    const { data: recentReplies } = await supabase
+      .from("forum_replies")
+      .select("thread_id, body, created_at, profiles(display_name)")
+      .in("thread_id", topIds)
+      .eq("is_pending", false)
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: false })
+
+    // Build a map: thread_id → latest reply (first match per thread since sorted desc)
+    const latestReplyMap = new Map<string, ForumThreadLatestReply>()
+    for (const r of recentReplies ?? []) {
+      if (!latestReplyMap.has(r.thread_id)) {
+        latestReplyMap.set(r.thread_id, {
+          body: r.body ?? "",
+          authorName: (r as any).profiles?.display_name || "Anonymous",
+          createdAt: r.created_at,
+        })
+      }
+    }
+
+    return top.map((t: any) => ({
       id: t.id,
       title: t.title,
       body: t.body,
@@ -106,6 +136,7 @@ export async function getTopForumThreads(limit = 3): Promise<ForumThread[]> {
       category: t.category || undefined,
       isPinned: t.is_pinned || false,
       isFeatured: t.is_featured || false,
+      latestReply: latestReplyMap.get(t.id) ?? null,
     }))
   } catch (error) {
     console.error("[v0] Failed to fetch top forum threads:", error)

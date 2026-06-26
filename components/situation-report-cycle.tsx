@@ -29,6 +29,7 @@ export interface SituationForumItem {
   replyCount: number
   category?: string
   isFeatured?: boolean
+  latestReply?: { body: string; authorName: string; createdAt: string } | null
 }
 
 export interface SituationBlogItem {
@@ -195,7 +196,9 @@ function PriorityBadge({ priority }: { priority?: string }) {
 // ─── Forum card ──────────────────────────────────────────────────────────────
 
 function ForumHotCard({ item }: { item: SituationForumItem }) {
-  const preview = stripMarkdown(item.body).slice(0, 140)
+  const reply = item.latestReply
+  // Prefer the latest reply body for the preview; fall back to the OP body
+  const previewText = stripMarkdown(reply?.body ?? item.body).slice(0, 160)
   const thumbSrc = firstImageInBody(item.body)
 
   return (
@@ -233,9 +236,16 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         </h3>
       </Link>
 
-      {/* Body preview */}
-      {preview && (
-        <p className="text-sm text-muted-foreground line-clamp-2 flex-1 px-4">{preview}</p>
+      {/* Latest reply preview — labelled so it's clear it's a reply, not the OP */}
+      {previewText && (
+        <div className="mx-4 border-l-2 border-primary/40 pl-3">
+          {reply && (
+            <p className="label-mono text-[10px] text-primary mb-1">
+              {reply.authorName.toUpperCase()} · {timeAgo(reply.createdAt)}
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
+        </div>
       )}
 
       {/* Meta row */}
