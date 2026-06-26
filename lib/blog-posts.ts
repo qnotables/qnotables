@@ -285,6 +285,19 @@ export async function getTopBlogPosts(limit = 3): Promise<BlogPost[]> {
 }
 
 /**
+ * Returns the N most recent blog posts (not archive types), sorted newest first.
+ */
+export async function getRecentBlogPosts(limit = 3): Promise<BlogPost[]> {
+  const posts = await getAllPosts()
+  const blogPosts = posts.filter(
+    (p) => !p.postType || !["Field Note", "Archive Record", "Source Record"].includes(p.postType)
+  )
+  const pool = blogPosts.length > 0 ? blogPosts : posts
+  // getAllPosts() already returns posts sorted newest first
+  return pool.slice(0, limit)
+}
+
+/**
  * Returns the top N archive / field note posts, sorted by hotness score.
  */
 export async function getTopArchivePosts(limit = 3): Promise<BlogPost[]> {

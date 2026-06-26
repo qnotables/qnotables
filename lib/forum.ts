@@ -144,6 +144,65 @@ export async function getTopForumThreads(limit = 3): Promise<ForumThread[]> {
   }
 }
 
+/**
+ * Returns the N most recent forum threads, sorted newest first,
+ * enriched with each thread's latest visible reply.
+ */
+export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
+  try {
+    const supabase = await createClient()
+
+    const { data: threads } = await supabase
+      .from("forum_threads")
+      .select(
+        "id, title, body, created_at, category, is_pinned, is_featured, profiles(display_name), forum_replies(count)"
+      )
+      .eq("is_soft_deleted", false)
+      .order("created_at", { ascending: false })
+      .limit(limit)
+
+    if (!threads || threads.length === 0) return []
+
+    const topIds = threads.map((t: any) => t.id)
+
+    // Fetch the most recent visible reply for each thread in one query
+    const { data: recentReplies } = await supabase
+      .from("forum_replies")
+      .select("thread_id, body, created_at, profiles(display_name)")
+      .in("thread_id", topIds)
+      .eq("is_pending", false)
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: false })
+
+    const latestReplyMap = new Map<string, ForumThreadLatestReply>()
+    for (const r of recentReplies ?? []) {
+      if (!latestReplyMap.has(r.thread_id)) {
+        latestReplyMap.set(r.thread_id, {
+          body: r.body ?? "",
+          authorName: (r as any).profiles?.display_name || "Anonymous",
+          createdAt: r.created_at,
+        })
+      }
+    }
+
+    return threads.map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      body: t.body,
+      authorName: t.profiles?.display_name || "Anonymous",
+      createdAt: t.created_at,
+      replyCount: (t.forum_replies?.[0]?.count ?? 0) as number,
+      category: t.category || undefined,
+      isPinned: t.is_pinned || false,
+      isFeatured: t.is_featured || false,
+      latestReply: latestReplyMap.get(t.id) ?? null,
+    }))
+  } catch (error) {
+    console.error("[v0] Failed to fetch recent forum threads:", error)
+    return []
+  }
+}
+
 export async function getLatestForumThread(): Promise<ForumThread | null> {
   try {
     const supabase = await createClient()

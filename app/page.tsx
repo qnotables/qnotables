@@ -11,31 +11,30 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
-import { SituationReportCycle } from "@/components/situation-report-cycle"
-import type { SituationForumItem, SituationBlogItem, SituationArchiveItem } from "@/components/situation-report-cycle"
+import { SituationFeedCycle } from "@/components/situation-report-cycle"
+import { BookOpen, Users } from "lucide-react"
+import type { SituationForumItem, SituationBlogItem } from "@/components/situation-report-cycle"
 
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { getNews } from "@/lib/rss"
-import { getTopBlogPosts, getTopArchivePosts } from "@/lib/blog-posts"
-import { getTopForumThreads } from "@/lib/forum"
+import { getRecentBlogPosts } from "@/lib/blog-posts"
+import { getRecentForumThreads } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 
 export default async function Page() {
   const [
     { featured, topStories, feed, trending, live },
-    topThreads,
-    topBlogs,
-    topArchives,
+    recentThreads,
+    recentBlogs,
   ] = await Promise.all([
     getNews(),
-    getTopForumThreads(3),
-    getTopBlogPosts(3),
-    getTopArchivePosts(3),
+    getRecentForumThreads(3),
+    getRecentBlogPosts(3),
   ])
 
   // Map to typed cycle props
-  const forumItems: SituationForumItem[] = topThreads.map((t) => ({
+  const forumItems: SituationForumItem[] = recentThreads.map((t) => ({
     type: "forum",
     id: t.id,
     title: t.title,
@@ -48,7 +47,7 @@ export default async function Page() {
     latestReply: t.latestReply ?? null,
   }))
 
-  const blogItems: SituationBlogItem[] = topBlogs.map((p) => ({
+  const blogItems: SituationBlogItem[] = recentBlogs.map((p) => ({
     type: "blog",
     id: p.id,
     slug: p.slug,
@@ -67,23 +66,6 @@ export default async function Page() {
     content: p.content,
   }))
 
-  const archiveItems: SituationArchiveItem[] = topArchives.map((p) => ({
-    type: "archive",
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    excerpt: p.excerpt,
-    category: p.category,
-    tag: p.tag,
-    postType: p.postType,
-    priority: p.priority,
-    featured: p.featured,
-    coverImage: p.coverImage,
-    sourceName: p.sourceName,
-    date: p.date,
-    readMinutes: p.readMinutes,
-  }))
-  
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
     headline: s.headline,
@@ -120,12 +102,19 @@ export default async function Page() {
           <div className="lg:col-span-2">
             <FeaturedStory story={featured} />
 
-            {/* Situation Report cycle: Forum / Blog / Archive */}
-            <div className="mt-6">
-              <SituationReportCycle
-                forumItems={forumItems}
-                blogItems={[...blogItems, ...archiveItems]}
-                archiveItems={[]}
+            {/* Situation Report cyclers: recent blog posts (top) + recent forum posts (bottom) */}
+            <div className="mt-6 flex flex-col gap-6">
+              <SituationFeedCycle
+                items={blogItems}
+                heading="LATEST DISPATCHES"
+                icon={BookOpen}
+                emptyLabel="BLOG DISPATCHES"
+              />
+              <SituationFeedCycle
+                items={forumItems}
+                heading="LATEST FORUM ACTIVITY"
+                icon={Users}
+                emptyLabel="FORUM ACTIVITY"
               />
             </div>
             
