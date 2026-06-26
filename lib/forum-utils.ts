@@ -260,6 +260,7 @@ export function serializeTags(tags: string[]): string {
 /**
  * Sanitize a post body before passing to the Markdown renderer:
  * - Remove bare `!image` commands (legacy artifact)
+ * - Convert bare image URLs on their own line to ![img](url) so they render
  * - Turn bare social media URLs into link-only markdown (not img syntax)
  * - Validate markdown images: strip unsafe or social-media image src
  */
@@ -269,11 +270,22 @@ export function preprocessBody(raw: string): string {
   // Remove bare !image commands (not preceded by [ or followed by ()
   text = text.replace(/(?<!\[)!image(?!\()\s*/gi, "")
 
+  // Convert bare image URLs that sit alone on a line into markdown images.
+  // Uses a negative look-behind to skip URLs already inside ![...](...) or [...](...).
+  // Matches: https://example.com/photo.jpg  (with optional query string)
+  text = text.replace(
+    /(?<!\]\()(?<!!)\b(https?:\/\/\S+\.(?:jpg|jpeg|png|webp|gif|avif)(?:\?[^\s]*)?)\b/gim,
+    (match, url, _offset, _str) => {
+      if (isSocialMediaUrl(url)) return match
+      // If the line is just this URL (possibly with surrounding whitespace), wrap it
+      return `![image](${url})`
+    },
+  )
+
   // Replace markdown images that point at social-media pages (not direct images)
   // e.g. ![image](https://truthsocial.com/post/123) → just a link
   text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g, (match, alt, url) => {
     if (isSocialMediaUrl(url) && !isDirectImageUrl(url)) {
-      // Render as a plain link instead of broken image
       return `[${alt || url}](${url})`
     }
     return match
