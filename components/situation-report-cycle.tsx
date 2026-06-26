@@ -594,6 +594,149 @@ function StoryCarousel({ items, emptyLabel, emptyIcon }: StoryCarouselProps) {
   )
 }
 
+// ─── Single-feed auto-cycler ──────────────────────────────────────────────────
+
+interface SituationFeedCycleProps {
+  items: SituationItem[]
+  heading: string
+  iconName: "blog" | "forum"
+  emptyLabel: string
+}
+
+const FEED_ICONS = {
+  blog: BookOpen,
+  forum: Users,
+} as const
+
+/**
+ * A self-contained cycler that auto-advances through a single list of items
+ * (e.g. recent blog posts OR recent forum threads). Pauses on hover and
+ * respects prefers-reduced-motion. Includes manual prev/next + dot controls.
+ */
+export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: SituationFeedCycleProps) {
+  const Icon = FEED_ICONS[iconName]
+  const [idx, setIdx] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const total = items.length
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+    setReducedMotion(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+  }, [])
+
+  // Keep index in range if the list shrinks
+  useEffect(() => {
+    setIdx((i) => (total === 0 ? 0 : i % total))
+  }, [total])
+
+  useEffect(() => {
+    if (reducedMotion || isPaused || total <= 1) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
+    }
+    timerRef.current = setInterval(() => {
+      setIdx((i) => (i + 1) % total)
+    }, CYCLE_INTERVAL)
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isPaused, reducedMotion, total])
+
+  function prev() { setIdx((i) => (i - 1 + total) % total) }
+  function next() { setIdx((i) => (i + 1) % total) }
+
+  const item = items[idx]
+
+  return (
+    <div
+      className="border border-border bg-card overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Heading bar */}
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <span className="flex items-center gap-1.5 label-mono text-[11px] font-semibold text-primary">
+          <Icon className="h-3 w-3" />
+          {heading}
+        </span>
+        {total > 0 && (
+          <span className="ml-1 px-1 py-0.5 text-[9px] rounded-sm font-bold bg-primary/20 text-primary">
+            {total}
+          </span>
+        )}
+      </div>
+
+      {/* Active card */}
+      <div className="min-h-[320px]">
+        {total === 0 ? (
+          <EmptyCard label={emptyLabel} icon={Icon} />
+        ) : (
+          <div key={idx}>
+            {item.type === "forum" ? (
+              <ForumHotCard item={item as SituationForumItem} />
+            ) : item.type === "blog" ? (
+              <BlogHotCard item={item as SituationBlogItem} />
+            ) : (
+              <ArchiveHotCard item={item as SituationArchiveItem} />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination controls */}
+      {total > 1 && (
+        <div className="flex items-center justify-between border-t border-border px-4 py-2 bg-muted/30">
+          <button
+            onClick={prev}
+            aria-label="Previous item"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                aria-label={`Item ${i + 1} of ${total}`}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === idx ? "w-4 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground"
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={next}
+            aria-label="Next item"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Progress bar (auto-cycle indicator) */}
+      {!reducedMotion && !isPaused && total > 1 && (
+        <div className="h-px bg-border">
+          <div
+            key={idx}
+            className="h-full bg-primary/60 animate-[shrink_10s_linear_forwards]"
+            style={{ width: "100%" }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main cycle component ─────────────────────────────────────────────────────
 
 interface SituationReportCycleProps {
