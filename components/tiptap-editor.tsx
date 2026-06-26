@@ -21,8 +21,6 @@ import {
   Quote,
   Code2,
   Link2,
-  ImageIcon,
-  Upload,
   Loader2,
   X,
   Eye,
@@ -32,34 +30,36 @@ import {
   AlignCenter,
   AlignRight,
   CheckCircle2,
-  AlertCircle,
   Clock,
   Film,
   ExternalLink,
   Video,
 } from "lucide-react"
 import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
+import {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+  MAX_IMAGES,
+  MAX_VIDEO_BYTES,
+  UploadedMedia,
+  uploadMediaFile,
+  validateMediaFile,
+  iframeToMarkdownComment,
+} from "@/lib/media-utils"
+import {
+  MediaUploadButton,
+  MediaPreviewGrid,
+} from "@/components/editor/MediaUploadButton"
+import { EmbedMediaModal } from "@/components/editor/EmbedMediaModal"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_IMAGES = 10
-const MAX_BYTES = 10 * 1024 * 1024
-const MAX_VIDEO_BYTES = 500 * 1024 * 1024
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"])
-const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/mov"])
+const MAX_TIPTAP_IMAGES = 10 // blog editor allows more
+const MAX_IMAGE_BYTES_TIPTAP = 10 * 1024 * 1024 // 10 MB for blog
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface UploadedImage {
-  id: string
-  url: string
-  filename: string
-  status: "uploading" | "done" | "error"
-  error?: string
-}
-
 export interface TiptapEditorProps {
-  /** Hidden input name — serialized JSON is posted under this key */
   name: string
   id?: string
   defaultValue?: string
@@ -67,31 +67,33 @@ export interface TiptapEditorProps {
   required?: boolean
   uploadFolder?: "forum" | "blog"
   isSignedIn?: boolean
-  /** Called whenever editor content changes (JSON string) */
   onChange?: (json: string) => void
 }
 
 // ─── EmbedBlock Node ──────────────────────────────────────────────────────────
 
-function EmbedBlockView({ node, deleteNode }: {
+function EmbedBlockView({
+  node,
+  deleteNode,
+}: {
   node: { attrs: { provider: string; embedUrl: string; title: string; originalUrl: string } }
   deleteNode: () => void
 }) {
   const { provider, embedUrl, title, originalUrl } = node.attrs
   const isX = provider === "x"
-  const isInstagram = provider === "instagram"
 
   return (
     <NodeViewWrapper className="embed-block-wrapper my-4 select-none" contentEditable={false}>
       <div className="relative overflow-hidden border border-border bg-card">
-        {/* Header bar */}
         <div className="flex items-center justify-between border-b border-border bg-muted/60 px-3 py-1.5">
           <div className="flex items-center gap-2">
             <Film className="h-3.5 w-3.5 text-primary" />
             <span className="label-mono text-xs text-muted-foreground">
               {provider.toUpperCase()} EMBED
             </span>
-            {title && <span className="label-mono truncate text-xs text-foreground">{title}</span>}
+            {title && (
+              <span className="label-mono truncate text-xs text-foreground">{title}</span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <a
@@ -115,7 +117,6 @@ function EmbedBlockView({ node, deleteNode }: {
           </div>
         </div>
 
-        {/* X / Twitter — no iframe support; show link card */}
         {isX ? (
           <div className="flex flex-col items-center gap-3 px-6 py-6">
             <p className="label-mono text-sm text-muted-foreground">X / Twitter post</p>
@@ -130,7 +131,6 @@ function EmbedBlockView({ node, deleteNode }: {
             </a>
           </div>
         ) : (
-          /* All other providers — render iframe */
           <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
             <iframe
               src={embedUrl}
@@ -148,7 +148,6 @@ function EmbedBlockView({ node, deleteNode }: {
   )
 }
 
-// Build the Tiptap Node extension for embeds
 function createEmbedBlockExtension() {
   return TiptapNode.create({
     name: "embedBlock",
@@ -156,7 +155,6 @@ function createEmbedBlockExtension() {
     atom: true,
     draggable: true,
     selectable: true,
-
     addAttributes() {
       return {
         provider: { default: "" },
@@ -165,15 +163,12 @@ function createEmbedBlockExtension() {
         title: { default: "" },
       }
     },
-
     parseHTML() {
       return [{ tag: 'div[data-type="embed-block"]' }]
     },
-
     renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
       return ["div", mergeAttributes(HTMLAttributes as Record<string, string>, { "data-type": "embed-block" })]
     },
-
     addNodeView() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ReactNodeViewRenderer(EmbedBlockView as any)
@@ -183,7 +178,10 @@ function createEmbedBlockExtension() {
 
 // ─── VideoBlock Node ──────────────────────────────────────────────────────────
 
-function VideoBlockView({ node, deleteNode }: {
+function VideoBlockView({
+  node,
+  deleteNode,
+}: {
   node: { attrs: { src: string; title: string } }
   deleteNode: () => void
 }) {
@@ -195,7 +193,9 @@ function VideoBlockView({ node, deleteNode }: {
           <div className="flex items-center gap-2">
             <Video className="h-3.5 w-3.5 text-primary" />
             <span className="label-mono text-xs text-muted-foreground">UPLOADED VIDEO</span>
-            {title && <span className="label-mono truncate text-xs text-foreground">{title}</span>}
+            {title && (
+              <span className="label-mono truncate text-xs text-foreground">{title}</span>
+            )}
           </div>
           <button
             type="button"
@@ -225,22 +225,18 @@ function createVideoBlockExtension() {
     atom: true,
     draggable: true,
     selectable: true,
-
     addAttributes() {
       return {
         src: { default: "" },
         title: { default: "" },
       }
     },
-
     parseHTML() {
       return [{ tag: 'div[data-type="video-block"]' }]
     },
-
     renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
       return ["div", mergeAttributes(HTMLAttributes as Record<string, string>, { "data-type": "video-block" })]
     },
-
     addNodeView() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ReactNodeViewRenderer(VideoBlockView as any)
@@ -248,7 +244,7 @@ function createVideoBlockExtension() {
   })
 }
 
-// ─── Toolbar Button ───────────────────────────────────────────────────────────
+// ─── Toolbar helpers ──────────────────────────────────────────────────────────
 
 function ToolBtn({
   title,
@@ -284,56 +280,6 @@ function Divider() {
   return <div className="mx-0.5 h-5 w-px bg-border" />
 }
 
-// ─── Image Preview Grid ───────────────────────────────────────────────────────
-
-function ImagePreviewGrid({
-  images,
-  onRemove,
-}: {
-  images: UploadedImage[]
-  onRemove: (id: string) => void
-}) {
-  if (images.length === 0) return null
-  return (
-    <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-2">
-      {images.map((img) => (
-        <div
-          key={img.id}
-          className="group relative h-14 w-14 flex-shrink-0 overflow-hidden border border-border bg-background"
-        >
-          {img.status === "uploading" ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : img.status === "error" ? (
-            <div className="flex h-full w-full flex-col items-center justify-center px-1">
-              <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-            </div>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={img.url} alt={img.filename} className="h-full w-full object-cover" />
-          )}
-          {img.status === "done" && (
-            <div className="absolute bottom-0.5 right-0.5">
-              <CheckCircle2 className="h-3 w-3 text-green-400 drop-shadow" />
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => onRemove(img.id)}
-            className="absolute right-0 top-0 hidden p-0.5 bg-background/80 hover:bg-destructive hover:text-white text-muted-foreground group-hover:block transition-colors"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      ))}
-      <span className="label-mono self-end text-[10px] text-muted-foreground">
-        {images.filter((i) => i.status === "done").length}/{MAX_IMAGES} images
-      </span>
-    </div>
-  )
-}
-
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 function calculateStats(text: string) {
@@ -358,42 +304,36 @@ export function TiptapEditor({
   onChange,
 }: TiptapEditorProps) {
   const [tab, setTab] = useState<"write" | "preview">("write")
-  const [images, setImages] = useState<UploadedImage[]>([])
+  const [media, setMedia] = useState<UploadedMedia[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [pendingEmbed, setPendingEmbed] = useState<EmbedData | null>(null)
-  const [videoUploading, setVideoUploading] = useState(false)
-  const [videoUploadError, setVideoUploadError] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const videoFileRef = useRef<HTMLInputElement>(null)
   const [jsonValue, setJsonValue] = useState<string>("")
   const [previewText, setPreviewText] = useState<string>("")
 
-  const doneCount = images.filter((i) => i.status === "done").length
-  const canUpload = isSignedIn && doneCount < MAX_IMAGES
+  const imageDone = media.filter((m) => m.kind === "image" && m.status === "done").length
+  const canUpload = isSignedIn && imageDone < MAX_TIPTAP_IMAGES
 
-  // Parse defaultValue – could be JSON or legacy Markdown string
+  // Keep a stable ref for use inside Tiptap's handleDrop closure
+  const uploadVideoFileRef = useRef<(file: File) => void>(() => {})
+
   const getInitialContent = () => {
     if (!defaultValue || defaultValue.trim() === "") return ""
     try {
       const parsed = JSON.parse(defaultValue)
       if (parsed?.type === "doc") return parsed
     } catch {
-      // legacy Markdown — convert to plain paragraph nodes
+      // legacy markdown / plain text
     }
-    // Treat as plain text (basic conversion)
     return defaultValue
   }
 
   const EmbedBlock = useRef(createEmbedBlockExtension()).current
   const VideoBlock = useRef(createVideoBlockExtension()).current
-  // Use a ref so handleDrop can call the latest uploadVideoFile without stale closure
-  const uploadVideoFileRef = useRef<(file: File) => void>(() => {})
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        // Disable built-in blockquote/code/heading since we configure them separately
         blockquote: {},
         codeBlock: {},
         heading: { levels: [1, 2, 3] },
@@ -446,7 +386,7 @@ export function TiptapEditor({
           const videoFiles = allFiles.filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
           if (imageFiles.length > 0 && canUpload) {
             event.preventDefault()
-            imageFiles.slice(0, MAX_IMAGES - doneCount).forEach(uploadImageFile)
+            imageFiles.slice(0, MAX_TIPTAP_IMAGES - imageDone).forEach(uploadImageFile)
             return true
           }
           if (videoFiles.length > 0 && uploadFolder === "blog") {
@@ -460,11 +400,9 @@ export function TiptapEditor({
     },
   })
 
-  // Sync jsonValue on mount from editor
   useEffect(() => {
     if (editor && jsonValue === "") {
-      const json = JSON.stringify(editor.getJSON())
-      setJsonValue(json)
+      setJsonValue(JSON.stringify(editor.getJSON()))
     }
   }, [editor, jsonValue])
 
@@ -474,123 +412,125 @@ export function TiptapEditor({
 
   const uploadImageFile = useCallback(
     async (file: File) => {
-      if (!ALLOWED_IMAGE_TYPES.has(file.type)) return
-      if (file.size > MAX_BYTES) return
-      if (!canUpload) return
-
+      const err = validateMediaFile(file, "image")
+      if (err || file.size > MAX_IMAGE_BYTES_TIPTAP || !canUpload) return
       const tempId = crypto.randomUUID()
-      setImages((prev) => [
+      setMedia((prev) => [
         ...prev,
-        { id: tempId, url: "", filename: file.name, status: "uploading" },
+        { id: tempId, url: "", filename: file.name, size: file.size, kind: "image", status: "uploading" },
       ])
-
       try {
-        const fd = new FormData()
-        fd.append("file", file)
-        fd.append("folder", uploadFolder)
-        const res = await fetch("/api/upload", { method: "POST", body: fd })
-        const json = await res.json()
-
-        if (!res.ok || !json.success) throw new Error(json.error ?? "Upload failed")
-
-        setImages((prev) =>
-          prev.map((i) =>
-            i.id === tempId ? { ...i, url: json.url, filename: json.filename, status: "done" } : i,
+        const result = await uploadMediaFile(file, uploadFolder)
+        setMedia((prev) =>
+          prev.map((m) =>
+            m.id === tempId ? { ...m, url: result.url, filename: result.filename, status: "done" } : m,
           ),
         )
-
-        // Insert image into editor
-        editor?.chain().focus().setImage({ src: json.url, alt: file.name }).run()
+        editor?.chain().focus().setImage({ src: result.url, alt: file.name }).run()
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed"
-        setImages((prev) =>
-          prev.map((i) => (i.id === tempId ? { ...i, status: "error", error: msg } : i)),
+        setMedia((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, status: "error", error: msg } : m)),
         )
       }
     },
-    [canUpload, editor, uploadFolder, doneCount],
+    [canUpload, editor, uploadFolder, imageDone],
   )
 
-  function removeImage(imgId: string) {
-    setImages((prev) => prev.filter((i) => i.id !== imgId))
+  function removeMedia(id: string) {
+    setMedia((prev) => prev.filter((m) => m.id !== id))
   }
 
   // ─── Video upload ──────────────────────────────────────────────────────────
 
   const uploadVideoFile = useCallback(
-
     async (file: File) => {
-      if (!ALLOWED_VIDEO_TYPES.has(file.type)) {
-        setVideoUploadError("Only MP4, WEBM, and MOV videos are allowed.")
-        return
-      }
-      if (file.size > MAX_VIDEO_BYTES) {
-        setVideoUploadError("Video must be 500 MB or smaller.")
-        return
-      }
-      if (uploadFolder !== "blog") {
-        setVideoUploadError("Video uploads are only available in blog posts.")
-        return
-      }
+      if (!ALLOWED_VIDEO_TYPES.has(file.type)) return
+      if (file.size > MAX_VIDEO_BYTES) return
+      if (uploadFolder !== "blog") return
 
-      setVideoUploading(true)
-      setVideoUploadError(null)
+      const tempId = crypto.randomUUID()
+      setMedia((prev) => [
+        ...prev,
+        { id: tempId, url: "", filename: file.name, size: file.size, kind: "video", status: "uploading" },
+      ])
 
       try {
-        const fd = new FormData()
-        fd.append("file", file)
-        fd.append("folder", uploadFolder)
-        const res = await fetch("/api/upload", { method: "POST", body: fd })
-        const json = await res.json()
-
-        if (!res.ok || !json.success) throw new Error(json.error ?? "Upload failed")
-
-        // Insert video block into editor
+        const result = await uploadMediaFile(file, uploadFolder)
+        setMedia((prev) =>
+          prev.map((m) =>
+            m.id === tempId ? { ...m, url: result.url, filename: result.filename, status: "done" } : m,
+          ),
+        )
         editor?.chain().focus().insertContent({
           type: "videoBlock",
-          attrs: { src: json.url, title: file.name },
+          attrs: { src: result.url, title: file.name },
         }).run()
       } catch (err) {
-        setVideoUploadError(err instanceof Error ? err.message : "Video upload failed")
-      } finally {
-        setVideoUploading(false)
+        const msg = err instanceof Error ? err.message : "Video upload failed"
+        setMedia((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, status: "error", error: msg } : m)),
+        )
       }
     },
     [editor, uploadFolder],
   )
 
-  // Keep the ref in sync so handleDrop can always call the latest version
   uploadVideoFileRef.current = uploadVideoFile
 
-  // ─── Embed insertion ───────────────────────────────────────────────────────
+  // ─── MediaUploadButton callbacks ──────────────────────────────────────────
 
-  function confirmEmbed(embed: EmbedData) {
-    editor
-      ?.chain()
-      .focus()
-      .insertContent({
-        type: "embedBlock",
-        attrs: {
-          provider: embed.provider,
-          originalUrl: embed.originalUrl,
-          embedUrl: embed.embedUrl,
-          title: embed.title,
-        },
-      })
-      .run()
+  function onImageUploaded(url: string, filename: string) {
+    setMedia((prev) => {
+      const existing = prev.find((m) => m.filename === filename && m.status === "uploading")
+      if (existing) return prev.map((m) => (m.id === existing.id ? { ...m, url, status: "done" } : m))
+      return [...prev, { id: crypto.randomUUID(), url, filename, size: 0, kind: "image", status: "done" }]
+    })
+    editor?.chain().focus().setImage({ src: url, alt: filename }).run()
+  }
+
+  function onVideoUploaded(url: string, filename: string) {
+    setMedia((prev) => {
+      const existing = prev.find((m) => m.filename === filename && m.status === "uploading")
+      if (existing) return prev.map((m) => (m.id === existing.id ? { ...m, url, status: "done" } : m))
+      return [...prev, { id: crypto.randomUUID(), url, filename, size: 0, kind: "video", status: "done" }]
+    })
+    editor?.chain().focus().insertContent({
+      type: "videoBlock",
+      attrs: { src: url, title: filename },
+    }).run()
+  }
+
+  // ─── EmbedMediaModal callbacks ────────────────────────────────────────────
+
+  function onEmbedImageUrl(url: string) {
+    editor?.chain().focus().setImage({ src: url }).run()
+  }
+
+  function onEmbedUrl(embed: EmbedData) {
+    editor?.chain().focus().insertContent({
+      type: "embedBlock",
+      attrs: {
+        provider: embed.provider,
+        originalUrl: embed.originalUrl,
+        embedUrl: embed.embedUrl,
+        title: embed.title,
+      },
+    }).run()
     setPendingEmbed(null)
   }
 
-  function dismissEmbed() {
-    // Insert raw link instead
-    if (pendingEmbed) {
-      editor
-        ?.chain()
-        .focus()
-        .insertContent(`<a href="${pendingEmbed.originalUrl}" target="_blank" rel="noopener noreferrer nofollow">${pendingEmbed.originalUrl}</a>`)
-        .run()
-    }
-    setPendingEmbed(null)
+  function onIframeCode(src: string, title: string) {
+    // For Tiptap, insert as embedBlock using direct src
+    editor?.chain().focus().insertContent({
+      type: "embedBlock",
+      attrs: {
+        provider: "iframe",
+        originalUrl: src,
+        embedUrl: src,
+        title,
+      },
+    }).run()
   }
 
   // ─── Link insertion ────────────────────────────────────────────────────────
@@ -609,72 +549,150 @@ export function TiptapEditor({
     }
   }
 
-  // ─── Toolbar ───────────────────────────────────────────────────────────────
+  // ─── Pending embed banner (from paste detection) ──────────────────────────
+
+  function confirmEmbed(embed: EmbedData) {
+    onEmbedUrl(embed)
+  }
+
+  function dismissEmbed() {
+    if (pendingEmbed) {
+      editor
+        ?.chain()
+        .focus()
+        .insertContent(
+          `<a href="${pendingEmbed.originalUrl}" target="_blank" rel="noopener noreferrer nofollow">${pendingEmbed.originalUrl}</a>`,
+        )
+        .run()
+    }
+    setPendingEmbed(null)
+  }
 
   if (!editor) return null
+
+  // ─── Toolbar ───────────────────────────────────────────────────────────────
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/40 px-1 py-1">
       {/* Headings */}
-      <ToolBtn title="Heading 1" active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+      <ToolBtn
+        title="Heading 1"
+        active={editor.isActive("heading", { level: 1 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+      >
         <Heading1 className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Heading 2" active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+      <ToolBtn
+        title="Heading 2"
+        active={editor.isActive("heading", { level: 2 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+      >
         <Heading2 className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Heading 3" active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+      <ToolBtn
+        title="Heading 3"
+        active={editor.isActive("heading", { level: 3 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+      >
         <Heading3 className="h-3.5 w-3.5" />
       </ToolBtn>
 
       <Divider />
 
       {/* Inline formatting */}
-      <ToolBtn title="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
+      <ToolBtn
+        title="Bold"
+        active={editor.isActive("bold")}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+      >
         <Bold className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
+      <ToolBtn
+        title="Italic"
+        active={editor.isActive("italic")}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+      >
         <Italic className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Underline" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+      <ToolBtn
+        title="Underline"
+        active={editor.isActive("underline")}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+      >
         <UnderlineIcon className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Inline code" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
+      <ToolBtn
+        title="Inline code"
+        active={editor.isActive("code")}
+        onClick={() => editor.chain().focus().toggleCode().run()}
+      >
         <Code2 className="h-3.5 w-3.5" />
       </ToolBtn>
 
       <Divider />
 
       {/* Lists */}
-      <ToolBtn title="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+      <ToolBtn
+        title="Bullet list"
+        active={editor.isActive("bulletList")}
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+      >
         <List className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Numbered list" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+      <ToolBtn
+        title="Numbered list"
+        active={editor.isActive("orderedList")}
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+      >
         <ListOrdered className="h-3.5 w-3.5" />
       </ToolBtn>
 
       <Divider />
 
       {/* Block elements */}
-      <ToolBtn title="Blockquote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+      <ToolBtn
+        title="Blockquote"
+        active={editor.isActive("blockquote")}
+        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      >
         <Quote className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Code block" active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
+      <ToolBtn
+        title="Code block"
+        active={editor.isActive("codeBlock")}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+      >
         <Code2 className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Horizontal rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+      <ToolBtn
+        title="Horizontal rule"
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+      >
         <Minus className="h-3.5 w-3.5" />
       </ToolBtn>
 
       <Divider />
 
       {/* Alignment */}
-      <ToolBtn title="Align left" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+      <ToolBtn
+        title="Align left"
+        active={editor.isActive({ textAlign: "left" })}
+        onClick={() => editor.chain().focus().setTextAlign("left").run()}
+      >
         <AlignLeft className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Align center" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+      <ToolBtn
+        title="Align center"
+        active={editor.isActive({ textAlign: "center" })}
+        onClick={() => editor.chain().focus().setTextAlign("center").run()}
+      >
         <AlignCenter className="h-3.5 w-3.5" />
       </ToolBtn>
-      <ToolBtn title="Align right" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+      <ToolBtn
+        title="Align right"
+        active={editor.isActive({ textAlign: "right" })}
+        onClick={() => editor.chain().focus().setTextAlign("right").run()}
+      >
         <AlignRight className="h-3.5 w-3.5" />
       </ToolBtn>
 
@@ -685,63 +703,23 @@ export function TiptapEditor({
         <Link2 className="h-3.5 w-3.5" />
       </ToolBtn>
 
-      {/* Image */}
-      {isSignedIn && (
-        <ToolBtn
-          title={canUpload ? "Upload image" : `Image limit (${MAX_IMAGES})`}
-          disabled={!canUpload}
-          onClick={() => fileRef.current?.click()}
-        >
-          {images.some((i) => i.status === "uploading") ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <ImageIcon className="h-3.5 w-3.5" />
-          )}
-        </ToolBtn>
-      )}
-      <ToolBtn
-        title="Insert image URL"
-        onClick={() => {
-          const url = prompt("Image URL:")
-          if (url && /^https?:\/\//i.test(url.trim())) {
-            editor.chain().focus().setImage({ src: url.trim() }).run()
-          }
-        }}
-      >
-        <Upload className="h-3.5 w-3.5" />
-      </ToolBtn>
+      <Divider />
 
-      {/* Video upload — blog only */}
-      {isSignedIn && uploadFolder === "blog" && (
-        <ToolBtn
-          title={videoUploading ? "Uploading video…" : "Upload video (MP4, WEBM, MOV — max 500 MB)"}
-          disabled={videoUploading}
-          onClick={() => videoFileRef.current?.click()}
-        >
-          {videoUploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Video className="h-3.5 w-3.5" />
-          )}
-        </ToolBtn>
-      )}
+      {/* Upload Media — single unified button */}
+      <MediaUploadButton
+        uploadFolder={uploadFolder}
+        isSignedIn={isSignedIn}
+        onImageUploaded={onImageUploaded}
+        onVideoUploaded={onVideoUploaded}
+        media={media}
+      />
 
-      {/* Embed URL button */}
-      <ToolBtn
-        title="Insert embed (YouTube, Rumble, Vimeo, etc.)"
-        onClick={() => {
-          const url = prompt("Paste a YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok URL:")
-          if (!url) return
-          const embed = detectEmbedUrl(url.trim())
-          if (embed) {
-            setPendingEmbed(embed)
-          } else {
-            alert("URL not recognised as an embeddable video. Try YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok.")
-          }
-        }}
-      >
-        <Film className="h-3.5 w-3.5" />
-      </ToolBtn>
+      {/* Embed Media — single unified dropdown */}
+      <EmbedMediaModal
+        onImageUrl={onEmbedImageUrl}
+        onEmbedUrl={onEmbedUrl}
+        onIframeCode={onIframeCode}
+      />
     </div>
   )
 
@@ -750,19 +728,19 @@ export function TiptapEditor({
       className={`flex flex-col border border-border transition-colors focus-within:border-primary ${
         dragOver ? "border-primary bg-primary/5" : ""
       }`}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setDragOver(true)
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         e.preventDefault()
         setDragOver(false)
         if (!canUpload) return
-        const files = e.dataTransfer.files
-        if (files?.length) {
-          Array.from(files)
-            .filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
-            .slice(0, MAX_IMAGES - doneCount)
-            .forEach(uploadImageFile)
-        }
+        Array.from(e.dataTransfer.files)
+          .filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
+          .slice(0, MAX_TIPTAP_IMAGES - imageDone)
+          .forEach(uploadImageFile)
       }}
     >
       {/* Tab bar + stats */}
@@ -786,7 +764,8 @@ export function TiptapEditor({
           <div className="label-mono ml-3 flex items-center gap-3 text-xs text-muted-foreground">
             <span>{stats.words}w</span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />{stats.readingTime}min
+              <Clock className="h-3 w-3" />
+              {stats.readingTime}min
             </span>
           </div>
         </div>
@@ -800,7 +779,9 @@ export function TiptapEditor({
         <div className="relative">
           {dragOver && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-primary bg-primary/10">
-              <p className="label-mono text-sm font-semibold text-primary">Drop image or video to upload</p>
+              <p className="label-mono text-sm font-semibold text-primary">
+                Drop image or video to upload
+              </p>
             </div>
           )}
           <EditorContent editor={editor} />
@@ -818,77 +799,37 @@ export function TiptapEditor({
         </div>
       )}
 
-      {/* Embed confirmation prompt */}
+      {/* Pending embed banner (pasted URL auto-detected) */}
       {pendingEmbed && (
-        <EmbedConfirmBanner embed={pendingEmbed} onConfirm={confirmEmbed} onDismiss={dismissEmbed} />
+        <EmbedConfirmBanner
+          embed={pendingEmbed}
+          onConfirm={confirmEmbed}
+          onDismiss={dismissEmbed}
+        />
       )}
 
-      {/* Image previews */}
-      <ImagePreviewGrid images={images} onRemove={removeImage} />
+      {/* Media thumbnail grid */}
+      <MediaPreviewGrid media={media} onRemove={removeMedia} />
 
-      {/* Hidden image file input */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files) {
-            Array.from(e.target.files)
-              .slice(0, MAX_IMAGES - doneCount)
-              .forEach(uploadImageFile)
-          }
-          e.target.value = ""
-        }}
-      />
-
-      {/* Hidden video file input */}
-      <input
-        ref={videoFileRef}
-        type="file"
-        accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) uploadVideoFile(file)
-          e.target.value = ""
-        }}
-      />
-
-      {/* Video upload error */}
-      {videoUploadError && (
-        <div className="flex items-center gap-2 border-t border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive">
-          <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="label-mono">{videoUploadError}</span>
-          <button type="button" onClick={() => setVideoUploadError(null)} className="ml-auto">
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-
-      {/* Hidden input carrying the serialized JSON for form submission */}
+      {/* Serialized JSON for form submission */}
       <input type="hidden" name={name} id={id} value={jsonValue} required={required} />
     </div>
   )
 }
 
-// ─── Inline preview using editor text ─────────────────────────────────────────
+// ─── Inline preview ────────────────────────────────────────────────────────────
 
 function TiptapPreview({ editor }: { editor: ReturnType<typeof useEditor> }) {
-  // Simple text-based preview for now — TiptapRenderer handles full JSON rendering on publish
   const html = editor?.getHTML() ?? ""
   return (
     <div
       className="tiptap-preview-prose leading-relaxed text-foreground/90"
-      // The HTML from Tiptap is generated by our own extensions — it's safe
-      // (no user-raw HTML, no iframes, just semantic nodes from StarterKit + Image + Link)
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
 }
 
-// ─── Embed confirm banner ─────────────────────────────────────────────────────
+// ─── Embed confirm banner ──────────────────────────────────────────────────────
 
 function EmbedConfirmBanner({
   embed,
@@ -906,7 +847,9 @@ function EmbedConfirmBanner({
         <span className="label-mono text-xs text-foreground">
           Embed {embed.provider.toUpperCase()} video?
         </span>
-        <span className="label-mono truncate text-xs text-muted-foreground">{embed.originalUrl}</span>
+        <span className="label-mono truncate text-xs text-muted-foreground">
+          {embed.originalUrl}
+        </span>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button

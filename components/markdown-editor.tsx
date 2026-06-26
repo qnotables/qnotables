@@ -10,64 +10,28 @@ import {
   Quote,
   Code,
   Link2,
-  Image,
-  Upload,
   Eye,
   Pencil,
-  Loader2,
   Clock,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  ChevronDown,
-  Video,
-  Film,
 } from "lucide-react"
 import { Markdown } from "@/components/markdown"
 import { detectEmbedUrl } from "@/lib/tiptap-embed-utils"
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MAX_IMAGES = 5
-const MAX_BYTES = 5 * 1024 * 1024 // 5 MB for images
-const MAX_VIDEOS = 3
-const MAX_VIDEO_BYTES = 500 * 1024 * 1024 // 500 MB for videos
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"])
-const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/mov"])
-const ALLOWED_IMAGE_EXTS = /\.(jpg|jpeg|png|webp|gif)$/i
-const ALLOWED_VIDEO_EXTS = /\.(mp4|webm|mov)$/i
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface UploadedImage {
-  id: string
-  url: string
-  filename: string
-  size: number
-  status: "uploading" | "done" | "error"
-  error?: string
-}
-
-interface UploadedVideo {
-  id: string
-  url: string
-  filename: string
-  size: number
-  status: "uploading" | "done" | "error"
-  error?: string
-}
-
-interface MarkdownEditorProps {
-  name: string
-  id?: string
-  defaultValue?: string
-  placeholder?: string
-  rows?: number
-  required?: boolean
-  uploadFolder?: "forum" | "blog"
-  /** Pass false when the user is not signed in to disable image uploads. */
-  isSignedIn?: boolean
-}
+import {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+  MAX_IMAGES,
+  MAX_VIDEOS,
+  UploadedMedia,
+  uploadMediaFile,
+  validateMediaFile,
+  embedToMarkdownComment,
+  iframeToMarkdownComment,
+} from "@/lib/media-utils"
+import {
+  MediaUploadButton,
+  MediaPreviewGrid,
+} from "@/components/editor/MediaUploadButton"
+import { EmbedMediaModal } from "@/components/editor/EmbedMediaModal"
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
@@ -115,144 +79,17 @@ function insertText(value: string, start: number, end: number, text: string): Ed
   return { value: next, selectionStart: caret, selectionEnd: caret }
 }
 
-// ─── Validation ───────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-function validateFile(file: File, type: "image" | "video"): string | null {
-  if (type === "image") {
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
-    if (file.size > MAX_BYTES) return "Image must be 5 MB or smaller."
-    const ext = "." + (file.name.split(".").pop() ?? "")
-    if (!ALLOWED_IMAGE_EXTS.test(ext)) return "Only JPG, PNG, WEBP, and GIF images are allowed."
-  } else {
-    if (!ALLOWED_VIDEO_TYPES.has(file.type)) return "Only MP4, WEBM, and MOV videos are allowed."
-    if (file.size > MAX_VIDEO_BYTES) return "Video must be 500 MB or smaller."
-    const ext = "." + (file.name.split(".").pop() ?? "")
-    if (!ALLOWED_VIDEO_EXTS.test(ext)) return "Only MP4, WEBM, and MOV videos are allowed."
-  }
-  return null
-}
-
-// ─── Image Preview Grid ───────────────────────────────────────────────────────
-
-function ImagePreviewGrid({
-  images,
-  onRemove,
-}: {
-  images: UploadedImage[]
-  onRemove: (id: string) => void
-}) {
-  if (images.length === 0) return null
-
-  return (
-    <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-3">
-      {images.map((img) => (
-        <div
-          key={img.id}
-          className="group relative h-16 w-16 flex-shrink-0 overflow-hidden border border-border bg-background"
-        >
-          {img.status === "uploading" ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : img.status === "error" ? (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-              <span className="label-mono text-center text-[9px] leading-tight text-destructive">
-                {img.error ?? "Error"}
-              </span>
-            </div>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={img.url}
-              alt={img.filename}
-              className="h-full w-full object-cover opacity-90 group-hover:opacity-100"
-            />
-          )}
-
-          {/* Status overlay for done */}
-          {img.status === "done" && (
-            <div className="absolute bottom-0.5 right-0.5">
-              <CheckCircle2 className="h-3 w-3 text-green-400 drop-shadow" />
-            </div>
-          )}
-
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={() => onRemove(img.id)}
-            className="absolute right-0 top-0 hidden p-0.5 group-hover:block bg-background/80 hover:bg-destructive hover:text-white text-muted-foreground transition-colors"
-            aria-label="Remove image"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      ))}
-
-      <span className="label-mono self-end text-[10px] text-muted-foreground">
-        {images.filter((i) => i.status === "done").length}/{MAX_IMAGES} images
-      </span>
-    </div>
-  )
-}
-
-// ─── Video Preview Grid ───────────────────────────────────────────────────
-
-function VideoPreviewGrid({
-  videos,
-  onRemove,
-}: {
-  videos: UploadedVideo[]
-  onRemove: (id: string) => void
-}) {
-  if (videos.length === 0) return null
-
-  return (
-    <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 p-3">
-      {videos.map((vid) => (
-        <div
-          key={vid.id}
-          className="group relative h-16 w-16 flex-shrink-0 overflow-hidden border border-border bg-background flex items-center justify-center"
-        >
-          {vid.status === "uploading" ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          ) : vid.status === "error" ? (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
-              <span className="label-mono text-center text-[9px] leading-tight text-destructive">
-                {vid.error ?? "Error"}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-1">
-              <Video className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
-
-          {/* Status overlay for done */}
-          {vid.status === "done" && (
-            <div className="absolute bottom-0.5 right-0.5">
-              <CheckCircle2 className="h-3 w-3 text-green-400 drop-shadow" />
-            </div>
-          )}
-
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={() => onRemove(vid.id)}
-            className="absolute right-0 top-0 hidden p-0.5 group-hover:block bg-background/80 hover:bg-destructive hover:text-white text-muted-foreground transition-colors"
-            aria-label="Remove video"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      ))}
-
-      <span className="label-mono self-end text-[10px] text-muted-foreground">
-        {videos.filter((v) => v.status === "done").length}/{MAX_VIDEOS} videos
-      </span>
-    </div>
-  )
+interface MarkdownEditorProps {
+  name: string
+  id?: string
+  defaultValue?: string
+  placeholder?: string
+  rows?: number
+  required?: boolean
+  uploadFolder?: "forum" | "blog"
+  isSignedIn?: boolean
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -269,15 +106,10 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const [value, setValue] = useState(defaultValue)
   const [tab, setTab] = useState<"write" | "preview">("write")
-  const [images, setImages] = useState<UploadedImage[]>([])
-  const [videos, setVideos] = useState<UploadedVideo[]>([])
+  const [media, setMedia] = useState<UploadedMedia[]>([])
   const [dragOver, setDragOver] = useState(false)
-  const [showImageMenu, setShowImageMenu] = useState(false)
   const stats = calculateStats(value)
   const taRef = useRef<HTMLTextAreaElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const videoFileRef = useRef<HTMLInputElement>(null)
-  const imageMenuRef = useRef<HTMLDivElement>(null)
   const pendingSelection = useRef<{ start: number; end: number } | null>(null)
 
   // Restore caret after React re-render from state-driven edits
@@ -289,17 +121,6 @@ export function MarkdownEditor({
       pendingSelection.current = null
     }
   }, [value])
-
-  // Close image menu on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (imageMenuRef.current && !imageMenuRef.current.contains(e.target as Node)) {
-        setShowImageMenu(false)
-      }
-    }
-    if (showImageMenu) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [showImageMenu])
 
   function applyEdit(fn: (value: string, start: number, end: number) => EditResult) {
     const ta = taRef.current
@@ -319,97 +140,63 @@ export function MarkdownEditor({
     setValue(result.value)
   }
 
-  // ─── Upload logic ─────────────────────────────────────────────────────────
+  // ─── Upload logic (inline — manages media[] state and inserts markdown) ───
 
-  const doneImageCount = images.filter((i) => i.status === "done").length
-  const doneVideoCount = videos.filter((v) => v.status === "done").length
-  const canUploadImage = isSignedIn && doneImageCount < MAX_IMAGES
-  const canUploadVideo = isSignedIn && doneVideoCount < MAX_VIDEOS
+  const imageDone = media.filter((m) => m.kind === "image" && m.status === "done").length
+  const videoDone = media.filter((m) => m.kind === "video" && m.status === "done").length
 
-  async function uploadFile(file: File, type: "image" | "video") {
-    const validationError = validateFile(file, type)
+  async function doUpload(file: File, kind: "image" | "video") {
+    const validationError = validateMediaFile(file, kind)
+    const errId = crypto.randomUUID()
+
     if (validationError) {
-      const errId = crypto.randomUUID()
-      if (type === "image") {
-        setImages((prev) => [...prev, { id: errId, url: "", filename: file.name, size: file.size, status: "error", error: validationError }])
-      } else {
-        setVideos((prev) => [...prev, { id: errId, url: "", filename: file.name, size: file.size, status: "error", error: validationError }])
-      }
-      setTimeout(() => {
-        if (type === "image") {
-          setImages((prev) => prev.filter((i) => i.id !== errId))
-        } else {
-          setVideos((prev) => prev.filter((v) => v.id !== errId))
-        }
-      }, 4000)
+      setMedia((prev) => [
+        ...prev,
+        { id: errId, url: "", filename: file.name, size: file.size, kind, status: "error", error: validationError },
+      ])
+      setTimeout(() => setMedia((prev) => prev.filter((m) => m.id !== errId)), 4000)
       return
     }
 
     const tempId = crypto.randomUUID()
-    if (type === "image" && doneImageCount >= MAX_IMAGES) return
-    if (type === "video" && doneVideoCount >= MAX_VIDEOS) return
-
-    if (type === "image") {
-      setImages((prev) => [...prev, { id: tempId, url: "", filename: file.name, size: file.size, status: "uploading" }])
-    } else {
-      setVideos((prev) => [...prev, { id: tempId, url: "", filename: file.name, size: file.size, status: "uploading" }])
-    }
+    setMedia((prev) => [
+      ...prev,
+      { id: tempId, url: "", filename: file.name, size: file.size, kind, status: "uploading" },
+    ])
 
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("folder", uploadFolder)
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      const json = await res.json()
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? `${type} upload failed.`)
-      }
-
-      if (type === "image") {
-        setImages((prev) => prev.map((i) => (i.id === tempId ? { ...i, url: json.url, filename: json.filename, status: "done" } : i)))
-        insertAtCaret(`\n![uploaded image](${json.url})\n`)
+      const result = await uploadMediaFile(file, uploadFolder)
+      setMedia((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, url: result.url, filename: result.filename, status: "done" } : m,
+        ),
+      )
+      if (kind === "image") {
+        insertAtCaret(`\n![uploaded image](${result.url})\n`)
       } else {
-        setVideos((prev) => prev.map((v) => (v.id === tempId ? { ...v, url: json.url, filename: json.filename, status: "done" } : v)))
-        insertAtCaret(`\n![uploaded video](${json.url})\n`)
+        insertAtCaret(`\n![uploaded video](${result.url})\n`)
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : `${type} upload failed.`
-      if (type === "image") {
-        setImages((prev) => prev.map((i) => (i.id === tempId ? { ...i, status: "error", error: msg } : i)))
-      } else {
-        setVideos((prev) => prev.map((v) => (v.id === tempId ? { ...v, status: "error", error: msg } : v)))
-      }
+      const msg = err instanceof Error ? err.message : `${kind} upload failed.`
+      setMedia((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: "error", error: msg } : m)),
+      )
     }
   }
 
-  function handleImageFiles(files: FileList | File[]) {
-    const arr = Array.from(files).filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
-    const remaining = MAX_IMAGES - doneImageCount
-    arr.slice(0, remaining).forEach((f) => uploadFile(f, "image"))
+  function handleFiles(files: File[]) {
+    for (const file of files) {
+      const kind: "image" | "video" = ALLOWED_IMAGE_TYPES.has(file.type) ? "image" : "video"
+      if (kind === "image" && imageDone >= MAX_IMAGES) continue
+      if (kind === "video" && videoDone >= MAX_VIDEOS) continue
+      doUpload(file, kind)
+    }
   }
 
-  function handleVideoFiles(files: FileList | File[]) {
-    const arr = Array.from(files).filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
-    const remaining = MAX_VIDEOS - doneVideoCount
-    arr.slice(0, remaining).forEach((f) => uploadFile(f, "video"))
-  }
-
-  function onImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) handleImageFiles(e.target.files)
-    e.target.value = ""
-  }
-
-  function onVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) handleVideoFiles(e.target.files)
-    e.target.value = ""
-  }
-
-  // Paste images from clipboard — process ALL pasted image files, not just the first
+  // Paste images from clipboard
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
     const items = e.clipboardData?.items
     if (!items) return
-
     const imageFiles: File[] = []
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
@@ -418,10 +205,9 @@ export function MarkdownEditor({
         if (file) imageFiles.push(file)
       }
     }
-
     if (imageFiles.length > 0) {
       e.preventDefault()
-      if (canUploadImage) handleImageFiles(imageFiles)
+      if (isSignedIn) handleFiles(imageFiles)
     }
   }
 
@@ -437,72 +223,80 @@ export function MarkdownEditor({
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragOver(false)
-      const files = e.dataTransfer.files
-      if (!files.length) return
-      const imageFiles = Array.from(files).filter((f) => ALLOWED_IMAGE_TYPES.has(f.type))
-      const videoFiles = Array.from(files).filter((f) => ALLOWED_VIDEO_TYPES.has(f.type))
-      if (imageFiles.length && canUploadImage) handleImageFiles(imageFiles)
-      if (videoFiles.length && canUploadVideo) handleVideoFiles(videoFiles)
+      if (!isSignedIn) return
+      const files = Array.from(e.dataTransfer.files).filter(
+        (f) => ALLOWED_IMAGE_TYPES.has(f.type) || ALLOWED_VIDEO_TYPES.has(f.type),
+      )
+      handleFiles(files)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canUploadImage, canUploadVideo, doneImageCount, doneVideoCount],
+    [isSignedIn, imageDone, videoDone],
   )
 
-  function removeImage(imgId: string) {
-    setImages((prev) => {
-      const img = prev.find((i) => i.id === imgId)
-      if (img?.url) {
-        setValue((v) => v.replace(`\n![uploaded image](${img.url})\n`, "").replace(`![uploaded image](${img.url})`, ""))
+  function removeMedia(id: string) {
+    setMedia((prev) => {
+      const item = prev.find((m) => m.id === id)
+      if (item?.url) {
+        setValue((v) =>
+          v
+            .replace(`\n![uploaded image](${item.url})\n`, "")
+            .replace(`![uploaded image](${item.url})`, "")
+            .replace(`\n![uploaded video](${item.url})\n`, "")
+            .replace(`![uploaded video](${item.url})`, ""),
+        )
       }
-      return prev.filter((i) => i.id !== imgId)
+      return prev.filter((m) => m.id !== id)
     })
   }
 
-  function removeVideo(vidId: string) {
-    setVideos((prev) => {
-      const vid = prev.find((v) => v.id === vidId)
-      if (vid?.url) {
-        setValue((v) => v.replace(`\n![uploaded video](${vid.url})\n`, "").replace(`![uploaded video](${vid.url})`, ""))
+  // ─── MediaUploadButton callbacks ──────────────────────────────────────────
+
+  function onImageUploaded(url: string, filename: string) {
+    setMedia((prev) => {
+      // Mark any uploading entry with this filename as done, or add if missing
+      const existing = prev.find((m) => m.filename === filename && m.status === "uploading")
+      if (existing) {
+        return prev.map((m) =>
+          m.id === existing.id ? { ...m, url, status: "done" } : m,
+        )
       }
-      return prev.filter((v) => v.id !== vidId)
+      return [
+        ...prev,
+        { id: crypto.randomUUID(), url, filename, size: 0, kind: "image", status: "done" },
+      ]
     })
+    insertAtCaret(`\n![uploaded image](${url})\n`)
   }
 
-  // ─── Image button handler ─────────────────────────────────────────────────
-
-  function handleImageUrlPaste() {
-    setShowImageMenu(false)
-    const url = prompt("Image URL (must end in .jpg, .jpeg, .png, .webp, or .gif):")
-    if (!url) return
-    const trimmed = url.trim()
-    if (!/^https?:\/\//i.test(trimmed)) {
-      alert("URL must start with http:// or https://")
-      return
-    }
-    if (!/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(trimmed)) {
-      alert("URL must end in .jpg, .jpeg, .png, .webp, or .gif")
-      return
-    }
-    insertAtCaret(`![image](${trimmed})`)
+  function onVideoUploaded(url: string, filename: string) {
+    setMedia((prev) => {
+      const existing = prev.find((m) => m.filename === filename && m.status === "uploading")
+      if (existing) {
+        return prev.map((m) =>
+          m.id === existing.id ? { ...m, url, status: "done" } : m,
+        )
+      }
+      return [
+        ...prev,
+        { id: crypto.randomUUID(), url, filename, size: 0, kind: "video", status: "done" },
+      ]
+    })
+    insertAtCaret(`\n![uploaded video](${url})\n`)
   }
 
-  // ─── Embed button handler ──────────────────────────────────────────────────
+  // ─── EmbedMediaModal callbacks ────────────────────────────────────────────
 
-  function handleEmbedInsert() {
-    const url = prompt("Paste a YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok URL:")
-    if (!url) return
-    const embed = detectEmbedUrl(url.trim())
-    if (!embed) {
-      alert("URL not recognized. Try YouTube, Rumble, Odysee, Vimeo, X, Instagram, or TikTok.")
-      return
-    }
-    const embedJson = JSON.stringify({
-      provider: embed.provider,
-      url: embed.embedUrl,
-      title: embed.title || "Embedded video",
-      aspectRatio: "16/9",
-    })
-    insertAtCaret(`\n<!-- IFRAME_EMBED: ${embedJson} -->\n`)
+  function onEmbedImageUrl(url: string) {
+    insertAtCaret(`![image](${url})`)
+  }
+
+  function onEmbedUrl(embed: ReturnType<typeof detectEmbedUrl>) {
+    if (!embed) return
+    insertAtCaret(embedToMarkdownComment(embed))
+  }
+
+  function onIframeCode(src: string, title: string) {
+    insertAtCaret(iframeToMarkdownComment(src, title))
   }
 
   // ─── Toolbar actions ──────────────────────────────────────────────────────
@@ -551,18 +345,15 @@ export function MarkdownEditor({
         if (url) applyEdit((v, s, e) => wrapText(v, s, e, "[", `](${url})`, "link text"))
       },
     },
-    {
-      icon: <Film className="h-3.5 w-3.5" />,
-      label: "Embed video",
-      run: handleEmbedInsert,
-    },
   ]
 
-  const anyUploading = images.some((i) => i.status === "uploading")
+  const anyUploading = media.some((m) => m.status === "uploading")
 
   return (
     <div
-      className={`flex flex-col gap-0 border border-border focus-within:border-primary transition-colors ${dragOver ? "border-primary bg-primary/5" : ""}`}
+      className={`flex flex-col gap-0 border border-border focus-within:border-primary transition-colors ${
+        dragOver ? "border-primary bg-primary/5" : ""
+      }`}
       onDragOver={tab === "write" ? onDragOver : undefined}
       onDragLeave={tab === "write" ? onDragLeave : undefined}
       onDrop={tab === "write" ? onDrop : undefined}
@@ -595,7 +386,8 @@ export function MarkdownEditor({
         </div>
 
         {tab === "write" && (
-          <div className="flex flex-wrap items-center gap-0.5 py-1">
+          <div className="flex flex-wrap items-center gap-0 py-1">
+            {/* Formatting buttons */}
             {toolbarActions.map((a) => (
               <button
                 key={a.label}
@@ -608,98 +400,23 @@ export function MarkdownEditor({
               </button>
             ))}
 
-            {/* Image button with sub-menu */}
-            <div className="relative" ref={imageMenuRef}>
-              <button
-                type="button"
-                title="Image"
-                onClick={() => setShowImageMenu((v) => !v)}
-                className="flex items-center gap-0.5 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <Image className="h-3.5 w-3.5" />
-                <ChevronDown className="h-2.5 w-2.5" />
-              </button>
+            {/* Divider */}
+            <div className="mx-1 h-4 w-px bg-border" />
 
-              {showImageMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-44 border border-border bg-background shadow-lg">
-                  {/* Upload option */}
-                  {isSignedIn ? (
-                    <button
-                      type="button"
-                      disabled={!canUploadImage || anyUploading}
-                      onClick={() => { setShowImageMenu(false); fileRef.current?.click() }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      {canUploadImage ? `Upload image (${doneImageCount}/${MAX_IMAGES})` : "Limit reached"}
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-                      <Upload className="h-3.5 w-3.5" />
-                      Sign in to upload
-                    </div>
-                  )}
-
-                  <div className="h-px bg-border" />
-
-                  {/* Paste URL option */}
-                  <button
-                    type="button"
-                    onClick={handleImageUrlPaste}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
-                  >
-                    <Link2 className="h-3.5 w-3.5" />
-                    Paste image URL
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Direct image upload button */}
-            {isSignedIn && (
-              <button
-                type="button"
-                title={canUploadImage ? "Upload image" : `Image limit reached (${MAX_IMAGES})`}
-                disabled={!canUploadImage || anyUploading}
-                onClick={() => fileRef.current?.click()}
-                className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {anyUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Upload className="h-3.5 w-3.5" />
-                )}
-              </button>
-            )}
-
-            {/* Video upload button */}
-            {isSignedIn && (
-              <button
-                type="button"
-                title={canUploadVideo ? "Upload video" : `Video limit reached (${MAX_VIDEOS})`}
-                disabled={!canUploadVideo || anyUploading}
-                onClick={() => videoFileRef.current?.click()}
-                className="flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Video className="h-3.5 w-3.5" />
-              </button>
-            )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="hidden"
-              onChange={onImageFileChange}
+            {/* Upload Media — single button */}
+            <MediaUploadButton
+              uploadFolder={uploadFolder}
+              isSignedIn={isSignedIn}
+              onImageUploaded={onImageUploaded}
+              onVideoUploaded={onVideoUploaded}
+              media={media}
             />
 
-            <input
-              ref={videoFileRef}
-              type="file"
-              accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
-              className="hidden"
-              onChange={onVideoFileChange}
+            {/* Embed Media — single dropdown */}
+            <EmbedMediaModal
+              onImageUrl={onEmbedImageUrl}
+              onEmbedUrl={onEmbedUrl}
+              onIframeCode={onIframeCode}
             />
           </div>
         )}
@@ -707,7 +424,6 @@ export function MarkdownEditor({
 
       {/* Write area */}
       <div className={tab === "write" ? "relative block" : "hidden"}>
-        {/* Drag-over overlay */}
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center border-2 border-dashed border-primary bg-primary/10">
             <p className="label-mono text-sm font-semibold text-primary">Drop image or video to upload</p>
@@ -738,23 +454,18 @@ export function MarkdownEditor({
         </div>
       )}
 
-      {/* Uploaded image preview grid */}
-      <ImagePreviewGrid images={images} onRemove={removeImage} />
+      {/* Media thumbnail grid */}
+      <MediaPreviewGrid media={media} onRemove={removeMedia} />
 
-      {/* Uploaded video preview grid */}
-      <VideoPreviewGrid videos={videos} onRemove={removeVideo} />
-
-      {/* Drag hint when empty and signed in */}
-      {tab === "write" && isSignedIn && canUploadImage && images.length === 0 && (
+      {/* Hint row */}
+      {tab === "write" && isSignedIn && !anyUploading && media.length === 0 && (
         <p className="label-mono border-t border-border bg-muted/20 px-4 py-1.5 text-[11px] text-muted-foreground">
-          Drag and drop images here, or use the upload button. Max {MAX_IMAGES} images, 5 MB each.
+          Drag & drop images or videos, paste from clipboard, or use Upload / Embed above.
         </p>
       )}
-
-      {/* Not signed in hint */}
       {tab === "write" && !isSignedIn && (
         <p className="label-mono border-t border-border bg-muted/20 px-4 py-1.5 text-[11px] text-muted-foreground">
-          Sign in to upload images.
+          Sign in to upload images and videos.
         </p>
       )}
     </div>
