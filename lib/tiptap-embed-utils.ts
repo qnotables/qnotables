@@ -41,7 +41,7 @@ function extractRumbleId(url: string): string | null {
   // embed page: rumble.com/embed/v1abc23/
   const embedMatch = url.match(/rumble\.com\/embed\/([a-zA-Z0-9]+)/i)
   if (embedMatch?.[1]) return embedMatch[1]
-  // video page: rumble.com/v1abc23-some-title.html
+  // video page: rumble.com/v1abc23, rumble.com/v1abc23-title.html, rumble.com/v1abc23?query=...
   const videoMatch = url.match(/rumble\.com\/(v[a-zA-Z0-9]+)/i)
   if (videoMatch?.[1]) return videoMatch[1]
   return null
@@ -63,7 +63,8 @@ function extractVimeoId(url: string): string | null {
 }
 
 function extractTweetId(url: string): string | null {
-  const m = url.match(/(?:twitter|x)\.com\/\w+\/status\/(\d+)/i)
+  // Match /status/ or /statuses/ path with numeric ID
+  const m = url.match(/(?:twitter|x)\.com\/\w+\/status(?:es)?\/(\d+)/i)
   return m?.[1] ?? null
 }
 
@@ -73,8 +74,18 @@ function extractInstagramId(url: string): string | null {
 }
 
 function extractTikTokId(url: string): string | null {
-  const m = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/i)
-  return m?.[1] ?? null
+  // Full URL: tiktok.com/@username/video/123456789
+  const fullMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/i)
+  if (fullMatch?.[1]) return fullMatch[1]
+  // Short URL: vm.tiktok.com/shortcode or vt.tiktok.com/shortcode
+  // These need to be resolved, but for now we'll store the full URL
+  if (url.match(/v[mt]\.tiktok\.com/i)) {
+    // Can't extract just an ID from short URLs reliably; pass full URL
+    // and it will be used as the embed URL as-is (requires JS)
+    const id = url.split("/").filter(Boolean).pop()
+    return id ?? null
+  }
+  return null
 }
 
 // ─── URL detector ─────────────────────────────────────────────────────────────

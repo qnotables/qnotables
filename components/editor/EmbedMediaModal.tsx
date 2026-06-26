@@ -128,10 +128,10 @@ export function EmbedMediaModal({
       return
     }
 
-    // 3. URL but not a recognised embed — offer as image link fallback
+    // 3. URL but not a recognised embed — show supported formats
     if (/^https?:\/\//i.test(raw)) {
       setError(
-        `URL not recognised as an image or embeddable provider. Supported: YouTube, Rumble, Odysee, Vimeo, X/Twitter, Instagram, TikTok, and direct image URLs (.jpg, .png, .webp, .gif). For other iframes, switch to the "Iframe code" tab.`,
+        `URL not recognised. Supported formats:\n\nYouTube: youtube.com/watch?v=ID or youtu.be/ID\nRumble: rumble.com/vID or rumble.com/embed/vID/\nOdysee: odysee.com/@channel/video-title\nVimeo: vimeo.com/ID\nX/Twitter: x.com/user/status/ID\nInstagram: instagram.com/p/ID/ or .../reel/ID/\nTikTok: tiktok.com/@user/video/ID or vm.tiktok.com/shortcode\nImages: any .jpg, .png, .webp, .gif\n\nFor custom embeds, use the "Iframe code" tab.`,
       )
       return
     }
