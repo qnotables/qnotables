@@ -29,6 +29,7 @@ export interface SituationForumItem {
   replyCount: number
   category?: string
   isFeatured?: boolean
+  latestReply?: { body: string; authorName: string; createdAt: string } | null
 }
 
 export interface SituationBlogItem {
@@ -153,7 +154,7 @@ function Thumbnail({ src, alt, label, badge }: ThumbnailProps) {
           src={src}
           alt={alt}
           fill
-          className="object-cover object-top opacity-90 transition-opacity duration-300"
+          className="object-contain opacity-90 transition-opacity duration-300"
           sizes="(max-width: 768px) 100vw, 640px"
         />
       ) : (
@@ -195,8 +196,15 @@ function PriorityBadge({ priority }: { priority?: string }) {
 // ─── Forum card ──────────────────────────────────────────────────────────────
 
 function ForumHotCard({ item }: { item: SituationForumItem }) {
-  const preview = stripMarkdown(item.body).slice(0, 140)
-  const thumbSrc = firstImageInBody(item.body)
+  const reply = item.latestReply
+
+  // Prefer reply image for thumbnail; fall back to OP image
+  const replyImage = reply ? firstImageInBody(reply.body) : null
+  const thumbSrc = replyImage ?? firstImageInBody(item.body)
+
+  // Strip markdown for text preview — may be empty if body was image-only
+  const previewText = reply ? stripMarkdown(reply.body).trim().slice(0, 160) : ""
+  const fallbackText = !previewText ? stripMarkdown(item.body).trim().slice(0, 160) : ""
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -233,9 +241,25 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         </h3>
       </Link>
 
-      {/* Body preview */}
-      {preview && (
-        <p className="text-sm text-muted-foreground line-clamp-2 flex-1 px-4">{preview}</p>
+      {/* Latest reply preview */}
+      {reply && (
+        <div className="mx-4 border-l-2 border-primary/40 pl-3">
+          <p className="label-mono text-[10px] text-primary mb-1">
+            {reply.authorName.toUpperCase()} · {timeAgo(reply.createdAt)}
+          </p>
+          {previewText ? (
+            <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
+          ) : replyImage ? (
+            /* Reply was image-only — show the image inline in the quote block */
+            <img
+              src={replyImage}
+              alt="Latest reply"
+              className="max-h-32 w-auto rounded border border-border object-cover"
+            />
+          ) : fallbackText ? (
+            <p className="text-sm text-muted-foreground line-clamp-2">{fallbackText}</p>
+          ) : null}
+        </div>
       )}
 
       {/* Meta row */}

@@ -45,6 +45,7 @@ export default async function Page() {
     replyCount: t.replyCount,
     category: t.category,
     isFeatured: t.isFeatured,
+    latestReply: t.latestReply ?? null,
   }))
 
   const blogItems: SituationBlogItem[] = topBlogs.map((p) => ({
