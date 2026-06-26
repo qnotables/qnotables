@@ -599,16 +599,22 @@ function StoryCarousel({ items, emptyLabel, emptyIcon }: StoryCarouselProps) {
 interface SituationFeedCycleProps {
   items: SituationItem[]
   heading: string
-  icon: React.ElementType
+  iconName: "blog" | "forum"
   emptyLabel: string
 }
+
+const FEED_ICONS = {
+  blog: BookOpen,
+  forum: Users,
+} as const
 
 /**
  * A self-contained cycler that auto-advances through a single list of items
  * (e.g. recent blog posts OR recent forum threads). Pauses on hover and
  * respects prefers-reduced-motion. Includes manual prev/next + dot controls.
  */
-export function SituationFeedCycle({ items, heading, icon: Icon, emptyLabel }: SituationFeedCycleProps) {
+export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: SituationFeedCycleProps) {
+  const Icon = FEED_ICONS[iconName]
   const [idx, setIdx] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)

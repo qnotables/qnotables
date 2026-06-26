@@ -12,7 +12,6 @@ import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { SituationFeedCycle } from "@/components/situation-report-cycle"
-import { BookOpen, Users } from "lucide-react"
 import type { SituationForumItem, SituationBlogItem } from "@/components/situation-report-cycle"
 
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
@@ -107,13 +106,13 @@ export default async function Page() {
               <SituationFeedCycle
                 items={blogItems}
                 heading="LATEST DISPATCHES"
-                icon={BookOpen}
+                iconName="blog"
                 emptyLabel="BLOG DISPATCHES"
               />
               <SituationFeedCycle
                 items={forumItems}
                 heading="LATEST FORUM ACTIVITY"
-                icon={Users}
+                iconName="forum"
                 emptyLabel="FORUM ACTIVITY"
               />
             </div>
