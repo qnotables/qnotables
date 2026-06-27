@@ -24,6 +24,7 @@ export interface ArchiveRecord {
   type?: "blog" | "video"
   video_url?: string | null
   external_url?: string | null
+  content?: string | null
 }
 
 /**
@@ -94,6 +95,7 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     author: post.author || "HOT AND FRESH",
     cover_image: coverImage,
     type: "blog",
+    content: post.content || null,
   }
 }
 

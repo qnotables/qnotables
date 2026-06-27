@@ -106,7 +106,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
       <main className="flex-1">
         {/* Hero section */}
         <div className="border-b border-border bg-card">
-          <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-12">
+          <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
             <Link
               href="/archives"
               className="label-mono mb-6 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
@@ -194,7 +194,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         {/* Featured media */}
         {(post?.cover_image_url || post?.video_url || post?.embed_url || post?.iframe_url || video?.thumbnail_url || video?.video_url) && (
           <div className="border-b border-border bg-muted/20 px-4 py-8 md:px-6">
-            <div className="mx-auto max-w-4xl space-y-4">
+            <div className="mx-auto max-w-5xl space-y-4">
               {post?.cover_image_url && (
                 <img
                   src={post.cover_image_url}
@@ -232,7 +232,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         )}
 
         {/* Main content */}
-        <article className="mx-auto max-w-4xl px-4 py-12 md:px-6 md:py-16">
+        <article className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
           {post && (
             <div className="max-w-none">
               {isTiptapJson(post.body) ? (
@@ -305,7 +305,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         {/* Related posts */}
         {relatedPosts.length > 0 && (
           <section className="border-t border-border bg-muted/20 px-4 py-12 md:px-6 md:py-16">
-            <div className="mx-auto max-w-4xl">
+              <div className="mx-auto max-w-5xl">
               <h2 className="stencil mb-8 text-2xl text-foreground">Related Records</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedPosts.map((relatedPost) => (
