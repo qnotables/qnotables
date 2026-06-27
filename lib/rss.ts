@@ -137,12 +137,12 @@ export interface RSSSource {
 }
 
 export const RSS_SOURCES: RSSSource[] = [
-  {
-    id: "watkins",
-    name: "/qr/",
-    url: "https://8kun.top/qresearch/tripcode.xml",
-    enabled: true,
-  },
+  //{
+  //  id: "watkins",
+  //  name: "/qr/",
+  //  url: "https://8kun.top/qresearch/tripcode.xml",
+  //  enabled: true,
+  //},
   // Add more sources below:
   {
     id: "bbc",
