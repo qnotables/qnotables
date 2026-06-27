@@ -145,7 +145,7 @@ async function getDbPosts(): Promise<BlogPost[]> {
     const { data, error } = await admin
       .from("blog_posts")
       .select(
-        "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, created_at, published_at, updated_at, blog_post_tags(tag)",
+        "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, created_at, published_at, updated_at, blog_post_tags(tag)",
       )
       .eq("status", "published")
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -189,7 +189,7 @@ export async function getAllPostsAdmin(): Promise<BlogPost[]> {
   const { data, error } = await admin
     .from("blog_posts")
     .select(
-      "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, created_at, published_at, updated_at, blog_post_tags(tag)",
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
     )
     .order("published_at", { ascending: false, nullsFirst: false })
 
@@ -206,7 +206,7 @@ export async function getPostByIdAdmin(id: string): Promise<BlogPost | undefined
   const { data, error } = await admin
     .from("blog_posts")
     .select(
-      "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, created_at, published_at, updated_at, blog_post_tags(tag)",
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
     )
     .eq("id", id)
     .maybeSingle()
