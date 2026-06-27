@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
         <Link
           href="/archives"
           className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
