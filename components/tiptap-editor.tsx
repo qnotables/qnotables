@@ -339,7 +339,35 @@ export function TiptapEditor({
         heading: { levels: [1, 2, 3] },
       }),
       Underline,
-      Image.configure({ inline: false, allowBase64: false }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: "blog-image",
+        },
+      }).extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            align: {
+              default: "center",
+              parseHTML: element => element.getAttribute("data-align") || "center",
+              renderHTML: attributes => ({
+                "data-align": attributes.align,
+              }),
+            },
+          }
+        },
+        addCommands() {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return {
+            ...this.parent?.(),
+            setImageAlignment: (align: string) => ({ commands }: any) => {
+              return commands.updateAttributes("image", { align })
+            },
+          }
+        },
+      }),
       Link.configure({
         openOnClick: false,
         autolink: false,
@@ -697,6 +725,53 @@ export function TiptapEditor({
       </ToolBtn>
 
       <Divider />
+
+      {/* Image Alignment — only show when image is selected */}
+      {editor.isActive("image") && (
+        <>
+          <ToolBtn
+            title="Float image left"
+            active={editor.getAttributes("image").align === "left"}
+            onClick={() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (editor.chain().focus() as any).setImageAlignment("left").run()
+            }}
+          >
+            <AlignLeft className="h-3.5 w-3.5" />
+          </ToolBtn>
+          <ToolBtn
+            title="Center image"
+            active={editor.getAttributes("image").align === "center"}
+            onClick={() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (editor.chain().focus() as any).setImageAlignment("center").run()
+            }}
+          >
+            <AlignCenter className="h-3.5 w-3.5" />
+          </ToolBtn>
+          <ToolBtn
+            title="Float image right"
+            active={editor.getAttributes("image").align === "right"}
+            onClick={() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (editor.chain().focus() as any).setImageAlignment("right").run()
+            }}
+          >
+            <AlignRight className="h-3.5 w-3.5" />
+          </ToolBtn>
+          <ToolBtn
+            title="Full width image"
+            active={editor.getAttributes("image").align === "full"}
+            onClick={() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (editor.chain().focus() as any).setImageAlignment("full").run()
+            }}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </ToolBtn>
+          <Divider />
+        </>
+      )}
 
       {/* Link */}
       <ToolBtn title="Insert link" active={editor.isActive("link")} onClick={insertLink}>

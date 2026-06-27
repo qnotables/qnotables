@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'scheduled', 'archived')),
   cover_image TEXT,
   og_image_url TEXT,
+  seo_image_url TEXT,
   seo_title TEXT,
   seo_description TEXT,
   source_name TEXT,

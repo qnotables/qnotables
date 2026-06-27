@@ -109,6 +109,7 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
   const [excerptValue, setExcerptValue] = useState(post?.excerpt ?? "")
   const [seoTitleValue, setSeoTitleValue] = useState(post?.seoTitle ?? "")
   const [seoDescriptionValue, setSeoDescriptionValue] = useState(post?.seoDescription ?? "")
+  const [seoImageUrl, setSeoImageUrl] = useState<string>(post?.seoImageUrl ?? "")
 
   const inputClass =
     "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary"
@@ -235,6 +236,33 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
       </div>
 
       <CoverImageField defaultUrl={post?.coverImage} />
+
+      <div className="flex flex-col gap-2">
+        <label className="label-mono text-muted-foreground">SEO/OG Image <span className="text-muted-foreground/60">(optional — for social sharing)</span></label>
+        <input type="hidden" name="seo_image_url" value={seoImageUrl} />
+
+        {seoImageUrl ? (
+          <div className="relative w-full max-w-md overflow-hidden border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={seoImageUrl || "/placeholder.svg"} alt="SEO preview" className="h-48 w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setSeoImageUrl("")}
+              className="absolute right-2 top-2 flex items-center gap-1 border border-border bg-background/90 px-2 py-1 text-xs text-foreground transition-colors hover:border-primary"
+            >
+              <X className="h-3 w-3" /> Remove
+            </button>
+          </div>
+        ) : (
+          <input
+            type="url"
+            placeholder="https://example.com/image.jpg"
+            value={seoImageUrl}
+            onChange={(e) => setSeoImageUrl(e.target.value)}
+            className={`${inputClass} font-mono text-sm`}
+          />
+        )}
+      </div>
 
       <div className="flex flex-col gap-2">
         <label className="label-mono text-muted-foreground">Body</label>
