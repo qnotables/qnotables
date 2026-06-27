@@ -15,6 +15,24 @@ type Tab = "write" | "preview" | "details" | "sources" | "seo" | "settings"
 const DRAFT_KEY = "hot-and-fresh-new-post-draft"
 const AUTOSAVE_DELAY = 5000 // 5 seconds
 
+const CATEGORY_OPTIONS = [
+  "Breaking News",
+  "Politics",
+  "Markets",
+  "Economy",
+  "Technology",
+  "Health",
+  "Science",
+  "Environment",
+  "World",
+  "Investigations",
+  "Opinion",
+  "Media",
+  "Culture",
+  "Law & Justice",
+  "Defense & Security",
+] as const
+
 const POST_TYPE_OPTIONS = [
   "Field Note",
   "News Brief",
@@ -598,13 +616,18 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="label-mono block text-sm font-semibold text-foreground">Category *</label>
-                <input
-                  type="text"
+                <select
                   value={formData.category}
                   onChange={(e) => handleFieldChange("category", e.target.value)}
-                  placeholder="e.g., Markets, Politics"
                   className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
-                />
+                >
+                  <option value="">Select category</option>
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
                 <p className="label-mono mt-1 text-xs text-muted-foreground">Required to publish</p>
               </div>
 
