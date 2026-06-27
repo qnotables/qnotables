@@ -192,9 +192,29 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
     case "image": {
       const src = typeof node.attrs?.src === "string" ? node.attrs.src : ""
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : ""
+      const align = typeof node.attrs?.align === "string" ? node.attrs.align : "center"
       if (!isSafeUrl(src)) return null
+      
+      // Determine alignment classes based on align attribute
+      let alignClasses = ""
+      switch (align) {
+        case "left":
+          alignClasses = "float-left mr-4 mb-2 md:w-1/3 md:float-none md:mx-auto md:max-w-2xl"
+          break
+        case "right":
+          alignClasses = "float-right ml-4 mb-2 md:w-1/3 md:float-none md:mx-auto md:max-w-2xl"
+          break
+        case "full":
+          alignClasses = "w-full my-4"
+          break
+        case "center":
+        default:
+          alignClasses = "mx-auto my-4 max-w-2xl"
+          break
+      }
+      
       return (
-        <figure key={key} className="my-2">
+        <figure key={key} className={alignClasses}>
           <ForumImage src={src} alt={alt} />
           {alt && <figcaption className="label-mono mt-1 text-center text-xs text-muted-foreground">{alt}</figcaption>}
         </figure>

@@ -47,6 +47,7 @@ export async function createPost(
     "Editorial Desk"
   const seoTitle = String(formData.get("seo_title") ?? "").trim() || null
   const seoDescription = String(formData.get("seo_description") ?? "").trim() || null
+  const seoImageUrl = String(formData.get("seo_image_url") ?? "").trim() || null
   const sourceName = String(formData.get("source_name") ?? "").trim() || null
   const sourceUrl = String(formData.get("source_url") ?? "").trim() || null
   const customSlug = String(formData.get("slug") ?? "").trim()
@@ -74,6 +75,7 @@ export async function createPost(
     featured,
     priority,
     cover_image: coverImage,
+    seo_image_url: seoImageUrl,
     author_name: authorName,
     author_id: admin.id,
     read_minutes: readMinutes,
@@ -116,6 +118,7 @@ export async function updatePost(
   const featured = formData.get("featured") === "on"
   const priority = (String(formData.get("priority") ?? "medium") as any) || "medium"
   const coverImage = String(formData.get("cover_image") ?? "").trim() || null
+  const seoImageUrl = String(formData.get("seo_image_url") ?? "").trim() || null
   const authorName = String(formData.get("author_name") ?? "").trim() || "Editorial Desk"
   const seoTitle = String(formData.get("seo_title") ?? "").trim() || null
   const seoDescription = String(formData.get("seo_description") ?? "").trim() || null
@@ -146,6 +149,7 @@ export async function updatePost(
       featured,
       priority,
       cover_image: coverImage,
+      seo_image_url: seoImageUrl,
       author_name: authorName,
       read_minutes: readMinutes,
       seo_title: seoTitle,

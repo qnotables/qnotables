@@ -23,9 +23,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const site = getSiteUrl()
   const canonical = `${site}/archives/${post.slug}`
   const description = post.subtitle || post.excerpt || "Archived HOT AND FRESH record."
-  // Use cover image or first image from post body; fall back to site-wide default OG image
-  const { url: resolvedImage, source: imageSource } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
-  const ogImage = imageSource === "fallback" ? `${site}/images/og-default.png` : resolvedImage
+  
+  // Determine OG image: explicit seoImageUrl → first body image → cover image → default
+  let ogImage: string
+  if (post.seoImageUrl) {
+    ogImage = post.seoImageUrl
+  } else {
+    const { url: resolvedImage, source: imageSource } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
+    ogImage = imageSource === "fallback" ? `${site}/images/og-default.png` : resolvedImage
+  }
+  
   return {
     title: `${post.title} — HOT AND FRESH`,
     description,
@@ -100,15 +107,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Clock className="h-3.5 w-3.5" /> {post.readMinutes} MIN READ
           </span>
         </div>
-
-        {post.coverImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="mt-8 w-full border border-border object-cover"
-          />
-        )}
 
         <article className="mt-8">
           {isTiptapJson(post.content) ? (
