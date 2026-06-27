@@ -16,6 +16,9 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { timeAgo } from "@/lib/time"
+import { extractFirstVideo as extractForumVideo, extractFirstImage } from "@/lib/forum-utils"
+import { generateEmbedUrl, detectVideoPlatform, parseVideoEmbed } from "@/lib/video-embed-utils"
+import { parseIframeEmbed } from "@/lib/iframe-embed-utils"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +74,116 @@ export interface SituationArchiveItem {
 
 export type SituationItem = SituationForumItem | SituationBlogItem | SituationArchiveItem
 
+// ─── Forum / markdown embed extraction ───────────────────────────────────────
+
+type ForumMediaEmbed =
+  | { kind: "video-comment"; embedUrl: string; platform: string; title?: string }
+  | { kind: "iframe-comment"; url: string; title?: string; aspectRatio?: string }
+  | { kind: "video-url"; embedUrl: string; platform: string }
+  | { kind: "image"; src: string }
+
+/**
+ * Extracts the first embeddable media from a forum markdown body.
+ * Priority: VIDEO_EMBED comment → IFRAME_EMBED comment → bare video URL → image.
+ */
+function extractFirstForumMedia(body: string): ForumMediaEmbed | null {
+  if (!body) return null
+
+  // 1. <!-- VIDEO_EMBED: {...} -->
+  const videoCommentMatch = body.match(/<!-- VIDEO_EMBED: ({.*?}) -->/)
+  if (videoCommentMatch) {
+    const embed = parseVideoEmbed(videoCommentMatch[1])
+    if (embed?.embedUrl) {
+      return { kind: "video-comment", embedUrl: embed.embedUrl, platform: embed.platform, title: embed.title }
+    }
+  }
+
+  // 2. <!-- IFRAME_EMBED: {...} -->
+  const iframeCommentMatch = body.match(/<!-- IFRAME_EMBED: ({.*?}) -->/)
+  if (iframeCommentMatch) {
+    const embed = parseIframeEmbed(iframeCommentMatch[1])
+    if (embed?.url) {
+      return { kind: "iframe-comment", url: embed.url, title: embed.title, aspectRatio: embed.aspectRatio }
+    }
+  }
+
+  // 3. Bare YouTube / Rumble / Odysee / direct video URL
+  const videoUrl = extractForumVideo(body)
+  if (videoUrl) {
+    if (videoUrl.type === "youtube") {
+      return {
+        kind: "video-url",
+        embedUrl: `https://www.youtube-nocookie.com/embed/${videoUrl.videoId}?rel=0&modestbranding=1`,
+        platform: "youtube",
+      }
+    }
+    if (videoUrl.type === "rumble") {
+      return {
+        kind: "video-url",
+        embedUrl: `https://rumble.com/embed/${videoUrl.embedId}/`,
+        platform: "rumble",
+      }
+    }
+    if (videoUrl.type === "odysee") {
+      return {
+        kind: "video-url",
+        embedUrl: `https://odysee.com/embed/${videoUrl.path}`,
+        platform: "odysee",
+      }
+    }
+    if (videoUrl.type === "direct") {
+      return { kind: "video-url", embedUrl: videoUrl.url, platform: "direct" }
+    }
+  }
+
+  // 4. Static image
+  const img = extractFirstImage(body)
+  if (img) return { kind: "image", src: img }
+
+  return null
+}
+
+/**
+ * Extracts the first embeddable media from blog Tiptap JSON content,
+ * also checking for VIDEO_EMBED / IFRAME_EMBED comment patterns.
+ */
+function extractFirstBlogMedia(content?: string): { kind: "video" | "embed" | "iframe-comment"; src: string; title?: string } | null {
+  if (!content) return null
+
+  // Tiptap JSON: videoBlock / embedBlock nodes
+  let doc: TiptapNode
+  try { doc = JSON.parse(content) } catch { doc = { content: [] } }
+
+  function walkTiptap(nodes?: TiptapNode[]): { kind: "video" | "embed"; src: string; title?: string } | null {
+    if (!nodes) return null
+    for (const node of nodes) {
+      if (node.type === "videoBlock" && node.attrs?.src) return { kind: "video", src: node.attrs.src, title: node.attrs.title }
+      if (node.type === "embedBlock" && node.attrs?.src) return { kind: "embed", src: node.attrs.src, title: node.attrs.title }
+      const found = walkTiptap(node.content)
+      if (found) return found
+    }
+    return null
+  }
+
+  const tiptap = walkTiptap(doc.content)
+  if (tiptap) return tiptap
+
+  // HTML comment embeds (blog editor also produces these)
+  const videoCommentMatch = content.match(/<!-- VIDEO_EMBED: ({.*?}) -->/)
+  if (videoCommentMatch) {
+    const embed = parseVideoEmbed(videoCommentMatch[1])
+    if (embed?.embedUrl) return { kind: "embed", src: embed.embedUrl, title: embed.title }
+  }
+
+  const iframeCommentMatch = content.match(/<!-- IFRAME_EMBED: ({.*?}) -->/)
+  if (iframeCommentMatch) {
+    const embed = parseIframeEmbed(iframeCommentMatch[1])
+    if (embed?.url) return { kind: "iframe-comment" as const, src: embed.url, title: embed.title }
+  }
+
+  return null
+}
+
 // ─── Strip markdown ──────────────────────────────────────────────────────────
 
 function stripMarkdown(md: string): string {
@@ -82,56 +195,13 @@ function stripMarkdown(md: string): string {
     .trim()
 }
 
-/** Extract the first https image URL from markdown body text. */
-function firstImageInBody(body: string): string | null {
-  // Markdown image: ![alt](url)
-  const mdMatch = body.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/)
-  if (mdMatch) return mdMatch[1]
-  // Plain URL ending in common image extension
-  const plainMatch = body.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i)
-  if (plainMatch) return plainMatch[0]
-  return null
-}
 
-// ─── Video extraction from Tiptap JSON ───────────────────────────────────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ───────────────────
 
 interface TiptapNode {
   type?: string
   attrs?: Record<string, string>
   content?: TiptapNode[]
-}
-
-interface ExtractedVideo {
-  kind: "upload" | "embed"
-  src: string   // direct URL for uploads; iframe embed URL for embeds
-  title?: string
-}
-
-function extractFirstVideo(content?: string): ExtractedVideo | null {
-  if (!content) return null
-  let doc: TiptapNode
-  try {
-    doc = JSON.parse(content)
-  } catch {
-    return null
-  }
-
-  function walk(nodes?: TiptapNode[]): ExtractedVideo | null {
-    if (!nodes) return null
-    for (const node of nodes) {
-      if (node.type === "videoBlock" && node.attrs?.src) {
-        return { kind: "upload", src: node.attrs.src, title: node.attrs.title }
-      }
-      if (node.type === "embedBlock" && node.attrs?.src) {
-        return { kind: "embed", src: node.attrs.src, title: node.attrs.title }
-      }
-      const found = walk(node.content)
-      if (found) return found
-    }
-    return null
-  }
-
-  return walk(doc.content)
 }
 
 // ─── Shared thumbnail component ───────────────────────────────────────────────
@@ -198,28 +268,70 @@ function PriorityBadge({ priority }: { priority?: string }) {
 function ForumHotCard({ item }: { item: SituationForumItem }) {
   const reply = item.latestReply
 
-  // Prefer reply image for thumbnail; fall back to OP image
-  const replyImage = reply ? firstImageInBody(reply.body) : null
-  const thumbSrc = replyImage ?? firstImageInBody(item.body)
+  // Extract first embeddable media: prefer reply body, fall back to OP body
+  const replyMedia = reply ? extractFirstForumMedia(reply.body) : null
+  const opMedia = extractFirstForumMedia(item.body)
+  const media = replyMedia ?? opMedia
 
-  // Strip markdown for text preview — may be empty if body was image-only
+  // Strip markdown for text preview — may be empty if body was media-only
   const previewText = reply ? stripMarkdown(reply.body).trim().slice(0, 160) : ""
   const fallbackText = !previewText ? stripMarkdown(item.body).trim().slice(0, 160) : ""
 
+  const featuredBadge = item.isFeatured ? (
+    <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+      FEATURED
+    </span>
+  ) : undefined
+
   return (
     <div className="flex flex-col gap-3 h-full">
-      <Thumbnail
-        src={thumbSrc}
-        alt={item.title}
-        label={item.category ?? "FORUM"}
-        badge={
-          item.isFeatured ? (
-            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
-              FEATURED
-            </span>
-          ) : undefined
-        }
-      />
+      {/* Media area — video embed / iframe / image / fallback plate */}
+      {media?.kind === "video-comment" || media?.kind === "video-url" ? (
+        <div
+          className="relative w-full overflow-hidden bg-black border-b border-border"
+          style={{ aspectRatio: "16/7" }}
+        >
+          {(media.kind === "video-comment" || media.kind === "video-url") && media.platform === "direct" ? (
+            <video
+              src={media.embedUrl}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <iframe
+              src={(media as { embedUrl: string }).embedUrl}
+              title={item.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full border-0"
+            />
+          )}
+          {featuredBadge && <div className="absolute left-2 top-2">{featuredBadge}</div>}
+        </div>
+      ) : media?.kind === "iframe-comment" ? (
+        <div
+          className="relative w-full overflow-hidden bg-black border-b border-border"
+          style={{ aspectRatio: "16/7" }}
+        >
+          <iframe
+            src={media.url}
+            title={media.title ?? item.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full border-0"
+          />
+          {featuredBadge && <div className="absolute left-2 top-2">{featuredBadge}</div>}
+        </div>
+      ) : (
+        <Thumbnail
+          src={media?.kind === "image" ? media.src : null}
+          alt={item.title}
+          label={item.category ?? "FORUM"}
+          badge={featuredBadge}
+        />
+      )}
 
       {/* Label row */}
       <div className="flex items-center gap-2 px-4 pt-1">
@@ -249,10 +361,9 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
           </p>
           {previewText ? (
             <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
-          ) : replyImage ? (
-            /* Reply was image-only — show the image inline in the quote block */
+          ) : replyMedia?.kind === "image" ? (
             <img
-              src={replyImage}
+              src={replyMedia.src}
               alt="Latest reply"
               className="max-h-32 w-auto rounded border border-border object-cover"
             />
@@ -283,7 +394,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <MessageSquare className="h-3.5 w-3.5" />
-        JOIN DISCUSSION →
+        {media && media.kind !== "image" ? "WATCH & DISCUSS →" : "JOIN DISCUSSION →"}
       </Link>
     </div>
   )
@@ -297,29 +408,29 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
     ...(item.tags?.filter((t) => t !== item.tag) ?? []),
   ].slice(0, 3)
 
-  const video = extractFirstVideo(item.content)
+  const media = extractFirstBlogMedia(item.content)
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Video preview — shown instead of static thumbnail when post contains a video */}
-      {video ? (
+      {/* Media preview — video/iframe shown instead of static thumbnail when post contains embedded media */}
+      {media ? (
         <div
           className="relative w-full overflow-hidden bg-black border-b border-border"
           style={{ aspectRatio: "16/7" }}
         >
-          {video.kind === "upload" ? (
+          {media.kind === "video" ? (
             <video
-              src={video.src}
+              src={media.src}
               controls
               playsInline
               preload="metadata"
               className="w-full h-full object-contain"
-              title={video.title ?? item.title}
+              title={media.title ?? item.title}
             />
           ) : (
             <iframe
-              src={video.src}
-              title={video.title ?? item.title}
+              src={media.src}
+              title={media.title ?? item.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="absolute inset-0 w-full h-full border-0"
@@ -418,7 +529,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
         className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <BookOpen className="h-3.5 w-3.5" />
-        {video ? "WATCH DISPATCH →" : "READ DISPATCH →"}
+        {media ? "WATCH DISPATCH →" : "READ DISPATCH →"}
       </Link>
     </div>
   )
