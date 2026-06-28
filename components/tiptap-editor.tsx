@@ -316,6 +316,26 @@ export function TiptapEditor({
   // Keep a stable ref for use inside Tiptap's handleDrop closure
   const uploadVideoFileRef = useRef<(file: File) => void>(() => {})
 
+  // Serialize editor image insertions so concurrent uploads don't clobber each other.
+  // Each upload appends to this promise chain; inserts happen in completion order.
+  const insertQueueRef = useRef<Promise<void>>(Promise.resolve())
+
+  function enqueueImageInsert(url: string, alt: string) {
+    insertQueueRef.current = insertQueueRef.current.then(() => {
+      if (!editor) return
+      // Move to the end of the document, then insert a new paragraph + the image.
+      const { doc } = editor.state
+      const end = doc.content.size
+      editor
+        .chain()
+        .insertContentAt(end, [
+          { type: "paragraph" },
+          { type: "image", attrs: { src: url, alt } },
+        ])
+        .run()
+    })
+  }
+
   const getInitialContent = () => {
     if (!defaultValue || defaultValue.trim() === "") return ""
     try {
@@ -454,7 +474,7 @@ export function TiptapEditor({
             m.id === tempId ? { ...m, url: result.url, filename: result.filename, status: "done" } : m,
           ),
         )
-        editor?.chain().focus().setImage({ src: result.url, alt: file.name }).run()
+        enqueueImageInsert(result.url, file.name)
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed"
         setMedia((prev) =>
@@ -462,6 +482,7 @@ export function TiptapEditor({
         )
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [canUpload, editor, uploadFolder, imageDone],
   )
 
@@ -514,7 +535,7 @@ export function TiptapEditor({
       if (existing) return prev.map((m) => (m.id === existing.id ? { ...m, url, status: "done" } : m))
       return [...prev, { id: crypto.randomUUID(), url, filename, size: 0, kind: "image", status: "done" }]
     })
-    editor?.chain().focus().setImage({ src: url, alt: filename }).run()
+    enqueueImageInsert(url, filename)
   }
 
   function onVideoUploaded(url: string, filename: string) {
