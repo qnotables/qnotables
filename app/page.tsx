@@ -130,14 +130,14 @@ export default async function Page() {
           </aside>
         </div>
 
+        {/* Gallery Section */}
+        <div className="mt-12">
+          <GallerySection />
+        </div>
+
         {/* Rumble Live Stream — compact flash card */}
         <div className="mt-12">
           <RumbleLiveStream />
-        </div>
-
-        {/* Gallery Section - Below Brief Signup */}
-        <div className="mt-12">
-          <GallerySection />
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
