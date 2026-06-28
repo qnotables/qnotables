@@ -19,6 +19,8 @@ import { timeAgo } from "@/lib/time"
 import { extractFirstVideo as extractForumVideo, extractFirstImage } from "@/lib/forum-utils"
 import { generateEmbedUrl, detectVideoPlatform, parseVideoEmbed } from "@/lib/video-embed-utils"
 import { parseIframeEmbed } from "@/lib/iframe-embed-utils"
+import { ShareButtons } from "@/components/share-buttons"
+import { getSiteUrl } from "@/lib/rss-utils"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -386,6 +388,11 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
             {item.replyCount} {item.replyCount === 1 ? "reply" : "replies"}
           </span>
         </div>
+        <ShareButtons
+          title={item.title}
+          url={`${getSiteUrl()}/forum/${item.id}`}
+          className="ml-auto"
+        />
       </div>
 
       {/* CTA */}
@@ -498,7 +505,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       )}
 
       {/* Meta */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground label-mono mt-auto px-4">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground label-mono mt-auto px-4">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           <span>
@@ -521,6 +528,13 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
             <span>{item.sourceName}</span>
           </>
         )}
+        <ShareButtons
+          title={item.title}
+          url={`${getSiteUrl()}/blog/${item.slug}`}
+          excerpt={item.excerpt}
+          hashtags={item.tags}
+          className="ml-auto"
+        />
       </div>
 
       {/* CTA */}
@@ -607,6 +621,12 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
             <span>{item.sourceName}</span>
           </>
         )}
+        <ShareButtons
+          title={item.title}
+          url={`${getSiteUrl()}/archives/${item.slug}`}
+          excerpt={item.excerpt}
+          className="ml-auto"
+        />
       </div>
 
       {/* CTA */}
