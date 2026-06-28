@@ -11,14 +11,14 @@ interface EmbedSite {
 
 const SITES: EmbedSite[] = [
    {
-    id: "qresearch-latest",
-    label: "QResearch Latest",
+    id: "qresearch",
+    label: "QResearch",
     tag: "",
     url: "https://8kun.top/qresearch/res/24671999.html#bottom",
   },
   {
     id: "qresearch-catalog",
-    label: "QResearch Catalog",
+    label: "/QResearch/",
     tag: "",
     url: "https://8kun.top/qresearch/catalog.html",
   },
@@ -35,16 +35,22 @@ const SITES: EmbedSite[] = [
     url: "https://8kun.top/projectdcomms/catalog.html",
   },
  {
-    id: "Jiffy",
-    label: "Jiffy",
-    tag: "",
-    url: "https://jiffy.news/",
-  },
- {
     id: "You Are The News",
     label: "You Are The News",
     tag: "",
     url: "https://youarethe.news/",
+  },
+ {
+    id: "Watkins Report",
+    label: "Watkins Report",
+    tag: "",
+    url: "https://www.watkinsreport.com/",
+  },
+   {
+    id: "Jiffy",
+    label: "Jiffy",
+    tag: "",
+    url: "https://jiffy.news/",
   },
 ]
 
