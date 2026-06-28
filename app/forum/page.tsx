@@ -9,6 +9,7 @@ import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
 import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
+import { getNews } from "@/lib/rss"
 
 export const metadata = {
   title: "The Town Hall — Hot and Fresh",
@@ -22,6 +23,9 @@ export default async function ForumPage({
 }) {
   await searchParams // trigger Suspense boundary; category is read client-side via useSearchParams
   const supabase = await createClient()
+
+  // Fetch trending for sidebar — runs in parallel with thread queries below
+  const newsBundle = await getNews().catch(() => null)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -132,6 +136,7 @@ export default async function ForumPage({
             stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
             pinned={pinned}
             categoryCounts={categoryCounts}
+            trending={newsBundle?.trending ?? []}
           />
         </div>
       </main>

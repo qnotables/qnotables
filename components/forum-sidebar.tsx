@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { Pin, MessageSquare, Users, FileText, Layers } from "lucide-react"
 import { FORUM_CATEGORIES } from "@/lib/forum-utils"
+import { DailyVerseWidget } from "@/components/daily-verse-widget"
+import { TrendingPanel } from "@/components/trending-panel"
 
 export interface ForumSidebarStats {
   threadCount: number
@@ -14,10 +16,13 @@ export interface PinnedThread {
   replyCount: number
 }
 
+export type TrendingItem = { rank: number; headline: string; reports: number; url?: string }
+
 interface ForumSidebarProps {
   stats: ForumSidebarStats
   pinned: PinnedThread[]
   categoryCounts: Record<string, number>
+  trending?: TrendingItem[]
 }
 
 function StatRow({
@@ -40,7 +45,7 @@ function StatRow({
   )
 }
 
-export function ForumSidebar({ stats, pinned, categoryCounts }: ForumSidebarProps) {
+export function ForumSidebar({ stats, pinned, categoryCounts, trending = [] }: ForumSidebarProps) {
   return (
     <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
       {/* Stats */}
@@ -74,6 +79,12 @@ export function ForumSidebar({ stats, pinned, categoryCounts }: ForumSidebarProp
           </ul>
         </div>
       )}
+
+      {/* Daily Verse */}
+      <DailyVerseWidget />
+
+      {/* Most Reported */}
+      {trending.length > 0 && <TrendingPanel items={trending} />}
 
       {/* Categories */}
       <div className="border border-border bg-card p-4">
