@@ -13,6 +13,7 @@ import { LiveStreamButton } from "@/components/live-stream-button"
 import { SituationFeedCycle } from "@/components/situation-report-cycle"
 import type { SituationForumItem, SituationBlogItem } from "@/components/situation-report-cycle"
 
+import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { getNews } from "@/lib/rss"
@@ -124,6 +125,7 @@ export default async function Page() {
           {/* sidebar */}
           <aside className="flex flex-col gap-6">
             <IconLinksCard />
+            <DailyVerseWidget />
             <TrendingPanel items={trending} />
             <SidebarAd />
             <BriefSignup />

@@ -163,9 +163,9 @@ export const RSS_SOURCES: RSSSource[] = [
     enabled: true,
   },
   {
-    id: "blog",
-    name: "QNotables Blog",
-    url: "https://qnotables.com/blog-feed.xml",
+    id: "NY Post",
+    name: "Ny Post",
+    url: "https://nypost.com/feed/",
     enabled: true,
   },
 ]
