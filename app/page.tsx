@@ -28,8 +28,8 @@ export default async function Page() {
     recentBlogs,
   ] = await Promise.all([
     getNews(),
-    getRecentForumThreads(3),
-    getRecentBlogPosts(3),
+    getRecentForumThreads(5),
+    getRecentBlogPosts(5),
   ])
 
   // Map to typed cycle props

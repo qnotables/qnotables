@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useRef, useState } from "react"
+import { useActionState, useMemo, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import Link from "next/link"
 import { ImagePlus, Loader2, Save, X } from "lucide-react"
@@ -109,7 +109,38 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
   const [excerptValue, setExcerptValue] = useState(post?.excerpt ?? "")
   const [seoTitleValue, setSeoTitleValue] = useState(post?.seoTitle ?? "")
   const [seoDescriptionValue, setSeoDescriptionValue] = useState(post?.seoDescription ?? "")
-  const [seoImageUrl, setSeoImageUrl] = useState<string>(post?.seoImageUrl ?? "")
+  // Explicit override set by the user; empty string means "use auto-detected default"
+  const [seoImageOverride, setSeoImageOverride] = useState<string>(post?.seoImageUrl ?? "")
+  // Track body content so we can derive the first image as a fallback default
+  const [bodyContent, setBodyContent] = useState<string>(post?.content ?? "")
+
+  // Derive the first image from the body when no explicit override is set
+  const autoSeoImage = useMemo(() => {
+    if (!bodyContent) return ""
+    try {
+      // Tiptap JSON: walk content nodes for image src
+      if (bodyContent.trimStart().startsWith("{")) {
+        type TNode = { type?: string; attrs?: Record<string, string>; content?: TNode[] }
+        const doc: TNode = JSON.parse(bodyContent)
+        function walk(nodes?: TNode[]): string | undefined {
+          for (const n of nodes ?? []) {
+            if (n.type === "image" && n.attrs?.src) return n.attrs.src
+            const found = walk(n.content)
+            if (found) return found
+          }
+        }
+        return walk(doc.content) ?? ""
+      }
+      // Markdown / HTML fallback
+      const m = bodyContent.match(/!\[[^\]]*\]\((https?:\/\/[^\)]+)\)|<img[^>]+src=["']([^"']+)["']/i)
+      return m?.[1] ?? m?.[2] ?? ""
+    } catch {
+      return ""
+    }
+  }, [bodyContent])
+
+  // What actually gets submitted: explicit override > auto-detected > empty
+  const seoImageUrl = seoImageOverride || autoSeoImage
 
   const inputClass =
     "border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-primary"
@@ -238,27 +269,39 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
       <CoverImageField defaultUrl={post?.coverImage} />
 
       <div className="flex flex-col gap-2">
-        <label className="label-mono text-muted-foreground">SEO/OG Image <span className="text-muted-foreground/60">(optional — for social sharing)</span></label>
+        <label className="label-mono text-muted-foreground">
+          SEO/OG Image{" "}
+          <span className="text-muted-foreground/60">(optional — defaults to first image in post)</span>
+        </label>
         <input type="hidden" name="seo_image_url" value={seoImageUrl} />
 
         {seoImageUrl ? (
           <div className="relative w-full max-w-md overflow-hidden border border-border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={seoImageUrl || "/placeholder.svg"} alt="SEO preview" className="h-48 w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => setSeoImageUrl("")}
-              className="absolute right-2 top-2 flex items-center gap-1 border border-border bg-background/90 px-2 py-1 text-xs text-foreground transition-colors hover:border-primary"
-            >
-              <X className="h-3 w-3" /> Remove
-            </button>
+            <img src={seoImageUrl} alt="SEO preview" className="h-48 w-full object-cover" />
+            <div className="absolute right-2 top-2 flex items-center gap-1.5">
+              {!seoImageOverride && autoSeoImage && (
+                <span className="label-mono border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground">
+                  auto
+                </span>
+              )}
+              {seoImageOverride && (
+                <button
+                  type="button"
+                  onClick={() => setSeoImageOverride("")}
+                  className="flex items-center gap-1 border border-border bg-background/90 px-2 py-1 text-xs text-foreground transition-colors hover:border-primary"
+                >
+                  <X className="h-3 w-3" /> Remove
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <input
             type="url"
             placeholder="https://example.com/image.jpg"
-            value={seoImageUrl}
-            onChange={(e) => setSeoImageUrl(e.target.value)}
+            value={seoImageOverride}
+            onChange={(e) => setSeoImageOverride(e.target.value)}
             className={`${inputClass} font-mono text-sm`}
           />
         )}
@@ -273,6 +316,7 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
           uploadFolder="blog"
           placeholder="Write your post… Paste a YouTube, Rumble, Odysee, or Vimeo URL to embed it."
           isSignedIn
+          onChange={setBodyContent}
         />
       </div>
 

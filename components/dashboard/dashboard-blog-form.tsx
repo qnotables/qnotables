@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react"
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ImagePlus, Loader2, Save, X, AlertCircle, Check } from "lucide-react"
 import { TextStats } from "@/components/text-stats"
@@ -193,7 +193,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
       seo_title: post?.seoTitle ?? "",
       seo_description: post?.seoDescription ?? "",
       cover_image: post?.coverImage ?? "",
-      og_image_url: "",
+      og_image_url: post?.seoImageUrl ?? "",
     }
   })
 
@@ -251,6 +251,33 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }, [])
 
+  // Auto-derive the first image from the body to pre-fill og_image_url when empty
+  const autoOgImage = useMemo(() => {
+    const body = formData.body
+    if (!body) return ""
+    try {
+      if (body.trimStart().startsWith("{")) {
+        type TNode = { type?: string; attrs?: Record<string, string>; content?: TNode[] }
+        const doc: TNode = JSON.parse(body)
+        function walk(nodes?: TNode[]): string | undefined {
+          for (const n of nodes ?? []) {
+            if (n.type === "image" && n.attrs?.src) return n.attrs.src
+            const found = walk(n.content)
+            if (found) return found
+          }
+        }
+        return walk(doc.content) ?? ""
+      }
+      const m = body.match(/!\[[^\]]*\]\((https?:\/\/[^\)]+)\)|<img[^>]+src=["']([^"']+)["']/i)
+      return m?.[1] ?? m?.[2] ?? ""
+    } catch {
+      return ""
+    }
+  }, [formData.body])
+
+  // Effective og image: explicit override wins, otherwise auto-detected
+  const effectiveOgImage = formData.og_image_url || autoOgImage
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement> | null, mode: "draft" | "publish") => {
     if (e) e.preventDefault()
     setSubmitMode(mode)
@@ -302,7 +329,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     fd.append("seo_title", formData.seo_title)
     fd.append("seo_description", formData.seo_description)
     fd.append("cover_image", formData.cover_image)
-    fd.append("og_image_url", formData.og_image_url)
+    fd.append("og_image_url", effectiveOgImage)
 
     // Call the server action
     await formAction(fd)
@@ -602,8 +629,8 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
 
             <ImageField
               name="og_image_url"
-              label="Open Graph Image"
-              value={formData.og_image_url}
+              label={`Open Graph Image${!formData.og_image_url && autoOgImage ? " (auto: first image in post)" : ""}`}
+              value={effectiveOgImage}
               onChange={(url) => handleFieldChange("og_image_url", url)}
               uploadFolder="og"
             />
@@ -703,11 +730,10 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   source_url: "",
                   seo_title: "",
                   seo_description: "",
-                  cover_image: "",
-                  og_image_url: "",
-                })
-              }
-            }}
+      cover_image: "",
+      og_image_url: post?.seoImageUrl ?? "",
+    })
+  }}
             className="label-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Clear local draft
