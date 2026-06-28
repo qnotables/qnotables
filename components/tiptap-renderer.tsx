@@ -295,6 +295,30 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
       )
     }
 
+    case "htmlEmbedBlock": {
+      const html = typeof node.attrs?.html === "string" ? node.attrs.html : ""
+      const height = typeof node.attrs?.height === "number" ? node.attrs.height : 480
+      if (!html) return null
+      return (
+        <div key={key} className="my-4 overflow-hidden border border-border bg-card">
+          <div className="border-b border-border bg-muted/60 px-3 py-1.5">
+            <span className="label-mono text-xs text-muted-foreground">HTML EMBED</span>
+          </div>
+          {/* Sandboxed: deliberately omits allow-same-origin so injected scripts
+              run in an opaque origin and cannot reach our cookies/DOM. */}
+          <iframe
+            srcDoc={html}
+            title="HTML embed"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"
+            className="w-full border-0 bg-white"
+            style={{ height: `${height}px` }}
+          />
+        </div>
+      )
+    }
+
     default:
       // Unknown node — skip silently
       return null
