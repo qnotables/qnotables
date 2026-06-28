@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
 import { Markdown } from "@/components/markdown"
 import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { isTiptapJson } from "@/lib/tiptap-utils"
@@ -77,91 +78,110 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
-        <Link
-          href="/archives"
-          className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> Archives
-        </Link>
+      {/* Top ad — full width below the header */}
+      <TopAd />
 
-        <div className="label-mono mb-4 flex items-center gap-3 text-primary">
-          <span>{post.tag}</span>
-          {post.category && <span className="text-muted-foreground">•</span>}
-          {post.category && <span className="text-muted-foreground">{post.category}</span>}
-          <span className="text-muted-foreground">•</span>
-          <span className="text-muted-foreground">{formatDate(post.date)}</span>
-        </div>
+      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
+        {/* Two-column layout: article (left) + sidebar (right) */}
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
 
-        <h1 className="stencil text-balance text-3xl leading-tight text-foreground md:text-5xl">
-          {post.title}
-        </h1>
+          {/* Article column */}
+          <div className="min-w-0 flex-1">
+            <Link
+              href="/archives"
+              className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
+            >
+              <ArrowLeft className="h-4 w-4" /> Archives
+            </Link>
 
-        {post.subtitle && (
-          <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{post.subtitle}</p>
-        )}
-
-        <div className="label-mono mt-6 flex items-center gap-4 border-b border-border pb-6 text-muted-foreground">
-          <span>{post.author}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" /> {post.readMinutes} MIN READ
-          </span>
-        </div>
-
-        <article className="mt-8">
-          {isTiptapJson(post.content) ? (
-            <TiptapRenderer content={post.content} />
-          ) : (
-            <Markdown content={post.content} />
-          )}
-        </article>
-
-        {/* Share section */}
-        <div className="mt-12 border-t border-border pt-8">
-          <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
-          <ShareButtons
-            title={post.title}
-            url={`${getSiteUrl()}/archives/${post.slug}`}
-            excerpt={post.subtitle || post.excerpt}
-            hashtags={post.tags}
-          />
-        </div>
-
-        {/* Related posts */}
-        {relatedPosts.length > 0 && (
-          <section className="mt-12 border-t border-border pt-8">
-            <h2 className="stencil mb-6 text-xl text-foreground">Related Reading</h2>
-            <div className="space-y-4">
-              {relatedPosts.map((relatedPost) => (
-                <Link
-                  key={relatedPost.slug}
-                  href={`/archives/${relatedPost.slug}`}
-                  className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
-                >
-                  <div className="min-w-0 flex-1">
-                    <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
-                      {relatedPost.title}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
-                      {relatedPost.excerpt}
-                    </p>
-                  </div>
-                  <div className="label-mono mt-1 flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
-                  </div>
-                </Link>
-              ))}
+            <div className="label-mono mb-4 flex items-center gap-3 text-primary">
+              <span>{post.tag}</span>
+              {post.category && <span className="text-muted-foreground">•</span>}
+              {post.category && <span className="text-muted-foreground">{post.category}</span>}
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">{formatDate(post.date)}</span>
             </div>
-          </section>
-        )}
 
-        {/* Comments section */}
-        {post.id && (
-          <div className="mt-12">
-            <BlogComments postId={post.id} initialComments={comments} currentUserId={currentUserId} />
+            <h1 className="stencil text-balance text-3xl leading-tight text-foreground md:text-5xl">
+              {post.title}
+            </h1>
+
+            {post.subtitle && (
+              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{post.subtitle}</p>
+            )}
+
+            <div className="label-mono mt-6 flex items-center gap-4 border-b border-border pb-6 text-muted-foreground">
+              <span>{post.author}</span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> {post.readMinutes} MIN READ
+              </span>
+            </div>
+
+            <article className="mt-8">
+              {isTiptapJson(post.content) ? (
+                <TiptapRenderer content={post.content} />
+              ) : (
+                <Markdown content={post.content} />
+              )}
+            </article>
+
+            {/* Share section */}
+            <div className="mt-12 border-t border-border pt-8">
+              <p className="label-mono mb-4 text-xs font-semibold text-muted-foreground">SHARE THIS RECORD</p>
+              <ShareButtons
+                title={post.title}
+                url={`${getSiteUrl()}/archives/${post.slug}`}
+                excerpt={post.subtitle || post.excerpt}
+                hashtags={post.tags}
+              />
+            </div>
+
+            {/* Related posts */}
+            {relatedPosts.length > 0 && (
+              <section className="mt-12 border-t border-border pt-8">
+                <h2 className="stencil mb-6 text-xl text-foreground">Related Reading</h2>
+                <div className="space-y-4">
+                  {relatedPosts.map((relatedPost) => (
+                    <Link
+                      key={relatedPost.slug}
+                      href={`/archives/${relatedPost.slug}`}
+                      className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
+                          {relatedPost.title}
+                        </h3>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                          {relatedPost.excerpt}
+                        </p>
+                      </div>
+                      <div className="label-mono mt-1 flex items-center gap-1 text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Comments section */}
+            {post.id && (
+              <div className="mt-12">
+                <BlogComments postId={post.id} initialComments={comments} currentUserId={currentUserId} />
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Sidebar ad column — hidden on mobile, sticky on desktop */}
+          <aside className="hidden lg:block lg:w-64 xl:w-72 shrink-0">
+            <SidebarAd />
+          </aside>
+
+        </div>
       </main>
+
+      {/* Bottom ad — full width above the footer */}
+      <BottomAd />
 
       <SiteFooter />
     </div>
