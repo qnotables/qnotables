@@ -50,7 +50,7 @@ export function DailyVerseWidget() {
         id="dailyVersesWrapper"
         style={{
           fontFamily: "'Libre Baskerville', serif",
-          fontSize: "8pt",
+          fontSize: "11pt",
           color: "#eef2ff",
           textAlign: "center",
         }}
