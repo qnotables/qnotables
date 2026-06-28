@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/site-header"
-import { FeaturedStory } from "@/components/featured-story"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
 import { BriefSignup } from "@/components/brief-signup"
@@ -99,10 +98,8 @@ export default async function Page() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* primary column */}
           <div className="lg:col-span-2">
-            <FeaturedStory story={featured} />
-
             {/* Situation Report cyclers: recent blog posts (top) + recent forum posts (bottom) */}
-            <div className="mt-6 flex flex-col gap-6">
+            <div className="flex flex-col gap-6">
               <SituationFeedCycle
                 items={blogItems}
                 heading="LATEST DISPATCHES"
