@@ -39,8 +39,10 @@ export const SPAM_LIMITS = {
   POST_COOLDOWN_MS: 30_000,
   /** Upload rate-limit window in ms (60 s). */
   UPLOAD_COOLDOWN_MS: 60_000,
-  /** Max uploads per window per user. */
+  /** Max uploads per window per user (forum). Blog uploads use a separate, higher limit. */
   MAX_UPLOADS_PER_WINDOW: 3,
+  /** Max uploads per window per user for blog/admin editors (higher to allow multi-image batches). */
+  MAX_BLOG_UPLOADS_PER_WINDOW: 20,
   /** Days since account creation before user is considered "established". */
   NEW_USER_DAYS: 7,
   /** Post count below which a user is considered "new". */

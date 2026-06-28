@@ -84,21 +84,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Per-user upload rate limit: max 3 uploads per 60 s
-  const uploadRl = checkRateLimit(
-    user.id,
-    "upload",
-    SPAM_LIMITS.UPLOAD_COOLDOWN_MS,
-    SPAM_LIMITS.MAX_UPLOADS_PER_WINDOW,
-  )
-  if (!uploadRl.allowed) {
-    const secs = Math.ceil(uploadRl.retryAfterMs / 1000)
-    return NextResponse.json(
-      { success: false, error: `Upload limit reached. Please wait ${secs}s before uploading again.` },
-      { status: 429, headers: { "Retry-After": String(secs) } },
-    )
-  }
-
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
@@ -107,9 +92,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No file provided." }, { status: 400 })
     }
 
-    // Sanitize folder param first (needed for video permission check)
+    // Sanitize folder param (needed for video permission check and rate-limit bucket)
     const folderRaw = String(formData.get("folder") ?? "forum")
     const folder = folderRaw === "blog" ? "blog" : "forum"
+
+    // Blog editors batch-upload many images at once; use a higher per-window limit
+    // so multi-image drops don't immediately hit the forum spam guard.
+    const isBlogUpload = folder === "blog"
+    const uploadLimit = isBlogUpload
+      ? SPAM_LIMITS.MAX_BLOG_UPLOADS_PER_WINDOW
+      : SPAM_LIMITS.MAX_UPLOADS_PER_WINDOW
+    const uploadRlKey = isBlogUpload ? "upload:blog" : "upload:forum"
+
+    const uploadRl = checkRateLimit(
+      user.id,
+      uploadRlKey,
+      SPAM_LIMITS.UPLOAD_COOLDOWN_MS,
+      uploadLimit,
+    )
+    if (!uploadRl.allowed) {
+      const secs = Math.ceil(uploadRl.retryAfterMs / 1000)
+      return NextResponse.json(
+        { success: false, error: `Upload limit reached. Please wait ${secs}s before uploading again.` },
+        { status: 429, headers: { "Retry-After": String(secs) } },
+      )
+    }
 
     const isImage = ALLOWED_IMAGE_TYPES.has(file.type)
     const isVideo = ALLOWED_VIDEO_TYPES.has(file.type)
