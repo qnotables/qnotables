@@ -730,10 +730,11 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   source_url: "",
                   seo_title: "",
                   seo_description: "",
-      cover_image: "",
-      og_image_url: post?.seoImageUrl ?? "",
-    })
-  }}
+                  cover_image: "",
+                  og_image_url: post?.seoImageUrl ?? "",
+                })
+              }
+            }}
             className="label-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Clear local draft
