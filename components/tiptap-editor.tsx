@@ -622,7 +622,7 @@ export function TiptapEditor({
   // ─── Toolbar ───────────────────────────────────────────────────────────────
 
   const toolbar = (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/40 px-1 py-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-t border-border bg-muted/40 px-1 py-1">
       {/* Headings */}
       <ToolBtn
         title="Heading 1"
@@ -867,9 +867,6 @@ export function TiptapEditor({
         </div>
       </div>
 
-      {/* Toolbar (write mode only) */}
-      {tab === "write" && toolbar}
-
       {/* Editor area */}
       {tab === "write" && (
         <div className="relative">
@@ -894,6 +891,9 @@ export function TiptapEditor({
           )}
         </div>
       )}
+
+      {/* Toolbar (write mode only) */}
+      {tab === "write" && toolbar}
 
       {/* Pending embed banner (pasted URL auto-detected) */}
       {pendingEmbed && (
