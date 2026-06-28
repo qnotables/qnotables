@@ -14,9 +14,9 @@
  */
 
 import { useEffect, useRef, useState } from "react"
-import { Code2, Film, Image as ImageIcon, Link2, X, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Code2, Film, Globe, Image as ImageIcon, Link2, X, AlertCircle, CheckCircle2 } from "lucide-react"
 import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
-import { sanitizeIframeHtml, APPROVED_IFRAME_DOMAINS } from "@/lib/media-utils"
+import { sanitizeIframeHtml, sanitizeIframeHtmlAny, isHttpsUrl, APPROVED_IFRAME_DOMAINS } from "@/lib/media-utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,11 +30,21 @@ export interface EmbedMediaModalProps {
    * the user pastes raw iframe HTML code.
    */
   onIframeCode: (src: string, title: string) => void
+  /**
+   * Admin-only: when true, the modal allows embedding arbitrary https
+   * websites (any domain) and raw HTML (rendered in a sandboxed iframe).
+   * Defaults to false so the forum editor stays restricted.
+   */
+  allowArbitrary?: boolean
+  /** Called with an arbitrary https website URL (only when allowArbitrary). */
+  onWebsiteUrl?: (url: string, title: string) => void
+  /** Called with raw HTML to embed in a sandboxed iframe (only when allowArbitrary). */
+  onHtmlEmbed?: (html: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type InputMode = "url" | "iframe"
+type InputMode = "url" | "iframe" | "html"
 
 function isImageUrl(raw: string): boolean {
   return (
@@ -49,6 +59,9 @@ export function EmbedMediaModal({
   onImageUrl,
   onEmbedUrl,
   onIframeCode,
+  allowArbitrary = false,
+  onWebsiteUrl,
+  onHtmlEmbed,
 }: EmbedMediaModalProps) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<InputMode>("url")
@@ -90,12 +103,27 @@ export function EmbedMediaModal({
       return
     }
 
+    if (mode === "html") {
+      // Admin-only: raw HTML embed → sandboxed iframe in the editor/renderer
+      if (!allowArbitrary || !onHtmlEmbed) {
+        setError("Raw HTML embeds are not available here.")
+        return
+      }
+      onHtmlEmbed(raw)
+      setSuccess("HTML embedded.")
+      setTimeout(() => setOpen(false), 800)
+      return
+    }
+
     if (mode === "iframe") {
-      // User pasted raw iframe HTML
-      const sanitized = sanitizeIframeHtml(raw)
+      // User pasted raw iframe HTML. Admins (allowArbitrary) can use any https
+      // domain; everyone else is restricted to the approved allowlist.
+      const sanitized = allowArbitrary ? sanitizeIframeHtmlAny(raw) : sanitizeIframeHtml(raw)
       if (!sanitized) {
         setError(
-          "Could not sanitize that iframe. Make sure the src domain is in our approved list and there are no script tags.",
+          allowArbitrary
+            ? "Could not sanitize that iframe. Make sure it has a valid https src and contains no <script> tags."
+            : "Could not sanitize that iframe. Make sure the src domain is in our approved list and there are no script tags.",
         )
         return
       }
@@ -128,7 +156,15 @@ export function EmbedMediaModal({
       return
     }
 
-    // 3. URL but not a recognised embed — show supported formats
+    // 3. Admin-only: any other valid https URL → embed the website directly
+    if (allowArbitrary && onWebsiteUrl && isHttpsUrl(raw)) {
+      onWebsiteUrl(raw, "Embedded website")
+      setSuccess("Website embedded.")
+      setTimeout(() => setOpen(false), 800)
+      return
+    }
+
+    // 4. URL but not a recognised embed — show supported formats
     if (/^https?:\/\//i.test(raw)) {
       setError(
         `URL not recognised. Supported formats:\n\nYouTube: youtube.com/watch?v=ID or youtu.be/ID\nRumble: rumble.com/vID or rumble.com/embed/vID/\nOdysee: odysee.com/@channel/video-title\nVimeo: vimeo.com/ID\nX/Twitter: x.com/user/status/ID\nInstagram: instagram.com/p/ID/ or .../reel/ID/\nTikTok: tiktok.com/@user/video/ID or vm.tiktok.com/shortcode\nImages: any .jpg, .png, .webp, .gif\n\nFor custom embeds, use the "Iframe code" tab.`,
@@ -199,8 +235,22 @@ export function EmbedMediaModal({
               }`}
             >
               <Code2 className="h-3 w-3" />
-              Iframe code
+              Iframe
             </button>
+            {allowArbitrary && (
+              <button
+                type="button"
+                onClick={() => { setMode("html"); setError(null) }}
+                className={`flex items-center gap-1.5 px-3 py-2 label-mono text-[11px] transition-colors ${
+                  mode === "html"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Globe className="h-3 w-3" />
+                HTML
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -215,7 +265,9 @@ export function EmbedMediaModal({
             {mode === "url" ? (
               <>
                 <p className="label-mono text-[10px] text-muted-foreground leading-relaxed">
-                  Paste an image URL (.jpg/.png/.webp/.gif) or a link from YouTube, Rumble, Odysee, Vimeo, X/Twitter, Instagram, or TikTok.
+                  {allowArbitrary
+                    ? "Paste an image URL, a video/social link (YouTube, Rumble, Odysee, Vimeo, X, Instagram, TikTok), or any https website URL to embed it inline."
+                    : "Paste an image URL (.jpg/.png/.webp/.gif) or a link from YouTube, Rumble, Odysee, Vimeo, X/Twitter, Instagram, or TikTok."}
                 </p>
                 <div className="flex items-center gap-1.5 border border-border bg-muted/30 px-2 py-1">
                   <ImageIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
@@ -230,10 +282,12 @@ export function EmbedMediaModal({
                   />
                 </div>
               </>
-            ) : (
+            ) : mode === "iframe" ? (
               <>
                 <p className="label-mono text-[10px] text-muted-foreground leading-relaxed">
-                  Paste iframe embed code. Approved domains: {approvedDomainSample}…
+                  {allowArbitrary
+                    ? "Paste iframe embed code from any https source. Scripts and event handlers are stripped for safety."
+                    : `Paste iframe embed code. Approved domains: ${approvedDomainSample}…`}
                 </p>
                 <textarea
                   ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -244,6 +298,24 @@ export function EmbedMediaModal({
                   placeholder={'<iframe src="https://www.youtube-nocookie.com/embed/…" …></iframe>'}
                   className="w-full resize-y border border-border bg-muted/30 px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground"
                 />
+              </>
+            ) : (
+              <>
+                <p className="label-mono text-[10px] text-muted-foreground leading-relaxed">
+                  Paste raw HTML (widgets, embed codes, custom markup). It renders in a sandboxed iframe isolated from this site, so third-party scripts run safely.
+                </p>
+                <textarea
+                  ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={6}
+                  placeholder={'<div>\n  <!-- paste any HTML / embed snippet here -->\n</div>'}
+                  className="w-full resize-y border border-border bg-muted/30 px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <p className="label-mono text-[10px] text-muted-foreground leading-relaxed">
+                  Tip: press Shift+Enter for new lines; Enter to insert.
+                </p>
               </>
             )}
 

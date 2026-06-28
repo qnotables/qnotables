@@ -226,6 +226,86 @@ export function sanitizeIframeHtml(raw: string): string | null {
   return `<iframe ${safeAttrs.join(" ")} ${defaults.join(" ")} allowfullscreen></iframe>`
 }
 
+/** True when `raw` is a syntactically valid https:// URL. */
+export function isHttpsUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw.trim())
+    return u.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Sanitize an <iframe> HTML string WITHOUT the approved-domain allowlist.
+ * Intended for the admin blog editor only.
+ *
+ *   - Rejects non-iframe tags
+ *   - Requires an https src
+ *   - Strips script/event-handler/javascript: content
+ *   - Returns only safe attribute pairs
+ *
+ * Returns null when the input is rejected.
+ */
+export function sanitizeIframeHtmlAny(raw: string): string | null {
+  const trimmed = raw.trim()
+
+  if (!/<iframe[\s>]/i.test(trimmed)) return null
+  if (/<script/i.test(trimmed)) return null
+  if (/\bon\w+\s*=/i.test(trimmed)) return null
+  if (/javascript\s*:/i.test(trimmed)) return null
+
+  // Extract src — must be a valid https URL (any domain)
+  const srcMatch = trimmed.match(/\bsrc\s*=\s*["']([^"']+)["']/i)
+  const src = srcMatch?.[1]?.trim() ?? ""
+  if (!src || !isHttpsUrl(src)) return null
+
+  const attrRegex = /\b([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi
+  const safeAttrs: string[] = []
+  let m: RegExpExecArray | null
+
+  while ((m = attrRegex.exec(trimmed)) !== null) {
+    const name = m[1].toLowerCase()
+    const value = m[2] ?? m[3] ?? ""
+    if (!SAFE_IFRAME_ATTRS.has(name)) continue
+    if (name === "src" && !isHttpsUrl(value)) continue
+    if (name === "sandbox") {
+      const sanitizedSandbox = value
+        .split(/\s+/)
+        .filter((v) =>
+          [
+            "allow-presentation",
+            "allow-same-origin",
+            "allow-scripts",
+            "allow-forms",
+            "allow-popups",
+            "allow-popups-to-escape-sandbox",
+          ].includes(v),
+        )
+        .join(" ")
+      safeAttrs.push(`sandbox="${sanitizedSandbox}"`)
+      continue
+    }
+    if (/javascript\s*:/i.test(value)) continue
+    safeAttrs.push(`${name}="${value}"`)
+  }
+
+  const attrStr = safeAttrs.join(" ")
+  const hasLoading = /\bloading=/i.test(attrStr)
+  const hasReferrer = /\breferrerpolicy=/i.test(attrStr)
+  const hasSandbox = /\bsandbox=/i.test(attrStr)
+
+  const defaults: string[] = []
+  if (!hasLoading) defaults.push('loading="lazy"')
+  if (!hasReferrer) defaults.push('referrerpolicy="no-referrer-when-downgrade"')
+  if (!hasSandbox)
+    defaults.push(
+      'sandbox="allow-presentation allow-same-origin allow-scripts allow-forms allow-popups"',
+    )
+
+  return `<iframe ${safeAttrs.join(" ")} ${defaults.join(" ")} allowfullscreen></iframe>`
+}
+
 // ─── Embed comment helpers ────────────────────────────────────────────────────
 
 /**

@@ -34,6 +34,7 @@ import {
   Film,
   ExternalLink,
   Video,
+  Globe,
 } from "lucide-react"
 import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
 import {
@@ -244,6 +245,75 @@ function createVideoBlockExtension() {
   })
 }
 
+// ─── HtmlEmbedBlock Node (raw HTML in a sandboxed iframe) ───────────────────────
+
+function HtmlEmbedBlockView({
+  node,
+  deleteNode,
+}: {
+  node: { attrs: { html: string; height: number } }
+  deleteNode: () => void
+}) {
+  const { html, height } = node.attrs
+  return (
+    <NodeViewWrapper className="html-embed-block-wrapper my-4 select-none" contentEditable={false}>
+      <div className="relative overflow-hidden border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border bg-muted/60 px-3 py-1.5">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-primary" />
+            <span className="label-mono text-xs text-muted-foreground">HTML EMBED</span>
+          </div>
+          <button
+            type="button"
+            onClick={deleteNode}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 text-muted-foreground hover:text-destructive transition-colors"
+            title="Remove embed"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        {/* Sandboxed: deliberately omits allow-same-origin so injected
+            scripts run in an opaque origin and cannot reach our cookies/DOM. */}
+        <iframe
+          srcDoc={html}
+          title="HTML embed"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"
+          className="w-full border-0 bg-white"
+          style={{ height: `${height || 480}px` }}
+        />
+      </div>
+    </NodeViewWrapper>
+  )
+}
+
+function createHtmlEmbedBlockExtension() {
+  return TiptapNode.create({
+    name: "htmlEmbedBlock",
+    group: "block",
+    atom: true,
+    draggable: true,
+    selectable: true,
+    addAttributes() {
+      return {
+        html: { default: "" },
+        height: { default: 480 },
+      }
+    },
+    parseHTML() {
+      return [{ tag: 'div[data-type="html-embed-block"]' }]
+    },
+    renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+      return ["div", mergeAttributes(HTMLAttributes as Record<string, string>, { "data-type": "html-embed-block" })]
+    },
+    addNodeView() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return ReactNodeViewRenderer(HtmlEmbedBlockView as any)
+    },
+  })
+}
+
 // ─── Toolbar helpers ──────────────────────────────────────────────────────────
 
 function ToolBtn({
@@ -349,6 +419,7 @@ export function TiptapEditor({
 
   const EmbedBlock = useRef(createEmbedBlockExtension()).current
   const VideoBlock = useRef(createVideoBlockExtension()).current
+  const HtmlEmbedBlock = useRef(createHtmlEmbedBlockExtension()).current
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -400,6 +471,7 @@ export function TiptapEditor({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       EmbedBlock,
       VideoBlock,
+      HtmlEmbedBlock,
     ],
     content: getInitialContent(),
     onUpdate({ editor }) {
@@ -579,6 +651,27 @@ export function TiptapEditor({
         embedUrl: src,
         title,
       },
+    }).run()
+  }
+
+  // Admin-only: embed an arbitrary https website as an iframe-style embed block.
+  function onWebsiteUrl(url: string, title: string) {
+    editor?.chain().focus().insertContent({
+      type: "embedBlock",
+      attrs: {
+        provider: "website",
+        originalUrl: url,
+        embedUrl: url,
+        title,
+      },
+    }).run()
+  }
+
+  // Admin-only: embed raw HTML inside a sandboxed iframe.
+  function onHtmlEmbed(html: string) {
+    editor?.chain().focus().insertContent({
+      type: "htmlEmbedBlock",
+      attrs: { html, height: 480 },
     }).run()
   }
 
@@ -810,11 +903,15 @@ export function TiptapEditor({
         media={media}
       />
 
-      {/* Embed Media — single unified dropdown */}
+      {/* Embed Media — single unified dropdown.
+          Arbitrary website/HTML embeds are enabled only in the blog editor. */}
       <EmbedMediaModal
         onImageUrl={onEmbedImageUrl}
         onEmbedUrl={onEmbedUrl}
         onIframeCode={onIframeCode}
+        allowArbitrary={uploadFolder === "blog"}
+        onWebsiteUrl={onWebsiteUrl}
+        onHtmlEmbed={onHtmlEmbed}
       />
     </div>
   )
