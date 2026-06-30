@@ -51,7 +51,7 @@ export function DailyVerseWidget() {
         style={{
           fontFamily: "'Libre Baskerville', serif",
           fontSize: "11pt",
-          color: "#eef2ff",
+          color: "#e3decc",
           textAlign: "center",
         }}
       />
