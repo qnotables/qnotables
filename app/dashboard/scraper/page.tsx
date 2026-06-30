@@ -4,7 +4,8 @@ import { getScrapeLogs, getScrapedDrafts, getScraperSources } from "@/app/action
 import { ScraperRunButton } from "@/components/scraper/scraper-run-button"
 import { ScraperDraftsTable } from "@/components/scraper/scraper-drafts-table"
 import { ScraperLogs } from "@/components/scraper/scraper-logs"
-import { Rss, Globe, FileText, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import { NotablesRefreshButton } from "@/components/notables/notables-refresh-button"
+import { Rss, Globe, FileText, Clock, CheckCircle, AlertTriangle, Radio } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -135,6 +136,25 @@ export default async function ScraperPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Notables Scraper */}
+      <div className="border-b border-border px-6 py-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <Radio className="h-4 w-4 text-primary" />
+              <h2 className="label-mono text-xs font-semibold uppercase text-muted-foreground">
+                Notables Scraper
+              </h2>
+            </div>
+            <p className="label-mono text-xs text-muted-foreground">
+              Pulls QResearch notables from public 8kun RSS feeds (with HTML fallback).
+              Runs automatically every 30 minutes via cron.
+            </p>
+          </div>
+          <NotablesRefreshButton />
+        </div>
       </div>
 
       {/* Tabs: Drafts / Logs */}

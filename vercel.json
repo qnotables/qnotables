@@ -7,6 +7,10 @@
     {
       "path": "/api/scrape",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/notables-scrape",
+      "schedule": "*/30 * * * *"
     }
   ]
 }
