@@ -166,7 +166,7 @@ export const RSS_SOURCES: RSSSource[] = [
     id: "NY Post",
     name: "Ny Post",
     url: "https://nypost.com/feed/",
-    enabled: true,
+    enabled: false,
   },
 ]
 
