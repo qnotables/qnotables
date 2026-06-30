@@ -161,7 +161,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         {["NOTABLES", ...categories].map((cat) => (
           <a
             key={cat}
-            href={cat === "NOTABLES" ? "/#wire" : `/#desk-${cat}`}
+            href={cat === "NOTABLES" ? "/notables" : `/#desk-${cat}`}
             onClick={() => {
               setActive(cat)
               setMenuOpen(false)
