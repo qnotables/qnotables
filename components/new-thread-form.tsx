@@ -36,7 +36,7 @@ export function NewThreadForm() {
           name="title"
           required
           maxLength={140}
-          placeholder="What's the dispatch?"
+          placeholder="Title"
           className="border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
         />
       </div>
@@ -76,7 +76,7 @@ export function NewThreadForm() {
             id="tags"
             name="tags"
             maxLength={200}
-            placeholder="e.g. trump, economy, 2024"
+            placeholder="e.g. trump, economy, Q"
             className="border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
           />
         </div>
@@ -115,7 +115,7 @@ export function NewThreadForm() {
           rows={10}
           isSignedIn
           placeholder={
-            "Lay out the claim. Bring a source if you have one.\n\nTip: paste an image directly into this box to upload it."
+            "Tip: paste an image directly into this box to upload it."
           }
         />
       </div>
