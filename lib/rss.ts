@@ -138,17 +138,17 @@ export interface RSSSource {
 
 export const RSS_SOURCES: RSSSource[] = [
   {
-    id: "watkins",
-    name: "/qr/",
+    id: "/qr/",
+    name: "/qresearch/",
     url: "https://8kun.top/qresearch/tripcode.xml",
     enabled: true,
   },
   // Add more sources below:
   {
-    id: "bbc",
-    name: "BBC News",
+    id: "qnotables",
+    name: "/qnotables/",
     url: "https://sys.8ch.net/qnotables/tripcode.xml",
-    enabled: true,  // ← Disabled: causing redirect loop - causing production build to fail
+    enabled: true,  
   },
   {
     id: "fox",
