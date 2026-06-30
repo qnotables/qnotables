@@ -162,12 +162,12 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://feeds.foxnews.com/foxnews/national",
     enabled: true,
   },
-  {
-    id: "NY Post",
-    name: "Ny Post",
-    url: "https://nypost.com/feed/",
-    enabled: true,
-  },
+  //{
+  //  id: "NY Post",
+  //  name: "Ny Post",
+  //  url: "https://nypost.com/feed/",
+  //  enabled: true,
+  //},
 ]
 
 type ParsedItem = {
