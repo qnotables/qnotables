@@ -4,7 +4,24 @@ import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { runNotablesScrape } from "@/lib/notables/ingest"
-import type { NotablesRecord, NotablesFilters } from "@/lib/notables/types"
+import type { NotablesFilters } from "@/lib/notables/types"
+
+// Shape returned from blog_posts for the notables feed
+export type NotablesPost = {
+  id: string
+  slug: string | null
+  title: string
+  excerpt: string | null
+  body: string | null
+  tag: string | null
+  post_type: string | null
+  status: string | null
+  source_url: string | null
+  source_name: string | null
+  published_at: string | null
+  imported_at: string | null
+  created_at: string
+}
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -16,37 +33,36 @@ function getSupabase() {
 // ── Public: Fetch notables with filters & pagination ─────────────────────────
 
 export async function getNotables(filters: NotablesFilters = {}): Promise<{
-  items: NotablesRecord[]
+  items: NotablesPost[]
   total: number
 }> {
   const supabase = getSupabase()
-  const { search, board, dateFrom, dateTo, page = 1, pageSize = 20 } = filters
+  const { search, tag, dateFrom, dateTo, page = 1, pageSize = 20 } = filters
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
   let query = supabase
-    .from("notables")
-    .select("*", { count: "exact" })
-    .order("scraped_at", { ascending: false })
+    .from("blog_posts")
+    .select("id, slug, title, excerpt, body, tag, post_type, status, source_url, source_name, published_at, imported_at, created_at", { count: "exact" })
+    .eq("source_name", "Qnotables")
+    .order("published_at", { ascending: false, nullsFirst: false })
     .range(from, to)
 
-  if (board && board !== "all") {
-    query = query.eq("board", board)
+  if (tag && tag !== "all") {
+    query = query.eq("tag", tag)
   }
 
   if (dateFrom) {
-    query = query.gte("scraped_at", new Date(dateFrom).toISOString())
+    query = query.gte("published_at", new Date(dateFrom).toISOString())
   }
   if (dateTo) {
-    // include the full end day
     const end = new Date(dateTo)
     end.setDate(end.getDate() + 1)
-    query = query.lt("scraped_at", end.toISOString())
+    query = query.lt("published_at", end.toISOString())
   }
 
   if (search && search.trim()) {
-    // Text search on title and body
-    query = query.or(`title.ilike.%${search.trim()}%,body.ilike.%${search.trim()}%`)
+    query = query.or(`title.ilike.%${search.trim()}%,excerpt.ilike.%${search.trim()}%,body.ilike.%${search.trim()}%`)
   }
 
   const { data, error, count } = await query
@@ -54,24 +70,25 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
   if (error) throw new Error(`Failed to fetch notables: ${error.message}`)
 
   return {
-    items: (data ?? []) as NotablesRecord[],
+    items: (data ?? []) as NotablesPost[],
     total: count ?? 0,
   }
 }
 
-// ── Public: Get distinct boards for filter dropdown ───────────────────────────
+// ── Public: Get distinct tags for filter dropdown ─────────────────────────────
 
 export async function getNotablesBoards(): Promise<string[]> {
   const supabase = getSupabase()
   const { data, error } = await supabase
-    .from("notables")
-    .select("board")
-    .order("board")
+    .from("blog_posts")
+    .select("tag")
+    .eq("source_name", "Qnotables")
+    .not("tag", "is", null)
 
   if (error) return []
 
-  const boards = [...new Set((data ?? []).map((r: { board: string }) => r.board))]
-  return boards.filter(Boolean)
+  const tags = [...new Set((data ?? []).map((r: { tag: string }) => r.tag))]
+  return tags.filter(Boolean)
 }
 
 // ── Admin: Trigger a manual notables scrape ───────────────────────────────────
