@@ -148,7 +148,7 @@ export const RSS_SOURCES: RSSSource[] = [
     id: "bbc",
     name: "BBC News",
     url: "https://sys.8ch.net/qnotables/tripcode.xml",
-    enabled: false,  // ← Disabled: causing redirect loop - causing production build to fail
+    enabled: true,  // ← Disabled: causing redirect loop - causing production build to fail
   },
   {
     id: "fox",
