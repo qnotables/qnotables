@@ -18,11 +18,12 @@ import type { NotablesRecord, NotablesScrapeResult } from "./types"
 // ─── Source configuration ─────────────────────────────────────────────────────
 
 const RSS_SOURCES = [
-  { url: "https://8ch.net/qresearch/tripcode.xml", name: "8kun-rss-qresearch", board: "qresearch" },
-  { url: "https://8ch.net/qnotables/tripcode.xml", name: "8kun-rss-qnotables", board: "qnotables" },
+  { url: "https://8kun.top/qresearch/tripcode.xml", name: "8kun-rss-qresearch", board: "qresearch" },
+  { url: "https://8kun.top/qnotables/tripcode.xml", name: "8kun-rss-qnotables", board: "qnotables" },
 ]
 
-const HTML_FALLBACK_URL = "https://8ch.net/qresearch/res/24671999.html"
+// Points to the notables catalog thread index on 8kun
+const HTML_FALLBACK_URL = "https://8kun.top/qresearch/catalog.html"
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 

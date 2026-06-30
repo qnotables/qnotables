@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
+import { runNotablesScrape } from "@/lib/notables/ingest"
 import type { NotablesRecord, NotablesFilters } from "@/lib/notables/types"
 
 function getSupabase() {
@@ -87,48 +88,17 @@ export async function triggerNotablesScrape(): Promise<{
     return { success: false, newItems: 0, skippedDupes: 0, errors: ["Unauthorized"], message: "Unauthorized" }
   }
 
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
-    return {
-      success: false,
-      newItems: 0,
-      skippedDupes: 0,
-      errors: ["CRON_SECRET not set"],
-      message: "CRON_SECRET environment variable is not set.",
-    }
-  }
-
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-
   try {
-    const res = await fetch(`${baseUrl}/api/notables-scrape`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${cronSecret}` },
-    })
-
-    if (!res.ok) {
-      const body = await res.text()
-      return {
-        success: false,
-        newItems: 0,
-        skippedDupes: 0,
-        errors: [`HTTP ${res.status}: ${body}`],
-        message: `Scrape failed (HTTP ${res.status})`,
-      }
-    }
-
-    const data = await res.json()
+    const result = await runNotablesScrape("manual")
     revalidatePath("/notables")
     revalidatePath("/dashboard/scraper")
 
     return {
       success: true,
-      newItems: data.newItems ?? 0,
-      skippedDupes: data.skippedDupes ?? 0,
-      errors: data.errors ?? [],
-      message: `Notables scrape complete. ${data.newItems ?? 0} new item(s), ${data.skippedDupes ?? 0} duplicate(s) skipped.`,
+      newItems: result.newItems,
+      skippedDupes: result.skippedDupes,
+      errors: result.errors,
+      message: `Notables scrape complete. ${result.newItems} new item(s), ${result.skippedDupes} duplicate(s) skipped.`,
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -55,14 +55,29 @@ function stripHtml(html: string): string {
 
 /** Extract >>post references from raw text */
 function extractPostRefs(text: string): string[] {
-  const matches = text.match(/>>(\d{6,})/g)
+  const matches = text.match(/>>(\d{5,})/g)
   return matches ? [...new Set(matches)] : []
 }
 
-/** Extract external http(s) links from raw text */
-function extractLinks(text: string): string[] {
-  const matches = text.match(/https?:\/\/[^\s"'<>]+/g)
-  return matches ? [...new Set(matches)] : []
+/** Extract external http(s) links from raw text/HTML */
+function extractLinks(html: string): string[] {
+  // Pull hrefs first (most reliable in RSS content)
+  const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map((m) => m[1])
+  // Also pull bare URLs from plain text portions
+  const bare = html.match(/https?:\/\/[^\s"'<>)]+/g) ?? []
+  const all = [...hrefs, ...bare].filter((u) => u.startsWith("http"))
+  return [...new Set(all)]
+}
+
+/** Safe ISO date — converts any date string to ISO or returns null */
+function toIso(dateStr: string | undefined | null): string | null {
+  if (!dateStr) return null
+  try {
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  } catch {
+    return null
+  }
 }
 
 /** Extract image/video URLs from raw text/HTML */
@@ -86,9 +101,19 @@ export async function parseNotablesRss(feedUrl: string, sourceName: string): Pro
     return { items: [], error: `robots.txt disallows scraping ${feedUrl}` }
   }
 
-  let feed: Awaited<ReturnType<typeof rssParser.parseURL>>
+  let feed: Awaited<ReturnType<typeof rssParser.parseString>>
   try {
-    feed = await rssParser.parseURL(feedUrl)
+    // Use native fetch so HTTP 301/302 redirects (e.g. 8ch.net → 8kun.top) are followed
+    const res = await fetch(feedUrl, {
+      headers: NOTABLES_FETCH_HEADERS,
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!res.ok) {
+      return { items: [], error: `RSS fetch returned HTTP ${res.status} for ${feedUrl}` }
+    }
+    const xml = await res.text()
+    feed = await rssParser.parseString(xml)
   } catch (err) {
     return {
       items: [],
@@ -117,10 +142,11 @@ export async function parseNotablesRss(feedUrl: string, sourceName: string): Pro
     const rawText = stripHtml(rawContent) || item.contentSnippet?.trim() || null
     const body = rawText ? rawText.slice(0, 2000) : null
 
-    const allRefs = extractPostRefs(rawContent)
+    const postRefs = extractPostRefs(rawContent)
     const allLinks = extractLinks(rawContent)
     const allMedia = extractMedia(rawContent)
-    const links = [...new Set([...allRefs, ...allLinks])]
+    // links stores external URLs; post refs are embedded in raw_text
+    const links = [...allLinks, ...postRefs]
 
     const hashUnique = buildHash(board, postNumber, title)
 
@@ -134,7 +160,7 @@ export async function parseNotablesRss(feedUrl: string, sourceName: string): Pro
       links,
       media: allMedia,
       raw_text: rawContent ? rawContent.slice(0, 5000) : null,
-      created_at_source: item.isoDate ?? item.pubDate ?? null,
+      created_at_source: toIso(item.isoDate ?? item.pubDate),
       scraped_at: now,
       hash_unique: hashUnique,
     })
