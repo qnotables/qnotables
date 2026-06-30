@@ -29,7 +29,8 @@ export interface NotablesScrapeResult {
 
 export interface NotablesFilters {
   search?: string
-  board?: string
+  board?: string  // kept for legacy 8kun scraper compatibility
+  tag?: string    // used for blog_posts tag filter
   dateFrom?: string
   dateTo?: string
   page?: number

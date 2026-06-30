@@ -1,16 +1,14 @@
 "use client"
 
 import { useState, useTransition, useCallback } from "react"
-import Link from "next/link"
-import { Search, Calendar, Globe, ExternalLink, Image as ImageIcon, Link2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
-import { getNotables } from "@/app/actions/notables-actions"
-import type { NotablesRecord } from "@/lib/notables/types"
+import { Search, Calendar, Tag, ExternalLink, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { getNotables, type NotablesPost } from "@/app/actions/notables-actions"
 import DOMPurify from "isomorphic-dompurify"
 
 interface Props {
-  initialItems: NotablesRecord[]
+  initialItems: NotablesPost[]
   initialTotal: number
-  boards: string[]
+  boards: string[] // tags in this context
 }
 
 const PAGE_SIZE = 20
@@ -38,43 +36,28 @@ function sanitizeBody(html: string | null): string {
   })
 }
 
-function NotablesCard({ item }: { item: NotablesRecord }) {
-  const cleanBody = sanitizeBody(item.body)
-  const hasMedia = item.media && item.media.length > 0
-  const hasLinks = item.links && item.links.length > 0
+function NotablesCard({ item }: { item: NotablesPost }) {
+  const cleanBody = sanitizeBody(item.excerpt ?? item.body)
 
   return (
     <article className="border border-border bg-card p-4 transition-colors hover:bg-muted/40">
       {/* Header row */}
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-        <span className="label-mono inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
-          <Globe className="h-3 w-3" />
-          {item.board}
-        </span>
-        <span className="label-mono text-[10px] text-muted-foreground">
-          {formatDate(item.created_at_source ?? item.scraped_at)}
+        {item.tag && (
+          <span className="label-mono inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+            <Tag className="h-3 w-3" />
+            {item.tag}
+          </span>
+        )}
+        <span className="label-mono ml-auto text-[10px] text-muted-foreground">
+          {formatDate(item.published_at ?? item.created_at)}
         </span>
       </div>
-
-      {/* Post number + thread link */}
-      {item.post_number && (
-        <p className="label-mono mb-1 text-[10px] text-muted-foreground">
-          Post{" "}
-          <a
-            href={`${item.thread_url}#${item.post_number}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            #{item.post_number}
-          </a>
-        </p>
-      )}
 
       {/* Title */}
       <h2 className="stencil mb-2 text-sm leading-snug text-foreground">{item.title}</h2>
 
-      {/* Body */}
+      {/* Excerpt / body */}
       {cleanBody && (
         <div
           className="mb-3 line-clamp-4 text-xs leading-relaxed text-muted-foreground"
@@ -82,36 +65,29 @@ function NotablesCard({ item }: { item: NotablesRecord }) {
         />
       )}
 
-      {/* Footer: media + links + source */}
+      {/* Footer: post_type + source link */}
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-2">
-        {hasMedia && (
-          <span className="label-mono flex items-center gap-1 text-[10px] text-muted-foreground">
-            <ImageIcon className="h-3 w-3" />
-            {item.media.length} media
-          </span>
+        {item.post_type && (
+          <span className="label-mono text-[10px] text-muted-foreground">{item.post_type}</span>
         )}
-        {hasLinks && (
-          <span className="label-mono flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Link2 className="h-3 w-3" />
-            {item.links.length} ref(s)
-          </span>
+        {item.source_url && (
+          <a
+            href={item.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label-mono ml-auto flex items-center gap-1 text-[10px] text-primary hover:underline"
+          >
+            Source
+            <ExternalLink className="h-3 w-3" />
+          </a>
         )}
-        <a
-          href={item.thread_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="label-mono ml-auto flex items-center gap-1 text-[10px] text-primary hover:underline"
-        >
-          Source thread
-          <ExternalLink className="h-3 w-3" />
-        </a>
       </div>
     </article>
   )
 }
 
 export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
-  const [items, setItems] = useState<NotablesRecord[]>(initialItems)
+  const [items, setItems] = useState<NotablesPost[]>(initialItems)
   const [total, setTotal] = useState(initialTotal)
   const [search, setSearch] = useState("")
   const [board, setBoard] = useState("all")
@@ -133,7 +109,7 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
 
         const result = await getNotables({
           search: s || undefined,
-          board: b !== "all" ? b : undefined,
+          tag: b !== "all" ? b : undefined,
           dateFrom: df || undefined,
           dateTo: dt || undefined,
           page: p,
@@ -206,16 +182,16 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
             />
           </div>
 
-          {/* Board filter */}
+          {/* Tag filter */}
           <select
             value={board}
             onChange={(e) => handleBoardChange(e.target.value)}
             className="label-mono border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="all">All Boards</option>
+            <option value="all">All Tags</option>
             {boards.map((b) => (
               <option key={b} value={b}>
-                /{b}/
+                {b}
               </option>
             ))}
           </select>

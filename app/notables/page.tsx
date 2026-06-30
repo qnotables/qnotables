@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 export const metadata = {
   title: "Notables | Qnotables.ai",
   description:
-    "Browse the latest QResearch notables scraped from public 8kun board feeds. Search by keyword, filter by board or date.",
+    "Browse the latest QResearch notables imported from Qnotables.com. Search by keyword, filter by tag or date.",
 }
 
 export default async function NotablesPage() {
@@ -37,7 +37,7 @@ export default async function NotablesPage() {
               </div>
               <h1 className="stencil text-3xl text-foreground md:text-4xl">NOTABLES</h1>
               <p className="label-mono mt-2 text-xs text-muted-foreground">
-                QResearch notables from public 8kun board feeds. Updated every 30 minutes.
+                QResearch notables imported from Qnotables.com. Updated daily.
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -60,7 +60,7 @@ export default async function NotablesPage() {
           {total === 0 && (
             <div className="mt-6 border border-dashed border-border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
               <p className="label-mono">
-                No notables have been imported yet. The scraper runs every 30 minutes.
+                No notables have been imported yet. The scraper runs daily from Qnotables.com.
                 An admin can also trigger a manual import from the{" "}
                 <span className="text-foreground">Dashboard &rsaquo; Scraper</span> page.
               </p>
