@@ -67,8 +67,7 @@ export function GallerySection() {
   }
 
   return (
-    <section className="flex justify-center py-6">
-      <div className="w-full max-w-xs space-y-3">
+    <section className="w-full space-y-3 py-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -120,7 +119,6 @@ export function GallerySection() {
             onUploadSuccess={handleUploadSuccess}
           />
         )}
-      </div>
     </section>
   )
 }
