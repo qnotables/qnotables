@@ -16,6 +16,7 @@ import type { SituationForumItem, SituationBlogItem } from "@/components/situati
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
+import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
@@ -114,6 +115,11 @@ export default async function Page() {
                 emptyLabel="FORUM ACTIVITY"
               />
             </div>
+
+            {/* RSS Feed Links */}
+            <div className="mt-6">
+              <RssFeedCards />
+            </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.map((story) => (
@@ -129,6 +135,18 @@ export default async function Page() {
             <TrendingPanel items={trending} />
             <SidebarAd />
             <BriefSignup />
+            <div className="w-full">
+              <iframe
+                src="https://discord.com/widget?id=1521130800676995225&theme=dark"
+                width="100%"
+                height="500"
+                allowTransparency={true}
+                frameBorder="0"
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                title="Discord"
+                className="block w-full"
+              />
+            </div>
           </aside>
         </div>
 
