@@ -16,6 +16,7 @@ import type { SituationForumItem, SituationBlogItem } from "@/components/situati
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
+import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
@@ -113,6 +114,18 @@ export default async function Page() {
                 iconName="forum"
                 emptyLabel="FORUM ACTIVITY"
               />
+            </div>
+
+            {/* RSS Feed Links */}
+            <div className="mt-6">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 bg-primary" />
+                <span className="label-mono text-[11px] font-semibold tracking-widest text-muted-foreground">
+                  RSS FEEDS
+                </span>
+                <span className="flex-1 border-t border-border" />
+              </div>
+              <RssFeedCards />
             </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
