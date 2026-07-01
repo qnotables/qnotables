@@ -118,13 +118,6 @@ export default async function Page() {
 
             {/* RSS Feed Links */}
             <div className="mt-6">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-1.5 w-1.5 bg-primary" />
-                <span className="label-mono text-[11px] font-semibold tracking-widest text-muted-foreground">
-                  RSS FEEDS
-                </span>
-                <span className="flex-1 border-t border-border" />
-              </div>
               <RssFeedCards />
             </div>
             
