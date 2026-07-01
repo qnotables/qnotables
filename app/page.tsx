@@ -126,6 +126,9 @@ export default async function Page() {
           <aside className="flex flex-col gap-6">
             <IconLinksCard />
             <DailyVerseWidget />
+            <TrendingPanel items={trending} />
+            <SidebarAd />
+            <BriefSignup />
             <div className="w-full">
               <iframe
                 src="https://discord.com/widget?id=1521130800676995225&theme=dark"
@@ -138,9 +141,6 @@ export default async function Page() {
                 className="block w-full"
               />
             </div>
-            <TrendingPanel items={trending} />
-            <SidebarAd />
-            <BriefSignup />
           </aside>
         </div>
 
