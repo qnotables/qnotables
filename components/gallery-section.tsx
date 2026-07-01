@@ -67,58 +67,60 @@ export function GallerySection() {
   }
 
   return (
-    <section className="space-y-3 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
-          <p className="text-xs text-muted-foreground">
-            {images.length > 0
-              ? `${images.length} item${images.length === 1 ? '' : 's'} from the community`
-              : 'No media yet. Be the first to contribute!'}
-          </p>
-        </div>
-        {user ? (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 border border-primary bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Image
-          </button>
-        ) : (
-          <a
-            href="/auth/login"
-            className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            <LogIn className="h-3.5 w-3.5" />
-            Sign In to Upload
-          </a>
-        )}
-      </div>
-
-      {/* Carousel or empty state */}
-      {images.length > 0 ? (
-        <GalleryCarousel images={images} />
-      ) : (
-        <div className="flex h-[160px] flex-col items-center justify-center gap-3 border-2 border-dashed border-border bg-muted">
-          <div className="text-center">
-            <p className="text-sm font-medium">No images yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {user ? 'Click "Add Image" above to contribute.' : 'Sign in to upload the first image.'}
+    <section className="flex justify-center py-6">
+      <div className="w-full max-w-xs space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h2 className="text-lg font-bold tracking-tight">Media Library</h2>
+            <p className="text-xs text-muted-foreground">
+              {images.length > 0
+                ? `${images.length} item${images.length === 1 ? '' : 's'} from the community`
+                : 'No media yet. Be the first to contribute!'}
             </p>
           </div>
+          {user ? (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 border border-primary bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Image
+            </button>
+          ) : (
+            <a
+              href="/auth/login"
+              className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Sign In to Upload
+            </a>
+          )}
         </div>
-      )}
 
-      {/* Upload modal */}
-      {user && (
-        <GalleryUploadModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onUploadSuccess={handleUploadSuccess}
-        />
-      )}
+        {/* Carousel or empty state */}
+        {images.length > 0 ? (
+          <GalleryCarousel images={images} />
+        ) : (
+          <div className="flex h-[160px] flex-col items-center justify-center gap-3 border-2 border-dashed border-border bg-muted">
+            <div className="text-center">
+              <p className="text-sm font-medium">No images yet</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {user ? 'Click "Add Image" above to contribute.' : 'Sign in to upload the first image.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Upload modal */}
+        {user && (
+          <GalleryUploadModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onUploadSuccess={handleUploadSuccess}
+          />
+        )}
+      </div>
     </section>
   )
 }
