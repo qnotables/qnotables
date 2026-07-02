@@ -141,14 +141,14 @@ export const RSS_SOURCES: RSSSource[] = [
     id: "/qr/",
     name: "/qresearch/",
     url: "https://8kun.top/qresearch/tripcode.xml",
-    enabled: true,
+    enabled: false,
   },
   // Add more sources below:
   {
     id: "qnotables",
     name: "/qnotables/",
     url: "https://sys.8ch.net/qnotables/tripcode.xml",
-    enabled: true,  
+    enabled: false,  
   },
   {
     id: "fox",
