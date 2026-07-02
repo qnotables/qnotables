@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
 import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
-import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
+import { TopAd, SidebarAd, BottomAd, InFeedAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { SituationFeedCycle } from "@/components/situation-report-cycle"
@@ -132,7 +132,12 @@ export default async function Page() {
                 />
               ))}
             </div>
-            
+
+            {/* In-feed ad */}
+            <div className="mt-6">
+              <InFeedAd />
+            </div>
+
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.slice(2).map((story) => (
                 <StoryCard key={story.id} story={story} />
