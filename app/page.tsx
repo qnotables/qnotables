@@ -145,7 +145,9 @@ export default async function Page() {
             <IconLinksCard />
             <DailyVerseWidget />
             <TrendingPanel items={trending} />
-            <SidebarAd />
+            <div className="sticky top-6">
+              <SidebarAd />
+            </div>
             <BriefSignup />
             <div className="w-full">
               <iframe
