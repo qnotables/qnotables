@@ -134,7 +134,7 @@ export default async function Page() {
             </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {topStories.map((story) => (
+              {topStories.slice(2).map((story) => (
                 <StoryCard key={story.id} story={story} />
               ))}
             </div>
