@@ -16,7 +16,7 @@ import type { SituationForumItem, SituationBlogItem } from "@/components/situati
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
-import { RssFeedCards } from "@/components/rss-feed-cards"
+import { FlashStory } from "@/components/flash-story"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
@@ -116,9 +116,21 @@ export default async function Page() {
               />
             </div>
 
-            {/* RSS Feed Links */}
-            <div className="mt-6">
-              <RssFeedCards />
+            {/* Flash Story Cards */}
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {topStories.slice(0, 2).map((story) => (
+                <FlashStory
+                  key={story.id}
+                  title={story.headline}
+                  excerpt={story.summary}
+                  category={story.category}
+                  date={new Date(Date.now() - story.minutesAgo * 60 * 1000).toISOString()}
+                  readMinutes={story.readMinutes}
+                  image={story.image}
+                  source={story.source}
+                  type="feed"
+                />
+              ))}
             </div>
             
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
