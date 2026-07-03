@@ -143,6 +143,18 @@ export default async function Page() {
                 <StoryCard key={story.id} story={story} />
               ))}
             </div>
+            <div className="w-full">
+              <iframe
+                src="https://discord.com/widget?id=1521130800676995225&theme=dark"
+                width="100%"
+                height="300"
+                allowTransparency={true}
+                frameBorder="0"
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                title="Discord"
+                className="block w-full"
+              />
+            </div>
           </div>
 
           {/* sidebar */}
@@ -154,18 +166,6 @@ export default async function Page() {
               <SidebarAd />
             </div>
             <BriefSignup />
-            <div className="w-full">
-              <iframe
-                src="https://discord.com/widget?id=1521130800676995225&theme=dark"
-                width="100%"
-                height="500"
-                allowTransparency={true}
-                frameBorder="0"
-                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-                title="Discord"
-                className="block w-full"
-              />
-            </div>
           </aside>
         </div>
 
