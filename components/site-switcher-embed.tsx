@@ -52,6 +52,12 @@ const SITES: EmbedSite[] = [
     tag: "",
     url: "https://jiffy.news/",
   },
+  {
+    id: "Qagg",
+    label: "Qagg",
+    tag: "",
+    url: "https://Qagg.news/",
+  },
 ]
 
 export function SiteSwitcherEmbed() {
