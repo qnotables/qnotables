@@ -14,6 +14,8 @@ import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
 import { BlogComments } from "@/components/blog-comments"
 import { getBlogComments } from "@/app/actions/blog-comment-actions"
+import { getPostViewCount } from "@/app/actions/blog-view-actions"
+import { ViewCounter } from "@/components/view-counter"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -69,6 +71,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
   const comments = post.id ? await getBlogComments(post.id) : []
+  const initialViewCount = post.id ? await getPostViewCount(post.id) : 0
 
   // Fetch current user for comment form
   const supabase = await createClient()
@@ -111,11 +114,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{post.subtitle}</p>
             )}
 
-            <div className="label-mono mt-6 flex items-center gap-4 border-b border-border pb-6 text-muted-foreground">
+            <div className="label-mono mt-6 flex flex-wrap items-center gap-4 border-b border-border pb-6 text-muted-foreground">
               <span>{post.author}</span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" /> {post.readMinutes} MIN READ
               </span>
+              {post.id && (
+                <ViewCounter postId={post.id} initialCount={initialViewCount} />
+              )}
             </div>
 
             <article className="mt-8">
