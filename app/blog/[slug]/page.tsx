@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
@@ -141,25 +142,39 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <section className="mt-12 border-t border-border pt-8">
                 <h2 className="stencil mb-6 text-xl text-foreground">Related Reading</h2>
                 <div className="space-y-4">
-                  {relatedPosts.map((relatedPost) => (
-                    <Link
-                      key={relatedPost.slug}
-                      href={`/archives/${relatedPost.slug}`}
-                      className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
-                          {relatedPost.title}
-                        </h3>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
-                          {relatedPost.excerpt}
-                        </p>
-                      </div>
-                      <div className="label-mono mt-1 flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
-                      </div>
-                    </Link>
-                  ))}
+                  {relatedPosts.map((relatedPost) => {
+                    const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
+                    return (
+                      <Link
+                        key={relatedPost.slug}
+                        href={`/archives/${relatedPost.slug}`}
+                        className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
+                      >
+                        {ogImage && (
+                          <div className="relative h-20 w-28 shrink-0 overflow-hidden">
+                            <Image
+                              src={ogImage}
+                              alt={relatedPost.title}
+                              fill
+                              className="object-cover"
+                              sizes="112px"
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
+                            {relatedPost.title}
+                          </h3>
+                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                            {relatedPost.excerpt}
+                          </p>
+                        </div>
+                        <div className="label-mono mt-1 flex shrink-0 items-center gap-1 text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
               </section>
             )}
