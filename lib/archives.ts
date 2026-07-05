@@ -197,7 +197,7 @@ export async function getRelatedPosts(postId: string, limit = 3): Promise<BlogPo
     let query = supabase
       .from("blog_posts")
       .select(
-        "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
+        "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
       )
       .eq("status", "published")
       .neq("id", postId)
