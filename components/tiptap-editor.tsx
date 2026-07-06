@@ -487,6 +487,24 @@ export function TiptapEditor({
         id: id ?? "",
       },
       handlePaste(view, event) {
+        // Check for pasted image files first (copy-paste from clipboard/screenshot)
+        const items = event.clipboardData?.items
+        if (items) {
+          const imageItems = Array.from(items).filter(
+            (item) => item.kind === "file" && ALLOWED_IMAGE_TYPES.has(item.type),
+          )
+          if (imageItems.length > 0 && canUpload) {
+            event.preventDefault()
+            imageItems
+              .slice(0, MAX_TIPTAP_IMAGES - imageDone)
+              .forEach((item) => {
+                const file = item.getAsFile()
+                if (file) uploadImageFile(file)
+              })
+            return true
+          }
+        }
+        // Then check for embed URLs
         const text = event.clipboardData?.getData("text/plain")?.trim() ?? ""
         if (text) {
           const embed = detectEmbedUrl(text)
