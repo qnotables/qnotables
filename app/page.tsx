@@ -82,112 +82,112 @@ export default async function Page() {
 
   return (
     <DeskFilterProvider>
-    <div id="top" className="min-h-screen tactical-grid">
-      <SiteHeader wireStories={wireStories} />
-      <TradingViewTicker />
-      <TopAd />
+      <div id="top" className="min-h-screen tactical-grid">
+        <SiteHeader wireStories={wireStories} />
+        <TradingViewTicker />
+        <TopAd />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
-        {/* Site Switcher Embed */}
-        <SiteSwitcherEmbed />
+        <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+          {/* Site Switcher Embed */}
+          <SiteSwitcherEmbed />
 
-        {/* section label */}
-        <div className="mb-5 flex items-center gap-3">
-          <span className="h-2 w-2 bg-primary" />
-          <h1 className="stencil text-xl text-foreground">Situation Report</h1>
-          <LiveStreamButton live={live} />
-          <span className="ml-auto h-px flex-1 bg-border" />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* primary column */}
-          <div className="lg:col-span-2">
-            {/* Situation Report cyclers: recent blog posts (top) + recent forum posts (bottom) */}
-            <div className="flex flex-col gap-6">
-              <SituationFeedCycle
-                items={blogItems}
-                heading="LATEST DISPATCHES"
-                iconName="blog"
-                emptyLabel="BLOG DISPATCHES"
-              />
-              <SituationFeedCycle
-                items={forumItems}
-                heading="LATEST FORUM ACTIVITY"
-                iconName="forum"
-                emptyLabel="FORUM ACTIVITY"
-              />
-            </div>
-
-            {/* Flash Story Cards */}
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {topStories.slice(0, 2).map((story) => (
-                <FlashStory
-                  key={story.id}
-                  title={story.headline}
-                  excerpt={story.summary}
-                  category={story.category}
-                  date={new Date(Date.now() - story.minutesAgo * 60 * 1000).toISOString()}
-                  readMinutes={story.readMinutes}
-                  image={story.image}
-                  source={story.source}
-                  type="feed"
-                />
-              ))}
-            </div>
-
-            {/* In-feed ad */}
-            <div className="mt-6">
-              <InFeedAd />
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {topStories.slice(2).map((story) => (
-                <StoryCard key={story.id} story={story} />
-              ))}
-            </div>
-            <div className="w-full">
-              <iframe
-                src="https://discord.com/widget?id=1521130800676995225&theme=dark"
-                width="100%"
-                height="300"
-                frameBorder="0"
-                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-                title="Discord"
-                className="block w-full"
-              />
-            </div>
+          {/* section label */}
+          <div className="mb-5 flex items-center gap-3">
+            <span className="h-2 w-2 bg-primary" />
+            <h1 className="stencil text-xl text-foreground">Situation Report</h1>
+            <LiveStreamButton live={live} />
+            <span className="ml-auto h-px flex-1 bg-border" />
           </div>
 
-          {/* sidebar */}
-          <aside className="flex flex-col gap-6">
-            <IconLinksCard />
-            <DailyVerseWidget />
-            <TrendingPanel items={trending} />
-            <div className="sticky top-6">
-              <SidebarAd />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* primary column */}
+            <div className="lg:col-span-2">
+              {/* Situation Report cyclers: recent blog posts (top) + recent forum posts (bottom) */}
+              <div className="flex flex-col gap-6">
+                <SituationFeedCycle
+                  items={blogItems}
+                  heading="LATEST DISPATCHES"
+                  iconName="blog"
+                  emptyLabel="BLOG DISPATCHES"
+                />
+                <SituationFeedCycle
+                  items={forumItems}
+                  heading="LATEST FORUM ACTIVITY"
+                  iconName="forum"
+                  emptyLabel="FORUM ACTIVITY"
+                />
+              </div>
+
+              {/* Flash Story Cards */}
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {topStories.slice(0, 2).map((story) => (
+                  <FlashStory
+                    key={story.id}
+                    title={story.headline}
+                    excerpt={story.summary}
+                    category={story.category}
+                    date={new Date(Date.now() - story.minutesAgo * 60 * 1000).toISOString()}
+                    readMinutes={story.readMinutes}
+                    image={story.image}
+                    source={story.source}
+                    type="feed"
+                  />
+                ))}
+              </div>
+
+              {/* In-feed ad */}
+              <div className="mt-6">
+                <InFeedAd />
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {topStories.slice(2).map((story) => (
+                  <StoryCard key={story.id} story={story} />
+                ))}
+              </div>
+              <div className="w-full">
+                <iframe
+                  src="https://discord.com/widget?id=1521130800676995225&theme=dark"
+                  width="100%"
+                  height="300"
+                  frameBorder="0"
+                  sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                  title="Discord"
+                  className="block w-full"
+                />
+              </div>
             </div>
-            <BriefSignup />
-          </aside>
-        </div>
 
-        {/* Gallery Section */}
-        <div className="mt-12">
-          <GallerySection />
-        </div>
+            {/* sidebar */}
+            <aside className="flex flex-col gap-6">
+              <IconLinksCard />
+              <DailyVerseWidget />
+              <TrendingPanel items={trending} />
+              <div className="sticky top-6">
+                <SidebarAd />
+              </div>
+              <BriefSignup />
+            </aside>
+          </div>
 
-        {/* Rumble Live Stream — compact flash card */}
-        <div className="mt-12">
-          <RumbleLiveStream />
-        </div>
+          {/* Gallery Section */}
+          <div className="mt-12">
+            <GallerySection />
+          </div>
 
-        {/* wire feed, grouped by desk (client-filtered via nav) */}
-        <DeskNav />
-        <WireFeed desks={desks} />
-      </main>
+          {/* Rumble Live Stream — compact flash card */}
+          <div className="mt-12">
+            <RumbleLiveStream />
+          </div>
 
-      <BottomAd />
-      <SiteFooter />
-    </div>
+          {/* wire feed, grouped by desk (client-filtered via nav) */}
+          <DeskNav />
+          <WireFeed desks={desks} />
+        </main>
+
+        <BottomAd />
+        <SiteFooter />
+      </div>
     </DeskFilterProvider>
   )
 }
