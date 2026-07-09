@@ -55,6 +55,7 @@ export function TradingViewTicker() {
     <div
       ref={containerRef}
       className="tradingview-widget-container w-full"
+      style={{ backgroundColor: "#eef2ff" }}
     />
   )
 }
