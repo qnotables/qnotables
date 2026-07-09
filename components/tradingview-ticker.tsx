@@ -38,12 +38,17 @@ export function TradingViewTicker() {
     widgetDiv.className = "tradingview-widget-container__widget"
     container.appendChild(widgetDiv)
 
+    // TradingView reads config from an inline script that precedes the loader
+    const configScript = document.createElement("script")
+    configScript.type = "text/javascript"
+    configScript.text = JSON.stringify(TICKER_CONFIG)
+    container.appendChild(configScript)
+
     const script = document.createElement("script")
     script.type = "text/javascript"
     script.src =
       "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"
     script.async = true
-    script.innerHTML = JSON.stringify(TICKER_CONFIG)
     container.appendChild(script)
 
     return () => {

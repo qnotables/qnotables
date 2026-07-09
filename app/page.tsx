@@ -150,7 +150,6 @@ export default async function Page() {
                 src="https://discord.com/widget?id=1521130800676995225&theme=dark"
                 width="100%"
                 height="300"
-                allowTransparency={true}
                 frameBorder="0"
                 sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
                 title="Discord"
