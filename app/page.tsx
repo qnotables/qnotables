@@ -17,6 +17,7 @@ import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { FlashStory } from "@/components/flash-story"
+import { TradingViewTicker } from "@/components/tradingview-ticker"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
@@ -83,6 +84,7 @@ export default async function Page() {
     <DeskFilterProvider>
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader wireStories={wireStories} />
+      <TradingViewTicker />
       <TopAd />
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
