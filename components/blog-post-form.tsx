@@ -102,11 +102,25 @@ interface BlogPostFormProps {
   defaultAuthor?: string
 }
 
+/** Format a Date (or ISO string) as the value required by datetime-local inputs */
+function toDatetimeLocalValue(date: Date | string | null | undefined): string {
+  if (!date) return ""
+  const d = typeof date === "string" ? new Date(date) : date
+  if (isNaN(d.getTime())) return ""
+  // "YYYY-MM-DDTHH:mm" — what datetime-local expects
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  )
+}
+
 export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
   const isEdit = Boolean(post?.id)
   const action = isEdit ? updatePost : createPost
   const [state, formAction] = useActionState(action, { error: null })
   const [excerptValue, setExcerptValue] = useState(post?.excerpt ?? "")
+  const [status, setStatus] = useState(post?.status ?? "draft")
   const [seoTitleValue, setSeoTitleValue] = useState(post?.seoTitle ?? "")
   const [seoDescriptionValue, setSeoDescriptionValue] = useState(post?.seoDescription ?? "")
   // Explicit override set by the user; empty string means "use auto-detected default"
@@ -328,7 +342,13 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
             <label htmlFor="status" className="label-mono text-muted-foreground">
               Status
             </label>
-            <select id="status" name="status" defaultValue={post?.status ?? "draft"} className={inputClass}>
+            <select
+              id="status"
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className={inputClass}
+            >
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="scheduled">Scheduled</option>
@@ -360,6 +380,24 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
           <span className="label-mono text-foreground">Featured Post</span>
           <span className="label-mono text-muted-foreground">(Show in featured section)</span>
         </label>
+
+        {(status === "published" || status === "scheduled") && (
+          <div className="mt-4 flex flex-col gap-2">
+            <label htmlFor="published_at" className="label-mono text-muted-foreground">
+              Publish Date{" "}
+              <span className="text-muted-foreground/60">
+                {status === "scheduled" ? "(schedule for future)" : "(backdate if needed)"}
+              </span>
+            </label>
+            <input
+              id="published_at"
+              name="published_at"
+              type="datetime-local"
+              defaultValue={toDatetimeLocalValue(post?.publishedAt)}
+              className={`${inputClass} w-full max-w-xs font-mono text-sm`}
+            />
+          </div>
+        )}
       </div>
 
       <div className="border-t border-border pt-6">
