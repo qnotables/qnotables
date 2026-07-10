@@ -57,6 +57,7 @@ export default async function Page() {
     tag: p.tag,
     tags: p.tags,
     coverImage: p.coverImage,
+    seoImageUrl: p.seoImageUrl,
     date: p.date,
     readMinutes: p.readMinutes,
     featured: p.featured,
