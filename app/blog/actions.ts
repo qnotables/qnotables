@@ -60,9 +60,11 @@ export async function createPost(
 
   const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
   const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
-  const publishedAt =
-    status === "published" || status === "scheduled"
-      ? (publishedAtRaw ? new Date(publishedAtRaw).toISOString() : new Date().toISOString())
+  // Always persist the chosen publish date; fall back to now only when publishing and no date was given
+  const publishedAt = publishedAtRaw
+    ? new Date(publishedAtRaw).toISOString()
+    : status === "published"
+      ? new Date().toISOString()
       : null
 
   const db = createAdminClient()
@@ -136,9 +138,11 @@ export async function updatePost(
 
   const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
   const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
-  const publishedAt =
-    status === "published" || status === "scheduled"
-      ? (publishedAtRaw ? new Date(publishedAtRaw).toISOString() : new Date().toISOString())
+  // Always persist the chosen publish date; fall back to now only when publishing and no date was given
+  const publishedAt = publishedAtRaw
+    ? new Date(publishedAtRaw).toISOString()
+    : status === "published"
+      ? new Date().toISOString()
       : null
 
   const db = createAdminClient()
