@@ -417,54 +417,21 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
     ...(item.tags?.filter((t) => t !== item.tag) ?? []),
   ].slice(0, 3)
 
-  const media = extractFirstBlogMedia(item.content)
-
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Media preview — video/iframe shown instead of static thumbnail when post contains embedded media */}
-      {media ? (
-        <div
-          className="relative w-full overflow-hidden bg-black border-b border-border"
-          style={{ aspectRatio: "16/7" }}
-        >
-          {media.kind === "video" ? (
-            <video
-              src={media.src}
-              controls
-              playsInline
-              preload="metadata"
-              className="w-full h-full object-contain"
-              title={media.title ?? item.title}
-            />
-          ) : (
-            <iframe
-              src={media.src}
-              title={media.title ?? item.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full border-0"
-            />
-          )}
-          {item.featured && (
-            <span className="absolute left-2 top-2 label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+      {/* Always show the OG/cover image — videos only play on the post page */}
+      <Thumbnail
+        src={item.coverImage ?? item.seoImageUrl}
+        alt={item.title}
+        label={item.postType ?? item.category ?? "DISPATCH"}
+        badge={
+          item.featured ? (
+            <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
               FEATURED
             </span>
-          )}
-        </div>
-      ) : (
-        <Thumbnail
-          src={item.coverImage ?? item.seoImageUrl}
-          alt={item.title}
-          label={item.postType ?? item.category ?? "DISPATCH"}
-          badge={
-            item.featured ? (
-              <span className="label-mono px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground">
-                FEATURED
-              </span>
-            ) : undefined
-          }
-        />
-      )}
+          ) : undefined
+        }
+      />
 
       {/* Label row */}
       <div className="flex items-center gap-2 flex-wrap px-4 pt-1">
@@ -545,7 +512,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
         className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <BookOpen className="h-3.5 w-3.5" />
-        {media ? "WATCH DISPATCH →" : "READ DISPATCH →"}
+        READ DISPATCH →
       </Link>
     </div>
   )
