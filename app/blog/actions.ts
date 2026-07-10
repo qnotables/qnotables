@@ -59,7 +59,11 @@ export async function createPost(
   if (!slug) return { error: "Could not derive a valid slug from the title." }
 
   const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
-  const publishedAt = status === "published" ? new Date().toISOString() : null
+  const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
+  const publishedAt =
+    status === "published" || status === "scheduled"
+      ? (publishedAtRaw ? new Date(publishedAtRaw).toISOString() : new Date().toISOString())
+      : null
 
   const db = createAdminClient()
   const { error } = await db.from("blog_posts").insert({
@@ -131,7 +135,11 @@ export async function updatePost(
   if (!slug) return { error: "Could not derive a valid slug." }
 
   const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
-  const publishedAt = status === "published" ? new Date().toISOString() : null
+  const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
+  const publishedAt =
+    status === "published" || status === "scheduled"
+      ? (publishedAtRaw ? new Date(publishedAtRaw).toISOString() : new Date().toISOString())
+      : null
 
   const db = createAdminClient()
   const { error } = await db

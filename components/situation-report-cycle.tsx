@@ -50,6 +50,8 @@ export interface SituationBlogItem {
   priority?: string
   featured?: boolean
   coverImage?: string | null
+  /** OG/SEO image — used as fallback when coverImage is absent */
+  seoImageUrl?: string | null
   sourceName?: string
   date: string
   readMinutes?: number
@@ -451,7 +453,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
         </div>
       ) : (
         <Thumbnail
-          src={item.coverImage}
+          src={item.coverImage ?? item.seoImageUrl}
           alt={item.title}
           label={item.postType ?? item.category ?? "DISPATCH"}
           badge={
