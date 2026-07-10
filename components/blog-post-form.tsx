@@ -381,23 +381,19 @@ export function BlogPostForm({ post, defaultAuthor }: BlogPostFormProps) {
           <span className="label-mono text-muted-foreground">(Show in featured section)</span>
         </label>
 
-        {(status === "published" || status === "scheduled") && (
-          <div className="mt-4 flex flex-col gap-2">
-            <label htmlFor="published_at" className="label-mono text-muted-foreground">
-              Publish Date{" "}
-              <span className="text-muted-foreground/60">
-                {status === "scheduled" ? "(schedule for future)" : "(backdate if needed)"}
-              </span>
-            </label>
-            <input
-              id="published_at"
-              name="published_at"
-              type="datetime-local"
-              defaultValue={toDatetimeLocalValue(post?.publishedAt)}
-              className={`${inputClass} w-full max-w-xs font-mono text-sm`}
-            />
-          </div>
-        )}
+        <div className="mt-4 flex flex-col gap-2">
+          <label htmlFor="published_at" className="label-mono text-muted-foreground">
+            Publish Date{" "}
+            <span className="text-muted-foreground/60">(leave blank to use current time)</span>
+          </label>
+          <input
+            id="published_at"
+            name="published_at"
+            type="datetime-local"
+            defaultValue={toDatetimeLocalValue(post?.publishedAt)}
+            className={`${inputClass} w-full max-w-xs font-mono text-sm`}
+          />
+        </div>
       </div>
 
       <div className="border-t border-border pt-6">
