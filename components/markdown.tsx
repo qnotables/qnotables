@@ -9,6 +9,7 @@ import { VideoEmbedBlock } from "@/components/video-embed-block"
 import { parseVideoEmbed } from "@/lib/video-embed-utils"
 import { SafeEmbed } from "@/components/safe-embed"
 import { parseIframeEmbed } from "@/lib/iframe-embed-utils"
+import { omitPostMedia, resolveFirstPostMedia } from "@/lib/post-media"
 
 /**
  * Process embeds from HTML comments and render them as components
@@ -197,9 +198,10 @@ const components: Components = {
   hr: () => <hr className="border-border" />,
 }
 
-export function Markdown({ content }: { content: string }) {
+export function Markdown({ content, omitFirstMedia = false }: { content: string; omitFirstMedia?: boolean }) {
+  const renderedContent = omitFirstMedia ? omitPostMedia(content, resolveFirstPostMedia(content)) : content
   // Extract and render embeds (both video and iframe) before markdown processing
-  const { cleanContent, embeds } = processEmbeds(content)
+  const { cleanContent, embeds } = processEmbeds(renderedContent)
   
   return (
     <div className="flex flex-col gap-4 leading-relaxed text-foreground/90">

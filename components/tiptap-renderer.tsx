@@ -11,6 +11,7 @@
 import type { ReactNode } from "react"
 import { ForumImage } from "@/components/forum-image"
 import { Markdown } from "@/components/markdown"
+import { omitPostMedia, resolveFirstPostMedia } from "@/lib/post-media"
 export { isTiptapJson } from "@/lib/tiptap-utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -330,13 +331,15 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
 interface TiptapRendererProps {
   /** Serialized Tiptap JSON string (from editor.getJSON()) */
   content: string
+  omitFirstMedia?: boolean
 }
 
-export function TiptapRenderer({ content }: TiptapRendererProps) {
+export function TiptapRenderer({ content, omitFirstMedia = false }: TiptapRendererProps) {
+  const renderedContent = omitFirstMedia ? omitPostMedia(content, resolveFirstPostMedia(content)) : content
   // Parse the JSON document
   let doc: TiptapDoc | null = null
   try {
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(renderedContent)
     if (parsed?.type === "doc") doc = parsed as TiptapDoc
   } catch {
     // Fall back to rendering as plain text if content is not valid JSON
@@ -344,7 +347,7 @@ export function TiptapRenderer({ content }: TiptapRendererProps) {
 
   // Legacy Markdown fallback — if not a JSON doc, delegate to Markdown component
   if (!doc) {
-    return <Markdown content={content} />
+    return <Markdown content={renderedContent} />
   }
 
   const nodes = doc.content ?? []

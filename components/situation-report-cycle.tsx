@@ -21,6 +21,8 @@ import { generateEmbedUrl, detectVideoPlatform, parseVideoEmbed } from "@/lib/vi
 import { parseIframeEmbed } from "@/lib/iframe-embed-utils"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl } from "@/lib/rss-utils"
+import { resolveFirstPostMedia } from "@/lib/post-media"
+import { PostFeaturedMedia } from "@/components/post-featured-media"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -417,7 +419,7 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
     ...(item.tags?.filter((t) => t !== item.tag) ?? []),
   ].slice(0, 3)
 
-  const media = extractFirstBlogMedia(item.content)
+  const media = resolveFirstPostMedia(item.content)
 
   return (
     <div className="flex flex-col gap-3 h-full">
