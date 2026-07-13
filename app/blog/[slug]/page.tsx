@@ -11,7 +11,9 @@ import { isTiptapJson } from "@/lib/tiptap-utils"
 import { getPost, formatDate } from "@/lib/blog-posts"
 import { getRelatedPosts } from "@/lib/archives"
 import { ShareButtons } from "@/components/share-buttons"
-import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
+import { getSiteUrl } from "@/lib/rss-utils"
+import { resolveFirstPostMedia, resolveSocialImage } from "@/lib/post-media"
+import { PostFeaturedMedia } from "@/components/post-featured-media"
 import { BlogComments } from "@/components/blog-comments"
 import { getBlogComments } from "@/app/actions/blog-comment-actions"
 import { getPostViewCount } from "@/app/actions/blog-view-actions"
@@ -28,14 +30,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const canonical = `${site}/archives/${post.slug}`
   const description = post.subtitle || post.excerpt || "Archived HOT AND FRESH record."
   
-  // Determine OG image: explicit seoImageUrl → first body image → cover image → default
-  let ogImage: string
-  if (post.seoImageUrl) {
-    ogImage = post.seoImageUrl
-  } else {
-    const { url: resolvedImage, source: imageSource } = resolveFeedImage({ cover_image: post.coverImage, body: post.content })
-    ogImage = imageSource === "fallback" ? `${site}/images/og-default.png` : resolvedImage
-  }
+  const ogImage = resolveSocialImage({
+    content: post.content,
+    customImage: post.seoImageUrl,
+    coverImage: post.coverImage,
+    siteUrl: site,
+  })
   
   return {
     title: `${post.title} — HOT AND FRESH`,
@@ -69,6 +69,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     redirect(`/archives/${post.slug}`)
   }
 
+  const featuredMedia = resolveFirstPostMedia(post.content)
   const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
   const comments = post.id ? await getBlogComments(post.id) : []
   const initialViewCount = post.id ? await getPostViewCount(post.id) : 0
@@ -125,10 +126,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
 
             <article className="mt-8">
+              {featuredMedia && (
+                <div className="mb-8">
+                  <PostFeaturedMedia media={featuredMedia} title={post.title} />
+                </div>
+              )}
               {isTiptapJson(post.content) ? (
-                <TiptapRenderer content={post.content} />
+                <TiptapRenderer content={post.content} omitFirstMedia={Boolean(featuredMedia)} />
               ) : (
-                <Markdown content={post.content} />
+                <Markdown content={post.content} omitFirstMedia={Boolean(featuredMedia)} />
               )}
             </article>
 

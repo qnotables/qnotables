@@ -140,7 +140,7 @@ export function omitPostMedia(content: string, media: PostMedia | null): string 
   if (!Number.isFinite(index)) return content
   const tail = content.slice(index)
   const patterns = [
-    /^<!--\s*(?:VIDEO|IFRAME)_EMBED:\s*{.*?}\s*-->/is,
+    /^<!--[\s\S]*?(?:VIDEO|IFRAME)_EMBED:\s*{[\s\S]*?}\s*-->/i,
     /^<(?:img|video|iframe)\b[\s\S]*?(?:\/>|<\/(?:video|iframe)>)/i,
     /^!\[[^\]]*\]\(https?:\/\/[^\s)]+(?:\s+["'][^"']*["'])?\)/i,
     /^https?:\/\/[^\s<>"')\]]+/i,
