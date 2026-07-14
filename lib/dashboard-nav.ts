@@ -14,6 +14,7 @@ import {
   Settings,
   Video,
   ScanSearch,
+  Tags,
 } from "lucide-react"
 
 export interface NavItem {
@@ -33,6 +34,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Forum", href: "/dashboard/forum", icon: MessageSquare },
   { label: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
   { label: "RSS Feed", href: "/dashboard/rss", icon: Rss },
+  { label: "Classification", href: "/dashboard/classification", icon: Tags },
   { label: "Media Library", href: "/dashboard/media", icon: ImageIcon },
   { label: "Videos", href: "/dashboard/videos", icon: Video },
   { label: "Ads", href: "/dashboard/ads", icon: Megaphone, adminOnly: true },

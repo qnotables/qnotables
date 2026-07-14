@@ -1,4 +1,5 @@
 export type Category =
+  | "NOTABLES"
   | "WORLD"
   | "POLITICS"
   | "DEFENSE"
@@ -6,6 +7,12 @@ export type Category =
   | "TECH"
   | "SCIENCE"
   | "ENERGY"
+  | "ELECTION INTEGRITY"
+  | "BORDER SECURITY"
+  | "CORRUPTION"
+  | "CRIME"
+  | "FAITH"
+  | "CULTURE"
   | "OTHER"
 
 export type Story = {
@@ -23,6 +30,7 @@ export type Story = {
 }
 
 export const categories: Category[] = [
+  "NOTABLES",
   "WORLD",
   "POLITICS",
   "DEFENSE",
@@ -30,6 +38,12 @@ export const categories: Category[] = [
   "TECH",
   "SCIENCE",
   "ENERGY",
+  "ELECTION INTEGRITY",
+  "BORDER SECURITY",
+  "CORRUPTION",
+  "CRIME",
+  "FAITH",
+  "CULTURE",
   "OTHER",
 ]
 

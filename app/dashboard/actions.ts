@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
+import { classifyStory } from "@/lib/story-classifier"
 
 type Result = { success: boolean; error?: string }
 
@@ -170,12 +171,29 @@ export async function saveRssItem(formData: FormData): Promise<Result> {
   if (title.length < 2) return { success: false, error: "Title is required." }
 
   const status = String(formData.get("status") ?? "draft")
+  const link = String(formData.get("link") ?? "").trim() || null
+  const description = String(formData.get("description") ?? "").trim() || null
+  const sourceCategory = String(formData.get("category") ?? "").trim() || null
+  const classification = classifyStory({
+    headline: title,
+    description,
+    sourceCategory,
+    articleUrl: link,
+  })
   const payload = {
     title,
-    link: String(formData.get("link") ?? "").trim() || null,
+    link,
     guid: String(formData.get("guid") ?? "").trim() || null,
-    description: String(formData.get("description") ?? "").trim() || null,
-    category: String(formData.get("category") ?? "").trim() || null,
+    description,
+    category: classification.primaryCategory,
+    primary_category: classification.primaryCategory,
+    secondary_tags: classification.secondaryTags,
+    classification_confidence: classification.confidence,
+    classification_method: classification.method,
+    classification_rationale: classification.rationale,
+    classifier_version: classification.classifierVersion,
+    review_status: classification.reviewStatus,
+    source_category: sourceCategory,
     source_name: String(formData.get("source_name") ?? "").trim() || null,
     source_url: String(formData.get("source_url") ?? "").trim() || null,
     image_url: String(formData.get("image_url") ?? "").trim() || null,
@@ -190,11 +208,42 @@ export async function saveRssItem(formData: FormData): Promise<Result> {
   }
 
   if (id) {
-    const { error } = await db.from("rss_items").update(payload).eq("id", id)
+    const { data: existing } = await db.from("rss_items").select("manual_lock").eq("id", id).single()
+    const updatePayload = existing?.manual_lock
+      ? {
+          title: payload.title,
+          link: payload.link,
+          guid: payload.guid,
+          description: payload.description,
+          source_category: payload.source_category,
+          source_name: payload.source_name,
+          source_url: payload.source_url,
+          image_url: payload.image_url,
+          priority: payload.priority,
+          research_status: payload.research_status,
+          status: payload.status,
+          published_at: payload.published_at,
+          updated_at: payload.updated_at,
+        }
+      : payload
+    const { error } = await db.from("rss_items").update(updatePayload).eq("id", id)
     if (error) return { success: false, error: error.message }
   } else {
-    const { error } = await db.from("rss_items").insert(payload)
+    const { data: created, error } = await db.from("rss_items").insert(payload).select("id").single()
     if (error) return { success: false, error: error.message }
+    if (created) {
+      await db.from("rss_classification_events").insert({
+        rss_item_id: created.id,
+        event_type: "initial",
+        proposed_category: classification.primaryCategory,
+        secondary_tags: classification.secondaryTags,
+        confidence: classification.confidence,
+        method: classification.method,
+        rationale: classification.rationale,
+        classifier_version: classification.classifierVersion,
+        applied: true,
+      })
+    }
   }
   await logActivity({ action: id ? "updated RSS item" : "created RSS item", targetType: "rss_item", targetId: id })
   revalidatePath("/dashboard/rss")

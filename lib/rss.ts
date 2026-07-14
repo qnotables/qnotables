@@ -10,6 +10,7 @@ import {
 } from "@/lib/news-data"
 import { getLatestPost } from "@/lib/blog-posts"
 import { isSafeImageUrl, normalizeAbsoluteUrl } from "@/lib/rss-utils"
+import { classifyStory } from "@/lib/story-classifier"
 
 import crypto from "crypto"
 
@@ -184,18 +185,6 @@ const parser: Parser<unknown, ParsedItem> = new Parser({
   },
 })
 
-// Keyword rules that map article title/content onto one of our desks.
-// Ordered most-specific first so overlaps resolve sensibly.
-const CATEGORIZATION_RULES: { desk: Category; keywords: string[] }[] = [
-  { desk: "ENERGY", keywords: ["energy", "oil", "gas", "grid", "renewable", "solar", "wind", "nuclear", "electric", "fuel", "petroleum", "power"] },
-  { desk: "DEFENSE", keywords: ["defen", "military", "war", "army", "navy", "air force", "weapon", "security", "conflict", "missile", "troops", "nato", "combat", "strike"] },
-  { desk: "TECH", keywords: ["tech", "software", "hardware", "computing", "internet", "gadget", "cyber", "startup", "artificial intelligence", " ai", "app", "digital", "robot", "data"] },
-  { desk: "SCIENCE", keywords: ["science", "spacex", "space", "astronom", "physics", "biology", "chemistry", "environment", "climate", "study", "scientist", "nature", "discovery"] },
-  { desk: "ECONOMY", keywords: ["econom", "business", "market", "trade", "finance", "financial", "stock", "inflation", "bank", "money", "jobs", "industry", "tariff", "commerce"] },
-  { desk: "POLITICS", keywords: ["politic", "election", "government", "parliament", "congress", "senate", "policy", "diplomac", "minister", "president", "vote", "law", "legislat"] },
-  { desk: "WORLD", keywords: ["world", "international", "global", "foreign", "asia", "africa", "europe", "middle east", "americas", "ukraine", "china", "russia", "asia-pacific"] },
-]
-
 function stripHtml(input = ""): string {
   return input
     .replace(/<[^>]*>/g, " ")
@@ -272,20 +261,6 @@ function imageFrom(item: ParsedItem): string | undefined {
   return undefined
 }
 
-// Categorize an article based on keywords found in title + summary.
-function categorizeArticle(headline: string, summary: string): Category {
-  const text = `${headline} ${summary}`.toLowerCase()
-  
-  for (const rule of CATEGORIZATION_RULES) {
-    if (rule.keywords.some((kw) => text.includes(kw))) {
-      return rule.desk
-    }
-  }
-  
-  // Default to OTHER if no other category matches
-  return "OTHER"
-}
-
 /**
  * Fetch and parse a single RSS source
  */
@@ -312,13 +287,35 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
           ? Math.max(1, Math.round((Date.now() - publishedMs) / 60000))
           : 60 + i * 7
       const reports = hashReports(headline)
+      const rawItem = item as Parser.Item & ParsedItem & {
+        categories?: string[]
+        category?: string | string[]
+        keywords?: string | string[]
+        creator?: string
+      }
+      const sourceCategories = [
+        ...(rawItem.categories ?? []),
+        ...(Array.isArray(rawItem.category) ? rawItem.category : rawItem.category ? [rawItem.category] : []),
+      ]
+      const keywords = Array.isArray(rawItem.keywords)
+        ? rawItem.keywords
+        : rawItem.keywords?.split(",").map((keyword) => keyword.trim()) ?? []
+      const classification = classifyStory({
+        headline,
+        description: summary,
+        sourceCategory: sourceCategories.join(" "),
+        articleUrl: item.link,
+        keywords,
+        namedEntities: rawItem.creator ? [rawItem.creator] : [],
+        articleText: stripHtml(item.content || item.contentSnippet || ""),
+      })
 
       return {
         id: `${source.id}-${item.guid || item.link || i}`,
         headline,
         summary: summary || "Follow the link for the full report.",
         source: source.name,
-        category: categorizeArticle(headline, summary),
+        category: classification.primaryCategory,
         minutesAgo,
         readMinutes: estimateReadMinutes(summary),
         reports,
