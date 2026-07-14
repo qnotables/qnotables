@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
-import { classifyStory } from "@/lib/story-classifier"
+import { classifyStoryWithFallback } from "@/lib/story-classifier-ai"
 
 type Result = { success: boolean; error?: string }
 
@@ -174,7 +174,7 @@ export async function saveRssItem(formData: FormData): Promise<Result> {
   const link = String(formData.get("link") ?? "").trim() || null
   const description = String(formData.get("description") ?? "").trim() || null
   const sourceCategory = String(formData.get("category") ?? "").trim() || null
-  const classification = classifyStory({
+  const classification = await classifyStoryWithFallback({
     headline: title,
     description,
     sourceCategory,

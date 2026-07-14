@@ -5,7 +5,8 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { categories, type Category } from "@/lib/news-data"
-import { classifyStory } from "@/lib/story-classifier"
+import { CLASSIFIER_VERSION } from "@/lib/story-classifier"
+import { classifyStoryWithFallback, type CorrectionExample } from "@/lib/story-classifier-ai"
 
 export interface ClassificationFilters {
   from?: string
@@ -25,6 +26,8 @@ export interface ProposedChange {
   secondaryTags: Category[]
   confidence: number
   reviewStatus: string
+  method: "deterministic" | "ai"
+  classifierVersion: string
   rationale: string
 }
 
@@ -44,20 +47,51 @@ export async function previewReclassification(filters: ClassificationFilters): P
   if (filters.confidence === "high") query = query.gte("classification_confidence", 85)
   if (filters.confidence === "medium") query = query.gte("classification_confidence", 65).lt("classification_confidence", 85)
   if (filters.confidence === "low") query = query.lt("classification_confidence", 65)
-  const { data, error } = await query
+  const [{ data, error }, { data: correctionRows }] = await Promise.all([
+    query,
+    db
+      .from("rss_classification_events")
+      .select("previous_category,proposed_category,rss_items(title)")
+      .eq("event_type", "manual_correction")
+      .order("created_at", { ascending: false })
+      .limit(12),
+  ])
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((item) => {
-    const result = classifyStory({
+  const corrections: CorrectionExample[] = (correctionRows ?? []).flatMap((row) => {
+    const relation = row.rss_items as unknown as { title?: string } | null
+    return relation?.title
+      ? [{
+          headline: relation.title,
+          previousCategory: row.previous_category,
+          correctedCategory: row.proposed_category,
+        }]
+      : []
+  })
+
+  return Promise.all((data ?? []).map(async (item) => {
+    const result = await classifyStoryWithFallback({
       headline: item.title,
       description: item.description,
       sourceCategory: item.source_category ?? item.category,
       articleUrl: item.link,
       keywords: item.source_keywords ?? [],
       articleText: item.article_text,
-    })
-    return { id: item.id, title: item.title, publisher: item.source_name, currentCategory: item.primary_category ?? item.category ?? "OTHER", proposedCategory: result.primaryCategory, secondaryTags: result.secondaryTags, confidence: result.confidence, reviewStatus: result.reviewStatus, rationale: result.rationale }
-  })
+    }, corrections)
+    return {
+      id: item.id,
+      title: item.title,
+      publisher: item.source_name,
+      currentCategory: item.primary_category ?? item.category ?? "OTHER",
+      proposedCategory: result.primaryCategory,
+      secondaryTags: result.secondaryTags,
+      confidence: result.confidence,
+      reviewStatus: result.reviewStatus,
+      method: result.method,
+      classifierVersion: result.classifierVersion,
+      rationale: result.rationale,
+    }
+  }))
 }
 
 export async function applyReclassification(changes: ProposedChange[]) {
@@ -67,9 +101,9 @@ export async function applyReclassification(changes: ProposedChange[]) {
     if (!categories.includes(change.proposedCategory)) continue
     const { data } = await db.from("rss_items").select("manual_lock,primary_category").eq("id", change.id).single()
     if (!data || data.manual_lock) continue
-    const { error } = await db.from("rss_items").update({ primary_category: change.proposedCategory, category: change.proposedCategory, secondary_tags: change.secondaryTags, classification_confidence: change.confidence, classification_method: "deterministic", classification_rationale: change.rationale, classifier_version: "2026.07.1", review_status: change.reviewStatus, updated_at: new Date().toISOString() }).eq("id", change.id).eq("manual_lock", false)
+    const { error } = await db.from("rss_items").update({ primary_category: change.proposedCategory, category: change.proposedCategory, secondary_tags: change.secondaryTags, classification_confidence: change.confidence, classification_method: change.method, classification_rationale: change.rationale, classifier_version: change.classifierVersion, review_status: change.reviewStatus, updated_at: new Date().toISOString() }).eq("id", change.id).eq("manual_lock", false)
     if (error) throw new Error(error.message)
-    await db.from("rss_classification_events").insert({ rss_item_id: change.id, event_type: "reclassification", previous_category: data.primary_category, proposed_category: change.proposedCategory, secondary_tags: change.secondaryTags, confidence: change.confidence, method: "deterministic", rationale: change.rationale, classifier_version: "2026.07.1", applied: true })
+    await db.from("rss_classification_events").insert({ rss_item_id: change.id, event_type: "reclassification", previous_category: data.primary_category, proposed_category: change.proposedCategory, secondary_tags: change.secondaryTags, confidence: change.confidence, method: change.method, rationale: change.rationale, classifier_version: change.classifierVersion, applied: true })
   }
   revalidatePath("/dashboard/classification")
   revalidatePath("/")
@@ -87,7 +121,7 @@ export async function setManualClassification(id: string, category: Category) {
   if (readError) throw new Error(readError.message)
   const { error } = await db.from("rss_items").update({ primary_category: category, category, manual_lock: true, manually_classified_by: user.id, manually_classified_at: new Date().toISOString(), review_status: "reviewed", classification_method: "manual", classification_confidence: 100, updated_at: new Date().toISOString() }).eq("id", id)
   if (error) throw new Error(error.message)
-  await db.from("rss_classification_events").insert({ rss_item_id: id, event_type: "manual_correction", previous_category: current.primary_category, proposed_category: category, confidence: 100, method: "manual", classifier_version: "2026.07.1", applied: true, reviewer_id: user.id })
+  await db.from("rss_classification_events").insert({ rss_item_id: id, event_type: "manual_correction", previous_category: current.primary_category, proposed_category: category, confidence: 100, method: "manual", classifier_version: CLASSIFIER_VERSION, applied: true, reviewer_id: user.id })
   revalidatePath("/dashboard/classification")
   revalidatePath("/")
   return { success: true }
