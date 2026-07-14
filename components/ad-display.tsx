@@ -31,7 +31,7 @@ export async function TopAd() {
               buttonText: ad.button_text,
               buttonLink: ad.button_link,
             }))}
-            interval={10000}
+            interval={30000}
             className="h-[160px] w-full"
           />
         </div>
@@ -59,7 +59,7 @@ export async function SidebarAd() {
         buttonLink: ad.button_link,
       }))}
       className="sticky top-6 w-full max-w-xs"
-      interval={10000}
+      interval={30000}
     />
   )
 }
@@ -78,7 +78,7 @@ export async function BottomAd() {
           buttonText: ad.button_text,
           buttonLink: ad.button_link,
         }))}
-        interval={10000}
+        interval={30000}
         className="h-[150px] w-full"
       />
     </div>

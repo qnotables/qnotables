@@ -275,9 +275,6 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     }
   }, [formData.body])
 
-  // Effective og image: explicit override wins, otherwise auto-detected
-  const effectiveOgImage = formData.og_image_url || autoOgImage
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement> | null, mode: "draft" | "publish") => {
     if (e) e.preventDefault()
     setSubmitMode(mode)
@@ -329,7 +326,8 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     fd.append("seo_title", formData.seo_title)
     fd.append("seo_description", formData.seo_description)
     fd.append("cover_image", formData.cover_image)
-    fd.append("og_image_url", effectiveOgImage)
+    // Store only an explicit override; automatic media is resolved at render time.
+    fd.append("og_image_url", formData.og_image_url)
 
     // Call the server action
     await formAction(fd)
@@ -629,11 +627,17 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
 
             <ImageField
               name="og_image_url"
-              label={`Open Graph Image${!formData.og_image_url && autoOgImage ? " (auto: first image in post)" : ""}`}
-              value={effectiveOgImage}
+              label="Custom Open Graph / SEO Image"
+              value={formData.og_image_url}
               onChange={(url) => handleFieldChange("og_image_url", url)}
               uploadFolder="og"
             />
+            <p className="label-mono mt-2 text-xs text-muted-foreground">
+              Upload or select an override. If empty, previews use the first image or video thumbnail in the post.
+            </p>
+            {!formData.og_image_url && autoOgImage && (
+              <p className="label-mono mt-1 truncate text-xs text-muted-foreground">Automatic: {autoOgImage}</p>
+            )}
           </div>
         )}
 

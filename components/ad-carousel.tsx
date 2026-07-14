@@ -18,10 +18,10 @@ interface Ad {
 interface AdCarouselProps {
   ads: Ad[]
   className?: string
-  interval?: number // interval in milliseconds, default 20000ms (20 seconds)
+  interval?: number // interval in milliseconds, default 30000ms (30 seconds)
 }
 
-export function AdCarousel({ ads, className = "", interval = 20000 }: AdCarouselProps) {
+export function AdCarousel({ ads, className = "", interval = 30000 }: AdCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [mounted, setMounted] = useState(false)
 

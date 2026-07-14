@@ -10,7 +10,9 @@ import { SafeEmbed } from "@/components/safe-embed"
 import { getArchiveBySlug, getAllArchives, formatDate } from "@/lib/archive"
 import { getPublishedVideoById, getPublishedVideos } from "@/app/actions/video-actions"
 import { ShareButtons } from "@/components/share-buttons"
-import { getSiteUrl, resolveFeedImage } from "@/lib/rss-utils"
+import { getSiteUrl } from "@/lib/rss-utils"
+import { resolveFirstPostMedia, resolveSocialImage } from "@/lib/post-media"
+import { PostFeaturedMedia } from "@/components/post-featured-media"
 
 export const dynamic = "force-dynamic"
 
@@ -28,7 +30,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = post?.title || video?.title
   const desc = post?.excerpt || post?.subtitle || video?.description || "Archived HOT AND FRESH record."
   const canonical = `${site}/archives/${post?.slug || video?.id}`
-  const ogImage = post ? resolveFeedImage(post).url : video?.thumbnail_url
+  const ogImage = post
+    ? resolveSocialImage({
+        content: post.body,
+        customImage: post.og_image_url,
+        coverImage: post.cover_image_url,
+        siteUrl: site,
+      })
+    : video?.thumbnail_url
 
   return {
     title: `${title} — HOT AND FRESH`,
@@ -84,6 +93,8 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
       notFound()
     }
   }
+
+  const featuredMedia = post ? resolveFirstPostMedia(post.body) : null
 
   // Get related posts by tag or category (only if this is a blog post)
   let relatedPosts: Awaited<ReturnType<typeof getAllArchives>> = []
@@ -191,42 +202,23 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        {/* Featured media */}
-        {(post?.cover_image_url || post?.video_url || post?.embed_url || post?.iframe_url || video?.thumbnail_url || video?.video_url) && (
+        {/* First body media is featured; legacy dedicated media remains the fallback. */}
+        {(featuredMedia || post?.cover_image_url || post?.video_url || post?.embed_url || post?.iframe_url || video?.thumbnail_url || video?.video_url) && (
           <div className="border-b border-border bg-muted/20 px-4 py-8 md:px-6">
-            <div className="mx-auto max-w-5xl space-y-4">
-              {post?.cover_image_url && (
-                <img
-                  src={post.cover_image_url}
-                  alt={post.title}
-                  className="w-full border border-border object-cover"
-                />
-              )}
-              {(post?.video_url || video?.video_url) && (
-                <div>
-                  <video
-                    src={(post?.video_url || video?.video_url || "")}
-                    poster={video?.thumbnail_url ?? undefined}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="w-full border border-border"
-                  />
-                </div>
-              )}
-              {post?.embed_url && (
+            <div className="mx-auto max-w-5xl">
+              {featuredMedia ? (
+                <PostFeaturedMedia media={featuredMedia} title={post?.title || video?.title || "Featured media"} />
+              ) : post?.cover_image_url ? (
+                <img src={post.cover_image_url} alt={post.title} className="w-full border border-border object-cover" />
+              ) : (post?.video_url || video?.video_url) ? (
+                <video src={post?.video_url || video?.video_url || ""} poster={video?.thumbnail_url ?? undefined} controls playsInline preload="metadata" className="w-full border border-border" />
+              ) : post?.embed_url ? (
                 <SafeEmbed url={post.embed_url} type="iframe" title={post.title} />
-              )}
-              {post?.iframe_url && (
+              ) : post?.iframe_url ? (
                 <SafeEmbed iframeCode={post.iframe_url} type="iframe" title={post.title} />
-              )}
-              {video?.thumbnail_url && !video?.video_url && (
-                <img
-                  src={video.thumbnail_url}
-                  alt={video.title}
-                  className="w-full border border-border object-cover"
-                />
-              )}
+              ) : video?.thumbnail_url ? (
+                <img src={video.thumbnail_url} alt={video.title} className="w-full border border-border object-cover" />
+              ) : null}
             </div>
           </div>
         )}
@@ -236,9 +228,9 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           {post && (
             <div className="max-w-none">
               {isTiptapJson(post.body) ? (
-                <TiptapRenderer content={post.body} />
+                <TiptapRenderer content={post.body} omitFirstMedia={Boolean(featuredMedia)} />
               ) : (
-                <Markdown content={post.body} />
+                <Markdown content={post.body} omitFirstMedia={Boolean(featuredMedia)} />
               )}
             </div>
           )}
