@@ -373,9 +373,6 @@ export const RSS_SOURCES: RSSSource[] = [
     enabled: true,
   },
 ]
-  },
-]
-]
 
 type ParsedItem = {
   mediaThumbnail?: { $?: { url?: string } }
