@@ -61,70 +61,50 @@ export function makeImportedPostSlug(params: {
  * Add new sources here to include them in the feed aggregation
  */
 
-export function extractRssImage(item: any): string | undefined {
+export function extractRssImage(item: unknown): string | undefined {
+  const record = item as Record<string, any>
   const candidates: string[] = []
 
-  // media:content
-  const mediaContent = item["media:content"]
-  if (Array.isArray(mediaContent)) {
-    for (const media of mediaContent) {
-      if (media?.$?.url) candidates.push(media.$.url)
-      if (media?.url) candidates.push(media.url)
+  const addMediaUrls = (value: unknown) => {
+    for (const entry of Array.isArray(value) ? value : [value]) {
+      if (!entry) continue
+      if (typeof entry === "string") candidates.push(entry)
+      if (typeof entry === "object") {
+        const media = entry as { $?: { url?: string; href?: string }; url?: string; href?: string }
+        if (media.$?.url) candidates.push(media.$.url)
+        if (media.$?.href) candidates.push(media.$.href)
+        if (media.url) candidates.push(media.url)
+        if (media.href) candidates.push(media.href)
+      }
     }
-  } else if (mediaContent?.$?.url) {
-    candidates.push(mediaContent.$.url)
-  } else if (mediaContent?.url) {
-    candidates.push(mediaContent.url)
   }
 
-  // media:thumbnail
-  const mediaThumb = item["media:thumbnail"]
-  if (Array.isArray(mediaThumb)) {
-    for (const thumb of mediaThumb) {
-      if (thumb?.$?.url) candidates.push(thumb.$.url)
-      if (thumb?.url) candidates.push(thumb.url)
-    }
-  } else if (mediaThumb?.$?.url) {
-    candidates.push(mediaThumb.$.url)
-  } else if (mediaThumb?.url) {
-    candidates.push(mediaThumb.url)
-  }
+  addMediaUrls(record.mediaContent)
+  addMediaUrls(record["media:content"])
+  addMediaUrls(record.mediaThumbnail)
+  addMediaUrls(record["media:thumbnail"])
+  addMediaUrls(record.enclosure)
+  addMediaUrls(record.image)
+  addMediaUrls(record["itunes:image"])
 
-  // enclosure
-  const enclosure = item.enclosure
-  if (Array.isArray(enclosure)) {
-    for (const enc of enclosure) {
-      if (enc?.$?.url) candidates.push(enc.$.url)
-      if (enc?.url) candidates.push(enc.url)
-    }
-  } else if (enclosure?.$?.url) {
-    candidates.push(enclosure.$.url)
-  } else if (enclosure?.url) {
-    candidates.push(enclosure.url)
-  }
-
-  // image
-  if (typeof item.image === "string") candidates.push(item.image)
-  if (item.image?.url) candidates.push(item.image.url)
-
-  // content:encoded or description image
-  const htmlBodies = [
-    item["content:encoded"],
-    item.content,
-    item.description,
-    item.summary,
-  ].filter(Boolean)
-
-  for (const body of htmlBodies) {
+  for (const body of [
+    record["content:encoded"],
+    record.content,
+    record.contentSnippet,
+    record.description,
+    record.summary,
+  ]) {
+    if (!body) continue
     const text = Array.isArray(body) ? body.join(" ") : String(body)
-    const match = text.match(/<img[^>]+src=["']([^"']+)["']/i)
-    if (match?.[1]) candidates.push(match[1])
+    for (const match of text.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi)) {
+      if (match[1]) candidates.push(match[1])
+    }
   }
 
   for (const candidate of candidates) {
-    if (isSafeImageUrl(candidate)) {
-      return normalizeAbsoluteUrl(candidate)
-    }
+    if (!isSafeImageUrl(candidate)) continue
+    const normalized = normalizeAbsoluteUrl(candidate)
+    if (normalized) return normalized
   }
 
   return undefined
@@ -232,35 +212,6 @@ function priorityFor(minutesAgo: number, reports: number): Story["priority"] {
   return "ROUTINE"
 }
 
-function imageFrom(item: ParsedItem): string | undefined {
-  const i = item as any
-  // Try media namespace first (most common)
-  if (i.mediaThumbnail?.$?.url) return i.mediaThumbnail.$.url
-  if (i.mediaContent?.$?.url) return i.mediaContent.$.url
-
-  // Try image field (some RSS feeds)
-  if (i.image?.url) return i.image.url
-
-  // Try enclosure (podcasts, media feeds)
-  if (Array.isArray(i.enclosure)) {
-    const mediaEnclosure = i.enclosure.find((e: any) =>
-      e.$?.type?.startsWith("image/")
-    )
-    if (mediaEnclosure?.$?.url) return mediaEnclosure.$.url
-  } else if (i.enclosure?.$?.type?.startsWith("image/")) {
-    return i.enclosure.$.url
-  }
-
-  // Try description for img tag (last resort)
-  const desc = i.description || i.content
-  if (desc) {
-    const imgMatch = desc.match(/<img[^>]+src=["']([^"']+)["']/i)
-    if (imgMatch?.[1]) return imgMatch[1]
-  }
-  
-  return undefined
-}
-
 /**
  * Fetch and parse a single RSS source
  */
@@ -320,7 +271,7 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
         readMinutes: estimateReadMinutes(summary),
         reports,
         url: item.link,
-        image: imageFrom(item),
+        image: extractRssImage(item),
         priority: priorityFor(minutesAgo, reports),
       }
     })
@@ -390,7 +341,11 @@ export async function getNews(): Promise<NewsBundle> {
       image: s.image || topFallbackImages[i],
     }))
 
-    const feed = stories.filter((s) => !used.has(s.id)).slice(0, 30)
+    const feedFallbackImage = "/images/hot-and-fresh-default-feed.png"
+    const feed = stories
+      .filter((s) => !used.has(s.id))
+      .slice(0, 30)
+      .map((story) => ({ ...story, image: story.image || feedFallbackImage }))
 
     const allStories = [blogPostStory, ...stories]
     const trending = allStories
@@ -442,7 +397,11 @@ export async function getNews(): Promise<NewsBundle> {
     if (!s.image) s.image = topFallbackImages[i]
   })
 
-  const feed = unique.filter((s) => !used.has(s.id)).slice(0, 30)
+  const feedFallbackImage = "/images/hot-and-fresh-default-feed.png"
+  const feed = unique
+    .filter((s) => !used.has(s.id))
+    .slice(0, 30)
+    .map((story) => ({ ...story, image: story.image || feedFallbackImage }))
 
   const trending = [...unique]
     .sort((a, b) => b.reports - a.reports)
