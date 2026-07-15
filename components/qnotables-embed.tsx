@@ -62,7 +62,7 @@ function checkIsValidEmbed(url: string): boolean {
 function checkIsXEmbed(url: string): boolean {
   return url.includes("x.com") || url.includes("twitter.com")
 }
-
+// INSERT NOTABLE THREAD HERE
 const QNOTABLES_URL = "https://8kun.top/qresearch/res/24671999.html#bottom"
 
 /**

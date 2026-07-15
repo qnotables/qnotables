@@ -105,7 +105,7 @@ export function SiteSwitcherEmbed() {
       </div>
 
       {/* Iframe */}
-      <div className="relative w-full" style={{ height: "1300px" }}>
+      <div className="relative w-full" style={{ height: "888px" }}>
         <iframe
           key={activeId}
           src={active.url}
