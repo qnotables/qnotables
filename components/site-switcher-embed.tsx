@@ -12,7 +12,7 @@ interface EmbedSite {
 const SITES: EmbedSite[] = [
    {
     id: "qresearch",
-    label: "QResearch",
+    label: "NOTABLES",
     tag: "",
     url: "https://8kun.top/qresearch/res/24671999.html#bottom",
   },
