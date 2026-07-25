@@ -72,7 +72,7 @@ export interface BlogRow {
   subtitle?: string
   excerpt: string
   cover_image: string | null
-  seo_image_url?: string | null
+  og_image_url?: string | null
   body: string
   author_name: string
   tag: string
@@ -111,7 +111,7 @@ export function rowToPost(row: BlogRow): BlogPost {
     featured: row.featured,
     content: row.body,
     coverImage: row.cover_image,
-    seoImageUrl: row.seo_image_url,
+    seoImageUrl: row.og_image_url,
     published: row.published,
     status: row.status || (row.published ? "published" : "draft"),
     sourceUrl: row.source_url,

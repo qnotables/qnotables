@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   const featuredMedia = resolveFirstPostMedia(post.content)
-  const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
+  const relatedPosts = post.id ? await getRelatedPosts(post.id, 2) : []
   const comments = post.id ? await getBlogComments(post.id) : []
   const initialViewCount = post.id ? await getPostViewCount(post.id) : 0
 
@@ -150,46 +150,48 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
 
             {/* Related posts */}
-            {relatedPosts.length > 0 && (
-              <section className="mt-12 border-t border-border pt-8">
-                <h2 className="stencil mb-6 text-xl text-foreground">Related Reading</h2>
-                <div className="space-y-4">
-                  {relatedPosts.map((relatedPost) => {
-                    const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
-                    return (
-                      <Link
-                        key={relatedPost.slug}
-                        href={`/archives/${relatedPost.slug}`}
-                        className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
-                      >
-                        {ogImage && (
-                          <div className="relative h-20 w-28 shrink-0 overflow-hidden">
-                            <Image
-                              src={ogImage}
-                              alt={relatedPost.title}
-                              fill
-                              className="object-cover"
-                              sizes="112px"
-                            />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
-                            {relatedPost.title}
-                          </h3>
-                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
-                            {relatedPost.excerpt}
-                          </p>
+            <section className="mt-12 border-t border-border pt-8">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="stencil text-xl text-foreground">Continue Reading</h2>
+                <Link
+                  href="/archives"
+                  className="label-mono text-xs text-muted-foreground transition-colors hover:text-primary"
+                >
+                  All Records →
+                </Link>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {relatedPosts.map((relatedPost) => {
+                  const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
+                  return (
+                    <Link
+                      key={relatedPost.slug}
+                      href={`/archives/${relatedPost.slug}`}
+                      className="group flex flex-col border border-border bg-card transition-colors hover:border-primary"
+                    >
+                      {ogImage ? (
+                        <div className="relative aspect-video w-full overflow-hidden">
+                          <Image
+                            src={ogImage}
+                            alt={relatedPost.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 640px) 100vw, 50vw"
+                          />
                         </div>
-                        <div className="label-mono mt-1 flex shrink-0 items-center gap-1 text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
+                      ) : (
+                        <div className="aspect-video w-full bg-muted/30" />
+                      )}
+                      <div className="p-4">
+                        <h3 className="stencil line-clamp-2 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
+                          {relatedPost.title}
+                        </h3>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
 
             {/* Comments section */}
             {post.id && (

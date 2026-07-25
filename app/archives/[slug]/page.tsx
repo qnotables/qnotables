@@ -96,18 +96,21 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
   const featuredMedia = post ? resolveFirstPostMedia(post.body) : null
 
-  // Get related posts by tag or category (only if this is a blog post)
+  // Get related posts by tag or category (only if this is a blog post), falling back to recents
   let relatedPosts: Awaited<ReturnType<typeof getAllArchives>> = []
   if (post) {
     const allPosts = await getAllArchives()
-    relatedPosts = allPosts
-      .filter(
-        (p) =>
-          p.slug !== post.slug &&
-          ((post.tags && post.tags.some((t) => p.tags?.includes(t))) ||
-            (post.category && p.category === post.category))
-      )
-      .slice(0, 3)
+    const others = allPosts.filter((p) => p.slug !== post.slug)
+
+    // 1. Same category or shared tag
+    const matched = others.filter(
+      (p) =>
+        (post.tags && post.tags.some((t) => p.tags?.includes(t))) ||
+        (post.category && p.category === post.category),
+    )
+
+    // 2. Fall back to most recent if no matches
+    relatedPosts = (matched.length > 0 ? matched : others).slice(0, 2)
   }
 
   return (
@@ -295,36 +298,48 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         </article>
 
         {/* Related posts */}
-        {relatedPosts.length > 0 && (
-          <section className="border-t border-border bg-muted/20 px-4 py-12 md:px-6 md:py-16">
-              <div className="mx-auto max-w-5xl">
-              <h2 className="stencil mb-8 text-2xl text-foreground">Related Records</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {relatedPosts.map((relatedPost) => (
+        <section className="border-t border-border bg-muted/20 px-4 py-12 md:px-6 md:py-16">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="stencil text-2xl text-foreground">Continue Reading</h2>
+              <Link
+                href="/archives"
+                className="label-mono text-xs text-muted-foreground transition-colors hover:text-primary"
+              >
+                All Records →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {relatedPosts.map((relatedPost) => {
+                const cardImage = relatedPost.og_image_url || relatedPost.cover_image_url || null
+                return (
                   <Link
                     key={relatedPost.slug}
                     href={`/archives/${relatedPost.slug}`}
-                    className="group border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/30"
+                    className="group flex flex-col border border-border bg-card transition-colors hover:border-primary"
                   >
-                    {!!relatedPost.cover_image_url && (
-                      <img
-                        src={relatedPost.cover_image_url || ""}
-                        alt={relatedPost.title}
-                        className="mb-3 h-32 w-full object-cover transition-transform group-hover:scale-105"
-                      />
+                    {cardImage ? (
+                      <div className="relative aspect-video w-full overflow-hidden">
+                        <img
+                          src={cardImage}
+                          alt={relatedPost.title}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video w-full bg-muted/30" />
                     )}
-                    <h3 className="stencil line-clamp-2 text-base text-foreground transition-colors group-hover:text-primary">
-                      {relatedPost.title}
-                    </h3>
-                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                      {relatedPost.excerpt}
-                    </p>
+                    <div className="p-4">
+                      <h3 className="stencil line-clamp-2 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
+                        {relatedPost.title}
+                      </h3>
+                    </div>
                   </Link>
-                ))}
-              </div>
+                )
+              })}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
       </main>
 
       <SiteFooter />
