@@ -110,7 +110,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
     )
 
     // 2. Fall back to most recent if no matches
-    relatedPosts = (matched.length > 0 ? matched : others).slice(0, 3)
+    relatedPosts = (matched.length > 0 ? matched : others).slice(0, 2)
   }
 
   return (
@@ -309,57 +309,35 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                 All Records →
               </Link>
             </div>
-            {relatedPosts.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {relatedPosts.map((relatedPost) => (
+            <div className="grid grid-cols-2 gap-4">
+              {relatedPosts.map((relatedPost) => {
+                const cardImage = relatedPost.og_image_url || relatedPost.cover_image_url || null
+                return (
                   <Link
                     key={relatedPost.slug}
                     href={`/archives/${relatedPost.slug}`}
-                    className="group flex flex-col border border-border bg-card transition-colors hover:border-primary hover:bg-muted/30"
+                    className="group flex flex-col border border-border bg-card transition-colors hover:border-primary"
                   >
-                    {relatedPost.cover_image_url ? (
-                      <div className="relative h-36 w-full overflow-hidden">
+                    {cardImage ? (
+                      <div className="relative aspect-video w-full overflow-hidden">
                         <img
-                          src={relatedPost.cover_image_url}
+                          src={cardImage}
                           alt={relatedPost.title}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       </div>
                     ) : (
-                      <div className="h-36 w-full bg-muted/30" />
+                      <div className="aspect-video w-full bg-muted/30" />
                     )}
-                    <div className="flex flex-1 flex-col p-4">
-                      {(relatedPost.post_type || relatedPost.category) && (
-                        <span className="label-mono mb-2 text-xs text-primary">
-                          {relatedPost.post_type || relatedPost.category}
-                        </span>
-                      )}
-                      <h3 className="stencil line-clamp-2 flex-1 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
+                    <div className="p-4">
+                      <h3 className="stencil line-clamp-2 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
                         {relatedPost.title}
                       </h3>
-                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                        {relatedPost.excerpt}
-                      </p>
-                      {relatedPost.published_at && (
-                        <p className="label-mono mt-3 text-xs text-muted-foreground">
-                          {formatDate(new Date(relatedPost.published_at))}
-                        </p>
-                      )}
                     </div>
                   </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="border border-border bg-card p-6 text-center">
-                <p className="text-sm text-muted-foreground">Browse more records in the archives.</p>
-                <Link
-                  href="/archives"
-                  className="label-mono mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  View Archives →
-                </Link>
-              </div>
-            )}
+                )
+              })}
+            </div>
           </div>
         </section>
       </main>
