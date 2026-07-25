@@ -150,46 +150,73 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
 
             {/* Related posts */}
-            {relatedPosts.length > 0 && (
-              <section className="mt-12 border-t border-border pt-8">
-                <h2 className="stencil mb-6 text-xl text-foreground">Related Reading</h2>
-                <div className="space-y-4">
+            <section className="mt-12 border-t border-border pt-8">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="stencil text-xl text-foreground">Continue Reading</h2>
+                <Link
+                  href="/archives"
+                  className="label-mono text-xs text-muted-foreground transition-colors hover:text-primary"
+                >
+                  All Records →
+                </Link>
+              </div>
+              {relatedPosts.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-3">
                   {relatedPosts.map((relatedPost) => {
                     const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
                     return (
                       <Link
                         key={relatedPost.slug}
                         href={`/archives/${relatedPost.slug}`}
-                        className="group flex items-start gap-4 border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/20"
+                        className="group flex flex-col border border-border bg-card transition-colors hover:border-primary hover:bg-muted/20"
                       >
-                        {ogImage && (
-                          <div className="relative h-20 w-28 shrink-0 overflow-hidden">
+                        {ogImage ? (
+                          <div className="relative h-36 w-full shrink-0 overflow-hidden">
                             <Image
                               src={ogImage}
                               alt={relatedPost.title}
                               fill
-                              className="object-cover"
-                              sizes="112px"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              sizes="(max-width: 640px) 100vw, 33vw"
                             />
                           </div>
+                        ) : (
+                          <div className="h-36 w-full shrink-0 bg-muted/30" />
                         )}
-                        <div className="min-w-0 flex-1">
-                          <h3 className="stencil text-lg text-foreground transition-colors group-hover:text-primary">
+                        <div className="flex flex-1 flex-col p-4">
+                          {relatedPost.tag && (
+                            <span className="label-mono mb-2 text-xs text-primary">{relatedPost.tag}</span>
+                          )}
+                          <h3 className="stencil line-clamp-2 flex-1 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
                             {relatedPost.title}
                           </h3>
-                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                             {relatedPost.excerpt}
                           </p>
-                        </div>
-                        <div className="label-mono mt-1 flex shrink-0 items-center gap-1 text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> {relatedPost.readMinutes} MIN
+                          <div className="label-mono mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{formatDate(relatedPost.date)}</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {relatedPost.readMinutes} MIN
+                            </span>
+                          </div>
                         </div>
                       </Link>
                     )
                   })}
                 </div>
-              </section>
-            )}
+              ) : (
+                <div className="border border-border bg-card p-6 text-center">
+                  <p className="text-sm text-muted-foreground">Browse more records in the archives.</p>
+                  <Link
+                    href="/archives"
+                    className="label-mono mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    View Archives →
+                  </Link>
+                </div>
+              )}
+            </section>
 
             {/* Comments section */}
             {post.id && (

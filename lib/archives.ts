@@ -176,7 +176,7 @@ export async function getFeaturedPosts(): Promise<BlogPost[]> {
   }
 }
 
-/** Get related posts (same category or tags) */
+/** Get related posts (same category or tags, falls back to recent posts) */
 export async function getRelatedPosts(postId: string, limit = 3): Promise<BlogPost[]> {
   try {
     const supabase = await createClient()
@@ -191,26 +191,64 @@ export async function getRelatedPosts(postId: string, limit = 3): Promise<BlogPo
     if (postErr || !currentPost) throw postErr
 
     const category = currentPost.category
-    const postTags = currentPost.blog_post_tags?.map((t: any) => t.tag) || []
+    const postTags = (currentPost.blog_post_tags as Array<{ tag: string }> | null)?.map((t) => t.tag) || []
 
-    // Find posts with same category or tags
-    let query = supabase
-      .from("blog_posts")
-      .select(
-        "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)",
-      )
-      .eq("status", "published")
-      .neq("id", postId)
+    const baseSelect =
+      "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)"
 
+    // 1. Try posts with the same category first
     if (category) {
-      query = query.eq("category", category)
+      const { data: categoryMatches, error: categoryErr } = await supabase
+        .from("blog_posts")
+        .select(baseSelect)
+        .eq("status", "published")
+        .neq("id", postId)
+        .eq("category", category)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(limit)
+
+      if (!categoryErr && categoryMatches && categoryMatches.length > 0) {
+        return (categoryMatches as BlogRow[]).map(rowToPost)
+      }
     }
 
-    const { data, error } = await query.limit(limit)
+    // 2. Try posts sharing at least one tag
+    if (postTags.length > 0) {
+      const { data: tagMatches, error: tagErr } = await supabase
+        .from("blog_post_tags")
+        .select(
+          `blog_posts(${baseSelect})`,
+        )
+        .in("tag", postTags)
+        .neq("blog_post_id", postId)
+        .limit(limit * 3) // fetch more since we'll dedupe
 
-    if (error) throw error
+      if (!tagErr && tagMatches && tagMatches.length > 0) {
+        const seen = new Set<string>()
+        const posts: BlogPost[] = []
+        for (const row of tagMatches as any[]) {
+          const p = row.blog_posts
+          if (!p || p.status !== "published" || seen.has(p.id)) continue
+          seen.add(p.id)
+          posts.push(rowToPost(p as BlogRow))
+          if (posts.length >= limit) break
+        }
+        if (posts.length > 0) return posts
+      }
+    }
 
-    return (data as BlogRow[]).map(rowToPost)
+    // 3. Fall back to the most recent posts
+    const { data: recentPosts, error: recentErr } = await supabase
+      .from("blog_posts")
+      .select(baseSelect)
+      .eq("status", "published")
+      .neq("id", postId)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(limit)
+
+    if (recentErr) throw recentErr
+
+    return (recentPosts as BlogRow[]).map(rowToPost)
   } catch (err) {
     console.error("[v0] getRelatedPosts error", err)
     return []
