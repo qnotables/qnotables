@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   const featuredMedia = resolveFirstPostMedia(post.content)
-  const relatedPosts = post.id ? await getRelatedPosts(post.id) : []
+  const relatedPosts = post.id ? await getRelatedPosts(post.id, 2) : []
   const comments = post.id ? await getBlogComments(post.id) : []
   const initialViewCount = post.id ? await getPostViewCount(post.id) : 0
 
@@ -160,62 +160,37 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   All Records →
                 </Link>
               </div>
-              {relatedPosts.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {relatedPosts.map((relatedPost) => {
-                    const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
-                    return (
-                      <Link
-                        key={relatedPost.slug}
-                        href={`/archives/${relatedPost.slug}`}
-                        className="group flex flex-col border border-border bg-card transition-colors hover:border-primary hover:bg-muted/20"
-                      >
-                        {ogImage ? (
-                          <div className="relative h-36 w-full shrink-0 overflow-hidden">
-                            <Image
-                              src={ogImage}
-                              alt={relatedPost.title}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              sizes="(max-width: 640px) 100vw, 33vw"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-36 w-full shrink-0 bg-muted/30" />
-                        )}
-                        <div className="flex flex-1 flex-col p-4">
-                          {relatedPost.tag && (
-                            <span className="label-mono mb-2 text-xs text-primary">{relatedPost.tag}</span>
-                          )}
-                          <h3 className="stencil line-clamp-2 flex-1 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
-                            {relatedPost.title}
-                          </h3>
-                          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                            {relatedPost.excerpt}
-                          </p>
-                          <div className="label-mono mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{formatDate(relatedPost.date)}</span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {relatedPost.readMinutes} MIN
-                            </span>
-                          </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {relatedPosts.map((relatedPost) => {
+                  const ogImage = relatedPost.seoImageUrl || relatedPost.coverImage || null
+                  return (
+                    <Link
+                      key={relatedPost.slug}
+                      href={`/archives/${relatedPost.slug}`}
+                      className="group flex flex-col border border-border bg-card transition-colors hover:border-primary"
+                    >
+                      {ogImage ? (
+                        <div className="relative aspect-video w-full overflow-hidden">
+                          <Image
+                            src={ogImage}
+                            alt={relatedPost.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 640px) 100vw, 50vw"
+                          />
                         </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="border border-border bg-card p-6 text-center">
-                  <p className="text-sm text-muted-foreground">Browse more records in the archives.</p>
-                  <Link
-                    href="/archives"
-                    className="label-mono mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    View Archives →
-                  </Link>
-                </div>
-              )}
+                      ) : (
+                        <div className="aspect-video w-full bg-muted/30" />
+                      )}
+                      <div className="p-4">
+                        <h3 className="stencil line-clamp-2 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
+                          {relatedPost.title}
+                        </h3>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
             </section>
 
             {/* Comments section */}
