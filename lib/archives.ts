@@ -188,13 +188,13 @@ export async function getRelatedPosts(postId: string, limit = 3): Promise<BlogPo
       .eq("id", postId)
       .maybeSingle()
 
-    if (postErr || !currentPost) throw postErr
+    if (postErr) throw postErr
 
-    const category = currentPost.category
-    const postTags = (currentPost.blog_post_tags as Array<{ tag: string }> | null)?.map((t) => t.tag) || []
+    const category = currentPost?.category ?? null
+    const postTags = (currentPost?.blog_post_tags as Array<{ tag: string }> | null)?.map((t) => t.tag) || []
 
     const baseSelect =
-      "id, slug, title, subtitle, excerpt, cover_image, seo_image_url, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, created_at, published_at, updated_at, blog_post_tags(tag)"
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, og_image_url, created_at, published_at, updated_at, blog_post_tags(tag)"
 
     // 1. Try posts with the same category first
     if (category) {
@@ -215,25 +215,16 @@ export async function getRelatedPosts(postId: string, limit = 3): Promise<BlogPo
     // 2. Try posts sharing at least one tag
     if (postTags.length > 0) {
       const { data: tagMatches, error: tagErr } = await supabase
-        .from("blog_post_tags")
-        .select(
-          `blog_posts(${baseSelect})`,
-        )
-        .in("tag", postTags)
-        .neq("blog_post_id", postId)
-        .limit(limit * 3) // fetch more since we'll dedupe
+        .from("blog_posts")
+        .select(`${baseSelect}, blog_post_tags!inner(tag)`)
+        .eq("status", "published")
+        .neq("id", postId)
+        .in("blog_post_tags.tag", postTags)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(limit)
 
       if (!tagErr && tagMatches && tagMatches.length > 0) {
-        const seen = new Set<string>()
-        const posts: BlogPost[] = []
-        for (const row of tagMatches as any[]) {
-          const p = row.blog_posts
-          if (!p || p.status !== "published" || seen.has(p.id)) continue
-          seen.add(p.id)
-          posts.push(rowToPost(p as BlogRow))
-          if (posts.length >= limit) break
-        }
-        if (posts.length > 0) return posts
+        return (tagMatches as BlogRow[]).map(rowToPost)
       }
     }
 
