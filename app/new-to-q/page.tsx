@@ -1,13 +1,19 @@
 import type { Metadata } from "next"
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
+import { TopAd, BottomAd } from "@/components/ad-display"
 
 export const metadata: Metadata = {
-  title: "New to Q? — Hot and Fresh",
+  title: "New to Q? | HOT AND FRESH",
   description: "Everything you need to know to get started with Qnotables.",
 }
 
 export default function NewToQPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-16 md:px-6 md:py-24">
+    <>
+      <SiteHeader />
+      <TopAd />
+      <main className="mx-auto max-w-3xl px-4 py-16 md:px-6 md:py-24">
       {/* Page header */}
       <div className="mb-12 border-b border-border pb-8">
         <p className="label-mono mb-3 text-primary">GETTING STARTED</p>
@@ -49,6 +55,9 @@ export default function NewToQPage() {
         </section>
 
       </div>
-    </main>
+      </main>
+      <BottomAd />
+      <SiteFooter />
+    </>
   )
 }
