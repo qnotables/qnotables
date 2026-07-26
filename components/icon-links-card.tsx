@@ -15,7 +15,7 @@ const links = [
     description: "Historical records",
   },
   {
-    href: "/dashboard/team",
+    href: "/team",
     icon: Users,
     label: "Team",
     description: "Meet the team",

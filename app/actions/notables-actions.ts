@@ -6,20 +6,28 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { runNotablesScrape } from "@/lib/notables/ingest"
 import type { NotablesFilters } from "@/lib/notables/types"
 
-// Shape returned from blog_posts for the notables feed
+// Shape returned from the notables table for the notables feed
 export type NotablesPost = {
   id: string
-  slug: string | null
   title: string
-  excerpt: string | null
   body: string | null
+  raw_text: string | null
+  source: string | null        // e.g. "8kun-rss"
+  board: string | null         // e.g. "qresearch"
+  thread_url: string | null    // used as source_url
+  post_number: string | null
+  links: string[]
+  media: string[]              // image/video URLs — used as cover image
+  created_at_source: string | null
+  scraped_at: string
+  hash_unique: string
+  // mapped aliases used by NotablesCard
+  cover_image: string | null
+  og_image_url: string | null
+  excerpt: string | null
   tag: string | null
-  post_type: string | null
-  status: string | null
   source_url: string | null
-  source_name: string | null
   published_at: string | null
-  imported_at: string | null
   created_at: string
 }
 
@@ -42,37 +50,63 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
   const to = from + pageSize - 1
 
   let query = supabase
-    .from("blog_posts")
-    .select("id, slug, title, excerpt, body, tag, post_type, status, source_url, source_name, published_at, imported_at, created_at", { count: "exact" })
-    .eq("source_name", "Qnotables")
-    .order("published_at", { ascending: false, nullsFirst: false })
+    .from("notables")
+    .select("id, title, body, raw_text, source, board, thread_url, post_number, links, media, created_at_source, scraped_at, hash_unique", { count: "exact" })
+    .order("scraped_at", { ascending: false })
     .range(from, to)
 
   if (tag && tag !== "all") {
-    query = query.eq("tag", tag)
+    query = query.eq("board", tag)
   }
 
   if (dateFrom) {
-    query = query.gte("published_at", new Date(dateFrom).toISOString())
+    query = query.gte("scraped_at", new Date(dateFrom).toISOString())
   }
   if (dateTo) {
     const end = new Date(dateTo)
     end.setDate(end.getDate() + 1)
-    query = query.lt("published_at", end.toISOString())
+    query = query.lt("scraped_at", end.toISOString())
   }
 
   if (search && search.trim()) {
-    query = query.or(`title.ilike.%${search.trim()}%,excerpt.ilike.%${search.trim()}%,body.ilike.%${search.trim()}%`)
+    query = query.or(`title.ilike.%${search.trim()}%,body.ilike.%${search.trim()}%,raw_text.ilike.%${search.trim()}%`)
   }
 
   const { data, error, count } = await query
 
   if (error) throw new Error(`Failed to fetch notables: ${error.message}`)
 
-  return {
-    items: (data ?? []) as NotablesPost[],
-    total: count ?? 0,
-  }
+  // Map notables table columns to what NotablesCard expects
+  const items: NotablesPost[] = (data ?? []).map((row: Record<string, unknown>) => {
+    const media = Array.isArray(row.media) ? row.media as string[] : []
+    const links = Array.isArray(row.links) ? row.links as string[] : []
+    const firstImage = media.find((m) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(m)) ?? null
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      body: row.body as string | null,
+      raw_text: row.raw_text as string | null,
+      source: row.source as string | null,
+      board: row.board as string | null,
+      thread_url: row.thread_url as string | null,
+      post_number: row.post_number as string | null,
+      links,
+      media,
+      created_at_source: row.created_at_source as string | null,
+      scraped_at: row.scraped_at as string,
+      hash_unique: row.hash_unique as string,
+      // aliases for NotablesCard
+      cover_image: firstImage,
+      og_image_url: null,
+      excerpt: row.raw_text ? (row.raw_text as string).slice(0, 300) : null,
+      tag: row.board as string | null,
+      source_url: row.thread_url as string | null,
+      published_at: (row.created_at_source as string | null) ?? (row.scraped_at as string),
+      created_at: row.scraped_at as string,
+    }
+  })
+
+  return { items, total: count ?? 0 }
 }
 
 // ── Public: Get distinct tags for filter dropdown ─────────────────────────────
@@ -80,15 +114,14 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
 export async function getNotablesBoards(): Promise<string[]> {
   const supabase = getSupabase()
   const { data, error } = await supabase
-    .from("blog_posts")
-    .select("tag")
-    .eq("source_name", "Qnotables")
-    .not("tag", "is", null)
+    .from("notables")
+    .select("board")
+    .not("board", "is", null)
 
   if (error) return []
 
-  const tags = [...new Set((data ?? []).map((r: { tag: string }) => r.tag))]
-  return tags.filter(Boolean)
+  const boards = [...new Set((data ?? []).map((r: { board: string }) => r.board))]
+  return boards.filter(Boolean)
 }
 
 // ── Admin: Trigger a manual notables scrape ───────────────────────────────────

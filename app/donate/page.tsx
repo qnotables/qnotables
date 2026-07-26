@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
 import { Heart, AlertCircle, Shield } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -21,31 +20,7 @@ export const metadata: Metadata = {
 export default function DonatePage() {
   return (
     <div className="min-h-screen tactical-grid">
-      {/* sticky header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
-          <Link href="/" className="flex items-baseline gap-2" aria-label="Back to HOT AND FRESH home">
-            <Image
-              src="/us-flag.png"
-              alt="American flag"
-              width={32}
-              height={20}
-              className="h-5 w-8"
-            />
-            <span className="stencil text-2xl leading-none text-foreground md:text-3xl">
-              HOT AND FRESH
-            </span>
-            <span className="label-mono hidden text-primary sm:inline">/ DONATE</span>
-          </Link>
-          <Link
-            href="/"
-            className="label-mono border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            Back
-          </Link>
-        </div>
-      </header>
-
+      <SiteHeader />
       <TopAd />
 
       <main className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6 lg:py-16">
