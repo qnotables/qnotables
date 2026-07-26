@@ -16,6 +16,8 @@ export type NotablesPost = {
   tag: string | null
   post_type: string | null
   status: string | null
+  cover_image: string | null
+  og_image_url: string | null
   source_url: string | null
   source_name: string | null
   published_at: string | null
@@ -43,7 +45,7 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
 
   let query = supabase
     .from("blog_posts")
-    .select("id, slug, title, excerpt, body, tag, post_type, status, source_url, source_name, published_at, imported_at, created_at", { count: "exact" })
+    .select("id, slug, title, excerpt, body, tag, post_type, status, cover_image, og_image_url, source_url, source_name, published_at, imported_at, created_at", { count: "exact" })
     .eq("source_name", "Qnotables")
     .order("published_at", { ascending: false, nullsFirst: false })
     .range(from, to)
