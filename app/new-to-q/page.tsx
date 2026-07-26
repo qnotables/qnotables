@@ -110,7 +110,7 @@ The choice to know will be yours.
 
 The truth will set you free.
 
-
+https://static.wixstatic.com/media/123e17_4e1c3fe0b02e4bc496dd6a87aa097da9~mv2.png/v1/fill/w_375,h_297,al_c,q_85,enc_avif,quality_auto/You%20awake%20is%20their%20greatest%20fear.png
 
 DARK ► LIGHT
 
