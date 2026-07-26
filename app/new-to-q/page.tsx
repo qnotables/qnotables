@@ -120,7 +120,15 @@ While you are here have a look around. I set this site up to help show you the p
 
 
 
-Learn to trust yourself!
+          </p>
+        </section>
+
+ <section>
+          <h2 className="stencil mb-4 text-2xl text-foreground">Learn to trust yourself!</h2>
+          <p className="leading-relaxed text-muted-foreground">
+
+
+
           </p>
         </section>
 
