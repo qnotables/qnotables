@@ -195,27 +195,42 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : ""
       const align = typeof node.attrs?.align === "string" ? node.attrs.align : "center"
       if (!isSafeUrl(src)) return null
-      
-      // Determine alignment classes based on align attribute
-      let alignClasses = ""
-      switch (align) {
-        case "left":
-          alignClasses = "float-left mr-4 mb-2 md:w-1/3 md:float-none md:mx-auto md:max-w-2xl"
-          break
-        case "right":
-          alignClasses = "float-right ml-4 mb-2 md:w-1/3 md:float-none md:mx-auto md:max-w-2xl"
-          break
-        case "full":
-          alignClasses = "w-full my-4"
-          break
-        case "center":
-        default:
-          alignClasses = "mx-auto my-4 max-w-2xl"
-          break
+
+      // Float left/right: image sits inline and text wraps around it.
+      // Center/full: block-level, full clearfix.
+      if (align === "left") {
+        return (
+          <figure
+            key={key}
+            style={{ float: "left", maxWidth: "40%", marginRight: "1.25rem", marginBottom: "0.75rem", marginTop: "0.25rem" }}
+          >
+            <ForumImage src={src} alt={alt} />
+            {alt && <figcaption className="label-mono mt-1 text-center text-xs text-muted-foreground">{alt}</figcaption>}
+          </figure>
+        )
       }
-      
+      if (align === "right") {
+        return (
+          <figure
+            key={key}
+            style={{ float: "right", maxWidth: "40%", marginLeft: "1.25rem", marginBottom: "0.75rem", marginTop: "0.25rem" }}
+          >
+            <ForumImage src={src} alt={alt} />
+            {alt && <figcaption className="label-mono mt-1 text-center text-xs text-muted-foreground">{alt}</figcaption>}
+          </figure>
+        )
+      }
+      if (align === "full") {
+        return (
+          <figure key={key} className="my-4 w-full">
+            <ForumImage src={src} alt={alt} />
+            {alt && <figcaption className="label-mono mt-1 text-center text-xs text-muted-foreground">{alt}</figcaption>}
+          </figure>
+        )
+      }
+      // default: center
       return (
-        <figure key={key} className={alignClasses}>
+        <figure key={key} className="mx-auto my-4 max-w-2xl">
           <ForumImage src={src} alt={alt} />
           {alt && <figcaption className="label-mono mt-1 text-center text-xs text-muted-foreground">{alt}</figcaption>}
         </figure>
@@ -353,7 +368,7 @@ export function TiptapRenderer({ content, omitFirstMedia = false }: TiptapRender
   const nodes = doc.content ?? []
 
   return (
-    <div className="flex flex-col gap-4 leading-relaxed text-foreground/90">
+    <div className="tiptap-content leading-relaxed text-foreground/90">
       {nodes.map((node, i) => renderNode(node, i))}
     </div>
   )
