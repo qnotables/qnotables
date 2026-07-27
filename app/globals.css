@@ -249,6 +249,67 @@
 .tiptap-prose strong { font-weight: 600; color: var(--foreground); }
 .tiptap-prose img { margin-top: 0.5rem; margin-bottom: 0.5rem; max-width: 100%; }
 
+/* ─── Tiptap rendered content (TiptapRenderer output) ────────────────────── */
+
+/* Clearfix — ensures the container grows around any floated images */
+.tiptap-content::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Paragraph text flows around floated images */
+.tiptap-content p {
+  text-wrap: pretty;
+  line-height: 1.625;
+  /* overflow:hidden creates a new BFC so text stays beside the float */
+}
+
+/* Floated figure images — max 40% width so text has room to wrap */
+.tiptap-content figure[style*="float: left"],
+.tiptap-content figure[style*="float: right"] {
+  max-width: min(40%, 320px);
+}
+
+/* On narrow screens, stack floated images to full width */
+@media (max-width: 640px) {
+  .tiptap-content figure[style*="float: left"],
+  .tiptap-content figure[style*="float: right"] {
+    float: none !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* Editor-side image float preview (in tiptap-prose write mode) */
+.tiptap-prose img[data-align="left"] {
+  float: left;
+  max-width: min(40%, 320px);
+  margin-right: 1.25rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+.tiptap-prose img[data-align="right"] {
+  float: right;
+  max-width: min(40%, 320px);
+  margin-left: 1.25rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+.tiptap-prose img[data-align="full"] {
+  float: none;
+  width: 100%;
+  max-width: 100%;
+  margin: 1rem 0;
+}
+.tiptap-prose img[data-align="center"] {
+  float: none;
+  display: block;
+  margin: 1rem auto;
+  max-width: 100%;
+}
+
 /* Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

@@ -35,6 +35,9 @@ import {
   ExternalLink,
   Video,
   Globe,
+  ImageIcon,
+  GalleryHorizontal,
+  Maximize2,
 } from "lucide-react"
 import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
 import {
@@ -858,38 +861,39 @@ export function TiptapEditor({
 
       <Divider />
 
-      {/* Image Alignment — only show when image is selected */}
+      {/* Image wrap — only visible when an image node is selected */}
       {editor.isActive("image") && (
         <>
+          <span className="label-mono px-1.5 text-xs text-muted-foreground select-none">IMG:</span>
           <ToolBtn
-            title="Float image left"
+            title="Wrap text left — image floats left"
             active={editor.getAttributes("image").align === "left"}
             onClick={() => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (editor.chain().focus() as any).setImageAlignment("left").run()
             }}
           >
-            <AlignLeft className="h-3.5 w-3.5" />
+            <ImageIcon className="h-3.5 w-3.5" style={{ transform: "scaleX(-1)" }} />
           </ToolBtn>
           <ToolBtn
-            title="Center image"
-            active={editor.getAttributes("image").align === "center"}
+            title="Center image (no wrap)"
+            active={!editor.getAttributes("image").align || editor.getAttributes("image").align === "center"}
             onClick={() => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (editor.chain().focus() as any).setImageAlignment("center").run()
             }}
           >
-            <AlignCenter className="h-3.5 w-3.5" />
+            <GalleryHorizontal className="h-3.5 w-3.5" />
           </ToolBtn>
           <ToolBtn
-            title="Float image right"
+            title="Wrap text right — image floats right"
             active={editor.getAttributes("image").align === "right"}
             onClick={() => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (editor.chain().focus() as any).setImageAlignment("right").run()
             }}
           >
-            <AlignRight className="h-3.5 w-3.5" />
+            <ImageIcon className="h-3.5 w-3.5" />
           </ToolBtn>
           <ToolBtn
             title="Full width image"
@@ -899,7 +903,7 @@ export function TiptapEditor({
               (editor.chain().focus() as any).setImageAlignment("full").run()
             }}
           >
-            <Minus className="h-3.5 w-3.5" />
+            <Maximize2 className="h-3.5 w-3.5" />
           </ToolBtn>
           <Divider />
         </>
