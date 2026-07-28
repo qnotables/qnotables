@@ -63,7 +63,10 @@ export async function getScrapeLogs(limit = 20): Promise<ScrapeLog[]> {
     .order("started_at", { ascending: false })
     .limit(limit)
 
-  if (error) throw new Error(`Failed to fetch scrape logs: ${error.message}`)
+  if (error) {
+    console.error("[scraper-actions] getScrapeLogs error:", error.message)
+    return []
+  }
   return (data || []) as ScrapeLog[]
 }
 
@@ -79,7 +82,10 @@ export async function getScrapedDrafts() {
     .not("imported_at", "is", null)
     .order("imported_at", { ascending: false })
 
-  if (error) throw new Error(`Failed to fetch scraped drafts: ${error.message}`)
+  if (error) {
+    console.error("[scraper-actions] getScrapedDrafts error:", error.message)
+    return []
+  }
   return data || []
 }
 

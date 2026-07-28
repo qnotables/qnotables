@@ -19,9 +19,18 @@ export default async function ScraperPage() {
   if (!hasAccess) redirect("/dashboard/login")
 
   const [logs, drafts, sources] = await Promise.all([
-    getScrapeLogs(30),
-    getScrapedDrafts(),
-    getScraperSources(),
+    getScrapeLogs(30).catch((err) => {
+      console.error("[scraper-page] getScrapeLogs failed:", err?.message ?? err)
+      return []
+    }),
+    getScrapedDrafts().catch((err) => {
+      console.error("[scraper-page] getScrapedDrafts failed:", err?.message ?? err)
+      return []
+    }),
+    getScraperSources().catch((err) => {
+      console.error("[scraper-page] getScraperSources failed:", err?.message ?? err)
+      return []
+    }),
   ])
 
   const lastRun = logs[0] ?? null
