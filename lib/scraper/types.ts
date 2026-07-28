@@ -10,6 +10,8 @@ export interface ScraperSource {
   selector?: string
   /** Optional default category to assign scraped posts */
   category?: string
+  /** Optional homepage URL for the source publication */
+  website?: string
 }
 
 export interface ScrapedItem {

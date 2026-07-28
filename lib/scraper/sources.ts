@@ -10,20 +10,28 @@ import type { ScraperSource } from "./types"
  * The scraper will honour robots.txt and will not bypass logins or paywalls.
  */
 export const SCRAPER_SOURCES: ScraperSource[] = [
-  // ── RSS examples ─────────────────────────────────────────────────────────
+  // ── RSS ───────────────────────────────────────────────────────────────────
   {
     name: "Qnotables",
     url: "https://www.qnotables.com/blog-feed.xml",
     type: "rss",
     category: "Source Archive",
+    website: "https://qnotables.com",
+  },
+  {
+    name: "ZeroHedge",
+    url: "https://cms.zerohedge.com/fullrss2.xml",
+    type: "rss",
+    category: "News",
+    website: "https://zerohedge.com",
   },
 
-  // ── HTML examples ─────────────────────────────────────────────────────────
-   {
-     name: "Qnotables",
-     url: "https://qnotables.com/archives",
-     type: "html",
-     selector: "article",   // CSS selector for post elements
-     category: "Source Archive",
-   },
+  // ── HTML ──────────────────────────────────────────────────────────────────
+  {
+    name: "Qnotables",
+    url: "https://qnotables.com/archives",
+    type: "html",
+    selector: "article",
+    category: "Source Archive",
+  },
 ]
