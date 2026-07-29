@@ -13,6 +13,8 @@ import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl } from "@/lib/rss-utils"
 import { resolveFirstPostMedia, resolveSocialImage } from "@/lib/post-media"
 import { PostFeaturedMedia } from "@/components/post-featured-media"
+import { getArchiveVotes, incrementArchiveViews } from "@/app/actions/archive-vote-actions"
+import { ArchiveVotes } from "@/components/archive-votes"
 
 export const dynamic = "force-dynamic"
 
@@ -96,6 +98,16 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
   const featuredMedia = post ? resolveFirstPostMedia(post.body) : null
 
+  // Fetch vote counts + increment views for blog posts
+  const voteData = post
+    ? await getArchiveVotes(post.id).catch(() => ({ upVotes: 0, downVotes: 0, userVote: null }))
+    : { upVotes: 0, downVotes: 0, userVote: null }
+
+  if (post?.id) {
+    // Fire-and-forget — does not block page render
+    void incrementArchiveViews(post.id)
+  }
+
   // Get related posts by tag or category (only if this is a blog post), falling back to recents
   let relatedPosts: Awaited<ReturnType<typeof getAllArchives>> = []
   if (post) {
@@ -158,48 +170,62 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             )}
 
             {/* Meta */}
-            <div className="label-mono mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
-              {(post?.published_at || video?.date) && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {formatDate(new Date(post?.published_at || video?.date || new Date()))}
-                </span>
-              )}
-              {post?.timeline_date && (
-                <span className="flex items-center gap-1 text-xs">
-                  Timeline: {formatDate(new Date(post.timeline_date))}
-                </span>
-              )}
-              {post?.source_name && post?.source_url && (
-                <a
-                  href={post.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 transition-colors hover:text-primary"
-                >
-                  {post.source_name}
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              )}
-              {video?.external_url && (
-                <a
-                  href={video.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 transition-colors hover:text-primary"
-                >
-                  External Link
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              )}
-              {post?.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {post.tags.map((tag) => (
-                    <span key={tag} className="inline-block text-xs text-primary">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+            <div className="label-mono mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-4">
+                {(post?.published_at || video?.date) && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {formatDate(new Date(post?.published_at || video?.date || new Date()))}
+                  </span>
+                )}
+                {post?.timeline_date && (
+                  <span className="flex items-center gap-1 text-xs">
+                    Timeline: {formatDate(new Date(post.timeline_date))}
+                  </span>
+                )}
+                {post?.source_name && post?.source_url && (
+                  <a
+                    href={post.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 transition-colors hover:text-primary"
+                  >
+                    {post.source_name}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {video?.external_url && (
+                  <a
+                    href={video.external_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 transition-colors hover:text-primary"
+                  >
+                    External Link
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {post?.tags && post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {post.tags.map((tag) => (
+                      <span key={tag} className="inline-block text-xs text-primary">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Views + reputation voting — blog posts only */}
+              {post && (
+                <ArchiveVotes
+                  postId={post.id}
+                  slug={post.slug}
+                  initialUpVotes={voteData.upVotes}
+                  initialDownVotes={voteData.downVotes}
+                  userVote={voteData.userVote}
+                  viewCount={(post as any).view_count ?? 0}
+                />
               )}
             </div>
           </div>
