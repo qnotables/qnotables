@@ -10,10 +10,59 @@ const rssParser = new Parser({
       ["enclosure", "enclosure", { keepArray: false }],
     ],
   },
-  requestOptions: {
-    headers: SCRAPER_FETCH_HEADERS,
-  },
+  // Don't pass requestOptions — we fetch manually so we can sanitize first
 })
+
+/**
+ * Sanitize XML before parsing to handle common malformed entity issues:
+ * - Invalid named entities like &nbsp; &mdash; &copy; etc. that are legal HTML
+ *   but not valid XML unless declared in a DTD.
+ * - Bare & characters that are not part of a valid entity reference.
+ */
+function sanitizeXml(xml: string): string {
+  // Replace common HTML named entities with their Unicode equivalents
+  const HTML_ENTITIES: Record<string, string> = {
+    "&nbsp;": "\u00a0",
+    "&mdash;": "\u2014",
+    "&ndash;": "\u2013",
+    "&lsquo;": "\u2018",
+    "&rsquo;": "\u2019",
+    "&ldquo;": "\u201c",
+    "&rdquo;": "\u201d",
+    "&hellip;": "\u2026",
+    "&bull;": "\u2022",
+    "&copy;": "\u00a9",
+    "&reg;": "\u00ae",
+    "&trade;": "\u2122",
+    "&euro;": "\u20ac",
+    "&pound;": "\u00a3",
+    "&yen;": "\u00a5",
+    "&cent;": "\u00a2",
+    "&times;": "\u00d7",
+    "&divide;": "\u00f7",
+    "&laquo;": "\u00ab",
+    "&raquo;": "\u00bb",
+    "&eacute;": "\u00e9",
+    "&agrave;": "\u00e0",
+    "&egrave;": "\u00e8",
+    "&ecirc;": "\u00ea",
+    "&ccedil;": "\u00e7",
+    "&auml;": "\u00e4",
+    "&ouml;": "\u00f6",
+    "&uuml;": "\u00fc",
+    "&szlig;": "\u00df",
+  }
+
+  let sanitized = xml
+  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
+    sanitized = sanitized.replaceAll(entity, char)
+  }
+
+  // Replace any remaining bare & not followed by a valid entity ref (#digits, #xHex, or word;)
+  sanitized = sanitized.replace(/&(?!(?:#\d+|#x[\da-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);)/g, "&amp;")
+
+  return sanitized
+}
 
 function extractImageFromItem(item: any): string | undefined {
   // media:content — handle both array (keepArray:true) and scalar
@@ -79,7 +128,17 @@ export async function parseRssSource(source: ScraperSource): Promise<ScrapedItem
     throw new Error(`robots.txt disallows scraping ${source.url}`)
   }
 
-  const feed = await rssParser.parseURL(source.url)
+  // Fetch manually so we can sanitize XML before parsing
+  const res = await fetch(source.url, {
+    headers: SCRAPER_FETCH_HEADERS,
+    next: { revalidate: 300 },
+  })
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} fetching ${source.url}`)
+  }
+  const rawXml = await res.text()
+  const cleanXml = sanitizeXml(rawXml)
+  const feed = await rssParser.parseString(cleanXml)
   const items: ScrapedItem[] = []
 
   for (const item of feed.items ?? []) {
