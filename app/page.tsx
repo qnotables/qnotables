@@ -181,7 +181,9 @@ export default async function Page() {
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
-        <DeskNav />
+        <div className="mt-6">
+          <DeskNav />
+        </div>
         <WireFeed desks={desks} />
       </main>
 
