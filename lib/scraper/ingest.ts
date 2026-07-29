@@ -47,7 +47,7 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
     .join("\n\n")
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await supabase.from("blog_posts").insert([
+  const { error } = await supabase.from("blog_posts").insert([
     {
       title: item.title,
       slug,
@@ -60,8 +60,7 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
       source_name: item.sourceName,
       // source_url stores the canonical article URL for deduplication
       source_url: item.canonicalUrl,
-      cover_image_url: item.imageUrl || null,
-      media_image_url: item.imageUrl || null,
+      cover_image: item.imageUrl || null,
       original_publish_date: item.publishedAt || null,
       media_type: "none",
       include_in_rss: false,
@@ -69,10 +68,12 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
       imported_at: now,
       created_at: now,
       updated_at: now,
-      tags: [],
-      related_links: [],
     } as any,
   ])
+
+  if (error) {
+    throw new Error(`Failed to save draft "${item.title}": ${error.message}`)
+  }
 }
 
 async function processSource(source: ScraperSource): Promise<SourceResult> {
