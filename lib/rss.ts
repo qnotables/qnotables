@@ -372,6 +372,12 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://www.christianpost.com/category/world/rss",
     enabled: true,
   },
+  {
+    id: "ZeroHedge",
+    name: "ZeroHedge",
+    url: "https://cms.zerohedge.com/fullrss2.xml",
+    enabled: true,
+  },
 ]
 
 type ParsedItem = {
