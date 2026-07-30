@@ -61,11 +61,6 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
       // source_url stores the canonical article URL for deduplication
       source_url: item.canonicalUrl,
       cover_image: item.imageUrl || null,
-      original_publish_date: item.publishedAt || null,
-      media_type: "none",
-      include_in_rss: false,
-      public_archive: false,
-      imported_at: now,
       created_at: now,
       updated_at: now,
     } as any,
