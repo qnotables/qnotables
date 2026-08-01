@@ -65,10 +65,19 @@ export default function NewToQPage() {
     <p className="stencil text-xl font-semibold text-foreground">
       You awake is their greatest fear.
     </p>
-
+ <div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://rumble.com/embed/v9rccz/?pub=25xjr"
+        className="w-full"
+        style={{ height: "400px" }}
+        frameBorder="0"
+        allowFullScreen
+        title="Movie Set Propaganda"
+      />
+    </div>
     <div className="mt-6 w-full overflow-hidden rounded-md">
       <iframe
-        src="https://rumble.com/embed/vcdijn/"
+        src="https://rumble.com/embed/v9rcij/?pub=25xjr"
         className="w-full"
         style={{ height: "400px" }}
         frameBorder="0"
