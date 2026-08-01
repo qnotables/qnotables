@@ -107,16 +107,17 @@ export default function NewToQPage() {
       <div className="space-y-12">
 
         <div className="grid grid-cols-2 gap-4">
+         <img
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-5yzZsE9GUv4dasRHrsnHI1Jaj0l2KX.png"
+            alt="Q Drop 74 - Fellow Patriots: Stay the course and trust the plan. WWG1WGA. Conspiracy no more."
+            className="w-full rounded-md border border-border"
+          /> 
           <img
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-BCYyF3cG7hAnIpzoPO58QwB7iaJchU.png"
             alt="Q Drop 2237 - Q: The Greatest Military Intelligence Operation of Our Time. History will judge you well."
             className="w-full rounded-md border border-border"
           />
-          <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-5yzZsE9GUv4dasRHrsnHI1Jaj0l2KX.png"
-            alt="Q Drop 74 - Fellow Patriots: Stay the course and trust the plan. WWG1WGA. Conspiracy no more."
-            className="w-full rounded-md border border-border"
-          />
+          
         </div>
 
         <section>
