@@ -106,6 +106,15 @@ export default function NewToQPage() {
      {/* Content sections — add, edit, or remove these freely */}
       <div className="space-y-12">
 
+        <div className="w-full overflow-hidden rounded-md">
+          <video
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Donald%20Trump%20warns%20it%20is%20%27calm%20before%20the%20storm%27-k5q9MSe12dwd3Qhnmi7MUn9Py7VVIF.mp4"
+            controls
+            className="w-full rounded-md"
+            title="Donald Trump warns it is 'calm before the storm'"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
          <img
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-5yzZsE9GUv4dasRHrsnHI1Jaj0l2KX.png"
