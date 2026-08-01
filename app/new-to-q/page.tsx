@@ -181,7 +181,7 @@ export default function NewToQPage() {
   <img
     src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-FPOhPYXGJUtswUq6e8rbBQUoz7GxJv.png"
     alt="Donald Trump - We Are Doing This For Humanity"
-    className="mb-6 w-full rounded-md"
+    className="mb-6 w-1/2 rounded-md"
   />
   <h2 className="stencil mb-4 text-2xl text-foreground">
     Where to Start
