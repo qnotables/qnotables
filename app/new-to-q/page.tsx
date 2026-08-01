@@ -136,7 +136,7 @@ export default function NewToQPage() {
     </p>
 
     <p className="stencil text-xl font-semibold text-foreground">
-      You being awake is their greatest fear.
+      You awake is their greatest fear.
     </p>
   </div>
 </section>
