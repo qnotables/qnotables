@@ -279,7 +279,7 @@ export default function NewToQPage() {
 
         <section>
   <h2 className="stencil mb-4 text-2xl text-foreground">
-    Key Resources
+    Satanism on Full Display
   </h2>
 
   <div className="space-y-4 leading-relaxed text-muted-foreground">
@@ -293,7 +293,16 @@ export default function NewToQPage() {
       satanic or occult symbolism. German Chancellor Angela Merkel attended
       the event alongside other world leaders and heads of state.
     </p>
-
+<div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://rumble.com/embed/v6yvgrk/?pub=25xjr"
+        className="w-full"
+        style={{ height: "400px" }}
+        frameBorder="0"
+        allowFullScreen
+        title="Movie Set Propaganda"
+      />
+    </div>
     <blockquote className="border-l-4 border-primary pl-4 italic text-foreground">
       If this is what powerful people display openly, what happens behind
       closed doors?
