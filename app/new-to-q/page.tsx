@@ -17,6 +17,15 @@ export default function NewToQPage() {
       {/* Page header */}
       <div className="mb-12 border-b border-border pb-8">
         <p className="label-mono mb-3 text-primary">Q - THE PLAN TO SAVE THE WORLD</p>
+         {/* Featured video */}
+      <div className="mb-12">
+        <video
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Q_-_The_Plan_To_Save_The_World-480p2-C0xDCY17cS0URGf3AYzU0EgnIVhgcM.mp4"
+          controls
+          className="w-full rounded-md"
+          title="Q - The Plan To Save The World"
+        />
+      </div>
         <h1 className="stencil text-4xl text-foreground md:text-5xl">New to Q?</h1>
         <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
 Q is a United States Military Intelligence Operation. You may have heard it referred to as a psyop. It is.  A plan to awaken the citizens of the United States and by proxy, the World. The goal is to expose the evil and corruption that have been in positions of power for decades and even centuries WW (world wide), and return the power back to "We the People".
@@ -28,15 +37,7 @@ The media machine continues to attack our movement.
 You awake is their greatest fear. </p>
       </div>
 
-      {/* Featured video */}
-      <div className="mb-12">
-        <video
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Q_-_The_Plan_To_Save_The_World-480p2-C0xDCY17cS0URGf3AYzU0EgnIVhgcM.mp4"
-          controls
-          className="w-full rounded-md"
-          title="Q - The Plan To Save The World"
-        />
-      </div>
+     
 
       {/* Content sections — add, edit, or remove these freely */}
       <div className="space-y-12">
