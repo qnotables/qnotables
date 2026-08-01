@@ -104,16 +104,18 @@ export function SiteSwitcherEmbed() {
         </a>
       </div>
 
-      {/* Iframe */}
-      <div className="relative w-full" style={{ height: "1300px" }}>
-        <iframe
-          key={activeId}
-          src={active.url}
-          title={active.label}
-          className="absolute inset-0 h-full w-full border-0"
-          loading="lazy"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        />
+      {/* Iframes — all rendered at once to preserve navigation state, only active one is visible */}
+      <div className="relative w-full" style={{ height: "800px" }}>
+        {SITES.map((site) => (
+          <iframe
+            key={site.id}
+            src={site.url}
+            title={site.label}
+            className="absolute inset-0 h-full w-full border-0"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            style={{ display: activeId === site.id ? "block" : "none" }}
+          />
+        ))}
       </div>
     </div>
   )

@@ -26,7 +26,7 @@ export const SCRAPER_SOURCES: ScraperSource[] = [
     website: "https://zerohedge.com",
   },
 {
-    name: "Qnotables,
+    name: "Qnotables",
     url: "https://sys.8kun.top/qnotables/tripcode.xml",
     type: "rss",
     category: "News",
