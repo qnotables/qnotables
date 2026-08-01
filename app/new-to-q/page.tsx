@@ -308,6 +308,9 @@ export default function NewToQPage() {
       closed doors?
     </blockquote>
 
+    <div className="grid items-center gap-6 md:grid-cols-2">
+  {/* Text — left side */}
+  <div className="space-y-4 leading-relaxed text-muted-foreground">
     <p>
       This was the video that made everything click for me. It was my
       &ldquo;red-pill&rdquo; moment and changed how I viewed the people and
@@ -320,6 +323,17 @@ export default function NewToQPage() {
       six-hour video. Material like this should not be quietly presented,
       ignored, and later treated as though it never existed.
     </p>
+  </div>
+
+  {/* Image — right side */}
+  <div className="overflow-hidden rounded-md border border-border">
+    <img
+      src="/images/gotthard-tunnel-ceremony.jpg"
+      alt="Gotthard Base Tunnel opening ceremony"
+      className="h-auto w-full object-cover"
+    />
+  </div>
+</div>
 
     <a
       href="https://www.bitchute.com/video/us5xnNenaKtO/"
