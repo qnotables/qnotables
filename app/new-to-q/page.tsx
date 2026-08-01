@@ -191,10 +191,6 @@ export default function NewToQPage() {
       The world we have known may not be exactly as it appears. The research
       conducted by anons covers serious and often controversial subjects,
       including:
-    </p>
-  </div>
-  <div className="space-y-6 leading-relaxed text-muted-foreground">
-
     <ul className="grid gap-2 pl-5 sm:grid-cols-2">
       <li className="list-disc">Political corruption</li>
       <li className="list-disc">Secret societies</li>
@@ -207,6 +203,13 @@ export default function NewToQPage() {
       <li className="list-disc">Satanic rituals and ceremonies</li>
       <li className="list-disc">Intelligence leaks</li>
     </ul>
+    </p>
+
+
+  </div>
+  <div className="space-y-6 leading-relaxed text-muted-foreground">
+
+    
 
     <p>
       Anons—anonymous patriots and independent researchers—work together to
