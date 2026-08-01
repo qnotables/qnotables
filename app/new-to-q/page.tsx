@@ -85,6 +85,19 @@ export default function NewToQPage() {
         title="Movie Set Propaganda"
       />
     </div>
+
+    <div className="mt-6 grid grid-cols-2 gap-4">
+      <img
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-6U0LpaLFYQWmzS5O5hgIICIU4EM6g1.png"
+        alt="Q Drop 3761 - CNN in Panic Mode over POTUS Tweeting Qanon Accounts & Fake Whistleblower's Name"
+        className="w-full rounded-md border border-border"
+      />
+      <img
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-dKgvR7TAPGaWMgqYa8HUq8c6Nohwzh.png"
+        alt="Q Drop 3624 - Rudi Giuliani About to Expose a Massive Pay-for-Play Scheme Under the Obama Administration"
+        className="w-full rounded-md border border-border"
+      />
+    </div>
   </div>
 </section>
       </div>
