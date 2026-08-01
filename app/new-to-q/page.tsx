@@ -178,21 +178,22 @@ export default function NewToQPage() {
 </section>
 
 <section>
-  <img
-    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-FPOhPYXGJUtswUq6e8rbBQUoz7GxJv.png"
-    alt="Donald Trump - We Are Doing This For Humanity"
-    className="mb-6 w-1/2 rounded-md"
-  />
   <h2 className="stencil mb-4 text-2xl text-foreground">
     Where to Start
   </h2>
-
-  <div className="space-y-6 leading-relaxed text-muted-foreground">
-    <p>
+  <div className="mb-6 flex gap-6">
+    <img
+      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-FPOhPYXGJUtswUq6e8rbBQUoz7GxJv.png"
+      alt="Donald Trump - We Are Doing This For Humanity"
+      className="w-1/2 flex-shrink-0 rounded-md self-start"
+    />
+    <p className="leading-relaxed text-muted-foreground">
       The world we have known may not be exactly as it appears. The research
       conducted by anons covers serious and often controversial subjects,
       including:
     </p>
+  </div>
+  <div className="space-y-6 leading-relaxed text-muted-foreground">
 
     <ul className="grid gap-2 pl-5 sm:grid-cols-2">
       <li className="list-disc">Political corruption</li>
