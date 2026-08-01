@@ -14,7 +14,6 @@ import { SituationFeedCycle } from "@/components/situation-report-cycle"
 import type { SituationForumItem, SituationBlogItem } from "@/components/situation-report-cycle"
 
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
-import { RumbleLiveStream } from "@/components/rumble-live-stream"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { FlashStory } from "@/components/flash-story"
 import { getNews } from "@/lib/rss"
@@ -173,11 +172,6 @@ export default async function Page() {
         {/* Gallery Section */}
         <div className="mt-12">
           <GallerySection />
-        </div>
-
-        {/* Rumble Live Stream — compact flash card */}
-        <div className="mt-12">
-          <RumbleLiveStream />
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
