@@ -255,7 +255,7 @@ export default function NewToQPage() {
       be evaluated through evidence rather than assumption.
     </p>
 
-    <div className="rounded-md border border-border bg-muted/40 p-5 text-center">
+      <div className="rounded-md border border-border bg-muted/40 p-5 text-center">
       <p className="stencil text-xl text-foreground">
         Controlled Opposition
       </p>
@@ -268,6 +268,12 @@ export default function NewToQPage() {
         This Is Not a Game
       </p>
     </div>
+
+    <img
+      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-Dp4QDrDEIxtRxCZyzMtBpAqgnQjLZO.png"
+      alt="Alex Jones on InfoWars with Q Drop 4 overlay - No private comms. WWG1WGA. Conspiracy no more. Caption: I've talked to QAnon."
+      className="w-full rounded-md border border-border"
+    />
   </div>
 </section>
 
