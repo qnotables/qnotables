@@ -1,4 +1,5 @@
 export type Category =
+  | "NOTABLES"
   | "WORLD"
   | "POLITICS"
   | "DEFENSE"
@@ -6,6 +7,8 @@ export type Category =
   | "TECH"
   | "SCIENCE"
   | "ENERGY"
+  | "CULTURE"
+  | "CRIME"
   | "OTHER"
 
 export type Story = {
@@ -23,6 +26,7 @@ export type Story = {
 }
 
 export const categories: Category[] = [
+  "NOTABLES",
   "WORLD",
   "POLITICS",
   "DEFENSE",
@@ -30,6 +34,8 @@ export const categories: Category[] = [
   "TECH",
   "SCIENCE",
   "ENERGY",
+  "CULTURE",
+  "CRIME",
   "OTHER",
 ]
 
