@@ -13,6 +13,52 @@ import { isSafeImageUrl, normalizeAbsoluteUrl } from "@/lib/rss-utils"
 
 import crypto from "crypto"
 
+/**
+ * Sanitize XML before parsing to handle feeds (e.g. SEC) that contain
+ * HTML named entities (&nbsp; &mdash; etc.) or bare & characters that
+ * are valid HTML but not valid XML, causing the parser to throw.
+ */
+function sanitizeXml(xml: string): string {
+  const HTML_ENTITIES: Record<string, string> = {
+    "&nbsp;": "\u00a0",
+    "&mdash;": "\u2014",
+    "&ndash;": "\u2013",
+    "&lsquo;": "\u2018",
+    "&rsquo;": "\u2019",
+    "&ldquo;": "\u201c",
+    "&rdquo;": "\u201d",
+    "&hellip;": "\u2026",
+    "&bull;": "\u2022",
+    "&copy;": "\u00a9",
+    "&reg;": "\u00ae",
+    "&trade;": "\u2122",
+    "&euro;": "\u20ac",
+    "&pound;": "\u00a3",
+    "&yen;": "\u00a5",
+    "&cent;": "\u00a2",
+    "&times;": "\u00d7",
+    "&divide;": "\u00f7",
+    "&laquo;": "\u00ab",
+    "&raquo;": "\u00bb",
+    "&eacute;": "\u00e9",
+    "&agrave;": "\u00e0",
+    "&egrave;": "\u00e8",
+    "&ecirc;": "\u00ea",
+    "&ccedil;": "\u00e7",
+    "&auml;": "\u00e4",
+    "&ouml;": "\u00f6",
+    "&uuml;": "\u00fc",
+    "&szlig;": "\u00df",
+  }
+  let sanitized = xml
+  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
+    sanitized = sanitized.replaceAll(entity, char)
+  }
+  // Escape bare & not part of a valid XML entity ref
+  sanitized = sanitized.replace(/&(?!(?:#\d+|#x[\da-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);)/g, "&amp;")
+  return sanitized
+}
+
 export function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -502,7 +548,7 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
       next: { revalidate: 300 },
     })
     if (!res.ok) return []
-    const xml = await res.text()
+    const xml = sanitizeXml(await res.text())
     const parsed = await parser.parseString(xml)
 
     return (parsed.items ?? []).slice(0, 40).map((raw, i) => {
