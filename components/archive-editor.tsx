@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react"
 import { ArchivePost } from "@/lib/archive"
 import { saveArchivePost, publishArchivePost, scheduleArchivePost, checkSlugExists } from "@/app/actions/archive-actions"
 import { generateSlug } from "@/lib/slug-utils"
+import { categories } from "@/lib/news-data"
 
 type Tab = "write" | "media" | "sources" | "details" | "seo" | "timeline" | "preview" | "settings"
 
@@ -498,13 +499,16 @@ function ArchiveEditorDetails({ formData, onFieldChange, onArrayFieldChange }: a
     <div className="space-y-4 grid grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-semibold mb-2">Category</label>
-        <input
-          type="text"
+        <select
           value={formData.category || ""}
           onChange={e => onFieldChange("category", e.target.value)}
-          placeholder="e.g., Politics, Science"
           className="w-full px-3 py-2 border border-border bg-background"
-        />
+        >
+          <option value="">— Select category —</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
       </div>
 
       <div>
