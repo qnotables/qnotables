@@ -5,6 +5,7 @@ import { ArchivePost } from "@/lib/archive"
 import { saveArchivePost, publishArchivePost, scheduleArchivePost, checkSlugExists } from "@/app/actions/archive-actions"
 import { generateSlug } from "@/lib/slug-utils"
 import { categories } from "@/lib/news-data"
+import { DESKS, CONTENT_TYPES, DESK_LABELS, CONTENT_TYPE_LABELS, type Desk, type ContentType } from "@/lib/taxonomy"
 
 type Tab = "write" | "media" | "sources" | "details" | "seo" | "timeline" | "preview" | "settings"
 
@@ -507,6 +508,43 @@ function ArchiveEditorDetails({ formData, onFieldChange, onArrayFieldChange }: a
           <option value="">— Select category —</option>
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Desk — taxonomy axis 1 */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">
+          Desk
+          {formData.taxonomy_reviewed && (
+            <span className="ml-2 text-xs font-normal text-green-400 border border-green-500 px-1">Reviewed</span>
+          )}
+        </label>
+        <select
+          value={formData.desk || ""}
+          onChange={e => onFieldChange("desk", e.target.value)}
+          disabled={formData.taxonomy_reviewed === true}
+          className="w-full px-3 py-2 border border-border bg-background disabled:opacity-50"
+        >
+          <option value="">— Select desk —</option>
+          {DESKS.map(d => (
+            <option key={d} value={d}>{DESK_LABELS[d]}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Content Type — taxonomy axis 2 */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">Content Type</label>
+        <select
+          value={formData.content_type || ""}
+          onChange={e => onFieldChange("content_type", e.target.value)}
+          disabled={formData.taxonomy_reviewed === true}
+          className="w-full px-3 py-2 border border-border bg-background disabled:opacity-50"
+        >
+          <option value="">— Select type —</option>
+          {CONTENT_TYPES.map(ct => (
+            <option key={ct} value={ct}>{CONTENT_TYPE_LABELS[ct]}</option>
           ))}
         </select>
       </div>

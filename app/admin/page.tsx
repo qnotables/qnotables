@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowRight, BarChart3, MessageSquare, BookOpen, Lock, Megaphone, Tag } from "lucide-react"
+import { ArrowRight, BarChart3, MessageSquare, BookOpen, Lock, Megaphone, Tag, Layers } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/admin"
 
@@ -204,6 +204,24 @@ export default async function AdminPage() {
                     </p>
                   </div>
                   <Tag className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
+                </div>
+              </Link>
+
+              {/* Taxonomy Cleanup */}
+              <Link
+                href="/admin/taxonomy"
+                className="group border border-border bg-card p-6 transition-colors hover:border-primary"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="stencil text-foreground group-hover:text-primary">
+                      Taxonomy Cleanup
+                    </h3>
+                    <p className="label-mono mt-2 text-sm text-muted-foreground">
+                      Assign desk, content type, and tags to archive posts
+                    </p>
+                  </div>
+                  <Layers className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>
               </Link>
             </div>
