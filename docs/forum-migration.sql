@@ -153,7 +153,9 @@ CREATE INDEX IF NOT EXISTS idx_forum_threads_last_activity ON forum_threads (las
 CREATE INDEX IF NOT EXISTS idx_forum_threads_reply_count ON forum_threads (reply_count DESC);
 CREATE INDEX IF NOT EXISTS idx_forum_threads_slug        ON forum_threads (slug);
 CREATE INDEX IF NOT EXISTS idx_forum_threads_pinned      ON forum_threads (is_pinned) WHERE is_pinned = true;
-CREATE INDEX IF NOT EXISTS idx_forum_threads_tags_gin    ON forum_threads USING GIN (tags);
+-- NOTE: tags is a plain TEXT column (comma-separated), not an array,
+-- so a GIN index on it directly is not applicable. A trigram or
+-- expression index could be added later if tag search becomes slow.
 CREATE INDEX IF NOT EXISTS idx_forum_replies_thread_id   ON forum_replies (thread_id);
 CREATE INDEX IF NOT EXISTS idx_forum_replies_author_id   ON forum_replies (author_id);
 CREATE INDEX IF NOT EXISTS idx_forum_replies_created_at  ON forum_replies (created_at DESC);
