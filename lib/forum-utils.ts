@@ -33,6 +33,126 @@ export function getCategoryBySlug(slug: string): ForumCategory | undefined {
   return FORUM_CATEGORIES.find((c) => c.slug === slug)
 }
 
+// ─── Desks (taxonomy-aligned) ───────────────────────────────────────────────
+// The 11 controlled desk values shared with lib/taxonomy.ts. Used for the
+// forum's desk filter and the `desk` column on forum_threads. Kept as a local
+// constant (rather than importing DESKS) so this module stays dependency-free
+// for both server and client bundles.
+
+export interface ForumDesk {
+  slug: string
+  label: string
+}
+
+export const FORUM_DESKS: ForumDesk[] = [
+  { slug: "notables", label: "Notables" },
+  { slug: "world", label: "World" },
+  { slug: "politics", label: "Politics" },
+  { slug: "defense", label: "Defense" },
+  { slug: "economy", label: "Economy" },
+  { slug: "tech", label: "Tech" },
+  { slug: "science", label: "Science" },
+  { slug: "energy", label: "Energy" },
+  { slug: "culture", label: "Culture" },
+  { slug: "crime", label: "Crime" },
+  { slug: "other", label: "Other" },
+]
+
+const FORUM_DESK_SLUGS = new Set(FORUM_DESKS.map((d) => d.slug))
+
+/** Canonical desk slug for a raw value — null/unknown → "other". */
+export function normalizeDeskSlug(raw: string | null | undefined): string {
+  if (!raw || !raw.trim()) return "other"
+  const trimmed = raw.trim().toLowerCase()
+  if (FORUM_DESK_SLUGS.has(trimmed)) return trimmed
+  const byLabel = FORUM_DESKS.find((d) => d.label.toLowerCase() === trimmed)
+  return byLabel?.slug ?? "other"
+}
+
+export function getDeskLabel(slug: string | null | undefined): string {
+  const s = normalizeDeskSlug(slug)
+  return FORUM_DESKS.find((d) => d.slug === s)?.label ?? "Other"
+}
+
+// ─── Title validation / blocklist ───────────────────────────────────────────
+// Titles that are clearly test/placeholder/empty junk. Used to warn on thread
+// creation and to surface candidates in the admin cleanup tool. NEVER used to
+// auto-delete — only to flag.
+
+const TITLE_BLOCKLIST_EXACT = new Set([
+  "test",
+  "testing",
+  "test123",
+  "test 123",
+  "asdf",
+  "asdfasdf",
+  "qwerty",
+  "untitled",
+  "no title",
+  "title",
+  "new thread",
+  "aaa",
+  "aaaa",
+  "hello",
+  "hi",
+  "...",
+  ".",
+  "delete",
+  "ignore",
+  "placeholder",
+  "example",
+  "sample",
+])
+
+/**
+ * Returns a reason string when a title looks like junk/test content,
+ * otherwise null. Purely advisory — callers decide what to do with it.
+ */
+export function checkTitleQuality(rawTitle: string): string | null {
+  const title = rawTitle.trim()
+  if (title.length === 0) return "Title is empty."
+  if (title.length < 3) return "Title is too short (fewer than 3 characters)."
+  const lower = title.toLowerCase()
+  if (TITLE_BLOCKLIST_EXACT.has(lower)) return `"${title}" looks like a placeholder or test title.`
+  // Single repeated character e.g. "aaaaa", "!!!!!"
+  if (/^(.)\1{2,}$/.test(title)) return "Title is a single repeated character."
+  // No letters or numbers at all (only punctuation/symbols)
+  if (!/[a-z0-9]/i.test(title)) return "Title has no letters or numbers."
+  // Keyboard-mash heuristic: long run of consonants with no vowel
+  if (/^[bcdfghjklmnpqrstvwxyz]{6,}$/i.test(lower)) return "Title looks like random keyboard input."
+  return null
+}
+
+export function isLowQualityTitle(rawTitle: string): boolean {
+  return checkTitleQuality(rawTitle) !== null
+}
+
+// ─── Slug generation ──────────────────────────────────────────────────────────
+
+/** Base slug from a title: lowercased, alphanumeric + hyphens, trimmed. */
+export function slugifyTitle(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/g, "")
+}
+
+/**
+ * Generate a thread slug from a title plus a uniqueness suffix (typically the
+ * first 8 chars of the row UUID). Falls back to "thread" when the title has no
+ * slug-safe characters so we never produce an empty or bare-suffix slug.
+ */
+export function generateThreadSlug(title: string, uniqueSuffix: string): string {
+  const base = slugifyTitle(title) || "thread"
+  const suffix = uniqueSuffix.trim().toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12)
+  return suffix ? `${base}-${suffix}` : base
+}
+
 export function normalizeCategoryName(raw: string | null | undefined): string {
   if (!raw || !raw.trim()) return "Other"
   const trimmed = raw.trim()
