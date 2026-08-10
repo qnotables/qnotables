@@ -5,7 +5,13 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isAdminEmail } from "@/lib/admin"
-import { parseTags, serializeTags } from "@/lib/forum-utils"
+import {
+  parseTags,
+  serializeTags,
+  buildExcerpt,
+  generateThreadSlug,
+  normalizeDeskSlug,
+} from "@/lib/forum-utils"
 import {
   checkRateLimit,
   sanitizeBody,
