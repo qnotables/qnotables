@@ -8,7 +8,7 @@ import { ForumList, type ThreadListItem } from "@/components/forum-list"
 import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
-import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
+import { FORUM_CATEGORIES, normalizeCategorySlug, normalizeDeskSlug } from "@/lib/forum-utils"
 import { getNews } from "@/lib/rss"
 
 export const metadata = {
@@ -19,9 +19,13 @@ export const metadata = {
 export default async function ForumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{ category?: string; desk?: string; q?: string; sort?: string }>
 }) {
-  await searchParams // trigger Suspense boundary; category is read client-side via useSearchParams
+  const params = await searchParams
+  const categoryFilter = params.category?.trim().toLowerCase() ?? ""
+  const deskFilter = params.desk?.trim().toLowerCase() ?? ""
+  const searchQuery = params.q?.trim() ?? ""
+  const sort = params.sort ?? "latest"
   const supabase = await createClient()
 
   // Fetch trending for sidebar — runs in parallel with thread queries below
@@ -32,20 +36,34 @@ export default async function ForumPage({
 
   // Fetch threads with author profiles and reply counts
   let threads: any[] = []
-  let lastActivityMap = new Map<string, string>()
+  const lastActivityMap = new Map<string, string>()
   let memberCount = 0
+
+  let threadQuery = supabase
+    .from("forum_threads")
+    .select(
+      "id, slug, title, body, excerpt, category, desk, tags, created_at, last_activity_at, reply_count, view_count, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name)",
+    )
+    .eq("is_soft_deleted", false)
+    .eq("is_pending", false)
+    .eq("status", "published")
+
+  if (categoryFilter) threadQuery = threadQuery.eq("category", categoryFilter)
+  if (deskFilter) threadQuery = threadQuery.eq("desk", normalizeDeskSlug(deskFilter))
+  if (searchQuery) {
+    // PostgreSQL full-text search; websearch mode supports quoted phrases and exclusions.
+    threadQuery = threadQuery.textSearch("title", searchQuery, { type: "websearch", config: "english" })
+  }
+
+  threadQuery = threadQuery.order("is_pinned", { ascending: false })
+  if (sort === "most-replies") threadQuery = threadQuery.order("reply_count", { ascending: false })
+  else if (sort === "newest") threadQuery = threadQuery.order("created_at", { ascending: false })
+  else if (sort === "featured") threadQuery = threadQuery.order("is_featured", { ascending: false })
+  else threadQuery = threadQuery.order("last_activity_at", { ascending: false, nullsFirst: false })
 
   try {
     const [threadResult, replyResult, memberResult] = await Promise.all([
-      supabase
-        .from("forum_threads")
-        .select(
-          "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
-        )
-        .eq("is_soft_deleted", false)
-        .eq("is_pending", false)
-        .order("is_pinned", { ascending: false })
-        .order("created_at", { ascending: false }),
+      threadQuery,
       supabase
         .from("forum_replies")
         .select("thread_id, created_at")
@@ -69,15 +87,19 @@ export default async function ForumPage({
   }
 
   const rows: ThreadListItem[] = threads.map((t: any) => {
-    const replyCount = t.forum_replies?.[0]?.count ?? 0
+    const replyCount = t.reply_count ?? 0
     return {
       id: t.id,
+      slug: t.slug ?? null,
       title: t.title,
       body: t.body ?? "",
+      excerpt: t.excerpt ?? null,
       category: t.category ?? null,
+      desk: t.desk ?? "other",
       tags: t.tags ?? null,
       created_at: t.created_at,
-      last_activity_at: lastActivityMap.get(t.id) ?? t.created_at,
+      last_activity_at: t.last_activity_at ?? lastActivityMap.get(t.id) ?? t.created_at,
+      viewCount: t.view_count ?? 0,
       author_id: t.author_id,
       authorName: t.profiles?.display_name ?? "operator",
       replyCount,

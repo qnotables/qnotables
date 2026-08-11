@@ -11,6 +11,7 @@ import {
   buildExcerpt,
   generateThreadSlug,
   normalizeDeskSlug,
+  checkTitleQuality,
 } from "@/lib/forum-utils"
 import {
   checkRateLimit,
@@ -29,13 +30,18 @@ export async function createThread(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const rawBody = String(formData.get("body") ?? "").trim()
   const category = String(formData.get("category") ?? "").trim() || null
+  const desk = normalizeDeskSlug(String(formData.get("desk") ?? category ?? "other"))
   const rawTags = String(formData.get("tags") ?? "").trim()
   const source_url = String(formData.get("source_url") ?? "").trim() || null
+  const intent = String(formData.get("intent") ?? "publish")
+  const status = intent === "draft" ? "draft" : "published"
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
 
   if (title.length < 4 || rawBody.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
   }
+  const titleIssue = checkTitleQuality(title)
+  if (titleIssue) return { error: titleIssue }
 
   // Hard safety checks — no sanitizing, just reject
   if (containsScriptTags(rawBody) || containsScriptTags(title)) {
@@ -92,10 +98,29 @@ export async function createThread(formData: FormData) {
   const userIsNew = isNewUser(profile ?? {})
   const isPending = moderationMode && userIsNew
 
+  const now = new Date().toISOString()
+  const slug = generateThreadSlug(title, crypto.randomUUID())
+  const excerpt = buildExcerpt(body, 200)
   const { data, error } = await supabase
     .from("forum_threads")
-    .insert({ title, body, author_id: user.id, category, tags, source_url, is_pending: isPending })
-    .select("id")
+    .insert({
+      title,
+      body,
+      excerpt,
+      slug,
+      author_id: user.id,
+      category,
+      desk,
+      tags,
+      source_url,
+      status,
+      content_format: "markdown",
+      is_pending: isPending,
+      last_activity_at: now,
+      updated_at: now,
+      published_at: status === "published" ? now : null,
+    })
+    .select("id, slug")
     .single()
 
   if (error) return { error: error.message }
@@ -117,22 +142,32 @@ export async function createThread(formData: FormData) {
   if (isPending) {
     return { error: null, pending: true, message: "Your post is pending review by a moderator." }
   }
+  if (status === "draft") {
+    return { error: null, draft: true, id: data.id, slug: data.slug, message: "Draft saved." }
+  }
 
-  redirect(`/forum/${data.id}`)
+  redirect(`/forum/${data.slug || data.id}`)
 }
 
 export async function updateThread(formData: FormData) {
   const id = String(formData.get("thread_id") ?? "")
   const title = String(formData.get("title") ?? "").trim()
-  const body = String(formData.get("body") ?? "").trim()
+  const rawBody = String(formData.get("body") ?? "").trim()
   const category = String(formData.get("category") ?? "").trim() || null
+  const desk = normalizeDeskSlug(String(formData.get("desk") ?? category ?? "other"))
   const rawTags = String(formData.get("tags") ?? "").trim()
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
 
   if (!id) return { error: "Missing thread." }
-  if (title.length < 4 || body.length < 4) {
+  if (title.length < 4 || rawBody.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
   }
+  const titleIssue = checkTitleQuality(title)
+  if (titleIssue) return { error: titleIssue }
+  if (containsScriptTags(rawBody) || containsUnsafeHtml(rawBody)) {
+    return { error: "Post contains unsafe content." }
+  }
+  const body = sanitizeBody(rawBody)
 
   const supabase = await createClient()
   const {
@@ -142,7 +177,15 @@ export async function updateThread(formData: FormData) {
 
   const { error } = await supabase
     .from("forum_threads")
-    .update({ title, body, category, tags })
+    .update({
+      title,
+      body,
+      excerpt: buildExcerpt(body, 200),
+      category,
+      desk,
+      tags,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .eq("author_id", user.id)
 
@@ -283,11 +326,93 @@ export async function createReply(formData: FormData) {
     })
   }
 
+  if (!isPending) {
+    const { count } = await admin
+      .from("forum_replies")
+      .select("id", { count: "exact", head: true })
+      .eq("thread_id", threadId)
+      .eq("is_hidden", false)
+      .eq("is_pending", false)
+
+    await admin
+      .from("forum_threads")
+      .update({
+        reply_count: count ?? 0,
+        last_activity_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", threadId)
+  }
+
   revalidatePath(`/forum/${threadId}`)
   if (isPending) {
     return { error: null, pending: true, message: "Your reply is pending review by a moderator." }
   }
   return { error: null }
+}
+
+export async function updateReply(formData: FormData) {
+  const replyId = String(formData.get("reply_id") ?? "")
+  const rawBody = String(formData.get("body") ?? "").trim()
+  if (!replyId) return { error: "Missing reply." }
+  if (rawBody.length < 2) return { error: "Reply is too short." }
+  if (containsScriptTags(rawBody) || containsUnsafeHtml(rawBody)) {
+    return { error: "Reply contains unsafe content." }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "You must be signed in to edit." }
+
+  const { data: reply } = await supabase
+    .from("forum_replies")
+    .select("thread_id, author_id")
+    .eq("id", replyId)
+    .maybeSingle()
+
+  if (!reply || reply.author_id !== user.id) {
+    return { error: "You do not have permission to edit this reply." }
+  }
+
+  const { data: thread } = await supabase
+    .from("forum_threads")
+    .select("is_locked")
+    .eq("id", reply.thread_id)
+    .maybeSingle()
+  if (thread?.is_locked) return { error: "This thread is locked." }
+
+  const body = sanitizeBody(rawBody)
+  const { error } = await supabase
+    .from("forum_replies")
+    .update({ body, updated_at: new Date().toISOString(), content_format: "markdown" })
+    .eq("id", replyId)
+    .eq("author_id", user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/forum/${reply.thread_id}`)
+  return { error: null }
+}
+
+/** Best-effort view counter. Uses the service client so anonymous views count. */
+export async function incrementThreadViewCount(threadId: string) {
+  if (!threadId) return { error: "Missing thread." }
+  const admin = createAdminClient()
+  const { data: thread, error: readError } = await admin
+    .from("forum_threads")
+    .select("view_count")
+    .eq("id", threadId)
+    .eq("status", "published")
+    .maybeSingle()
+
+  if (readError || !thread) return { error: readError?.message ?? "Thread not found." }
+  const { error } = await admin
+    .from("forum_threads")
+    .update({ view_count: Math.max(0, Number(thread.view_count) || 0) + 1 })
+    .eq("id", threadId)
+
+  return { error: error?.message ?? null }
 }
 
 // ─── Rich-media moderation actions ───────────────────────────────────────────
