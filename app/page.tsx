@@ -176,16 +176,24 @@ export default async function Page() {
         </div>
 
         {/* RSS source directory */}
-        <section className="mt-12" aria-labelledby="rss-sources-heading">
-          <div className="mb-5 flex items-center gap-3">
+        <details className="group mt-12 border-y border-border">
+          <summary className="flex cursor-pointer list-none items-center gap-3 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background [&::-webkit-details-marker]:hidden">
             <span className="h-2 w-2 bg-primary" />
-            <h2 id="rss-sources-heading" className="stencil text-xl text-foreground">
-              RSS Sources
-            </h2>
+            <h2 className="stencil text-xl text-foreground">RSS Sources</h2>
             <span className="h-px flex-1 bg-border" />
+            <span className="label-mono text-xs text-muted-foreground group-open:hidden">Show sources</span>
+            <span className="label-mono hidden text-xs text-muted-foreground group-open:inline">Hide sources</span>
+            <span
+              aria-hidden="true"
+              className="text-lg leading-none text-primary transition-transform group-open:rotate-45"
+            >
+              +
+            </span>
+          </summary>
+          <div className="pb-6">
+            <RssFeedCards />
           </div>
-          <RssFeedCards />
-        </section>
+        </details>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
         <div className="mt-6">
