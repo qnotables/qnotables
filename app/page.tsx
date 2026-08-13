@@ -21,6 +21,13 @@ import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
+import { JsonLd } from "@/components/json-ld"
+import { pageMetadata, websiteSchema } from "@/lib/seo"
+
+export const metadata = pageMetadata({
+  title: "QNotables — News, Research, and Public Records",
+  path: "/",
+})
 
 export default async function Page() {
   const [
@@ -83,6 +90,7 @@ export default async function Page() {
   return (
     <DeskFilterProvider>
     <div id="top" className="min-h-screen tactical-grid">
+      <JsonLd data={websiteSchema} />
       <SiteHeader wireStories={wireStories} />
       <TopAd />
 

@@ -9,6 +9,8 @@ import { ArchiveSidebar } from "@/components/archive-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { getAllPosts } from "@/lib/blog-posts"
 import { getPublishedVideos } from "@/app/actions/video-actions"
+import { JsonLd } from "@/components/json-ld"
+import { collectionSchema, pageMetadata } from "@/lib/seo"
 import {
   transformBlogPostToArchive,
   convertVideoToArchive,
@@ -26,10 +28,13 @@ import {
 
 export const dynamic = "force-dynamic"
 
-export const metadata = {
-  title: "Archives | HOT AND FRESH",
-  description: "Search HOT AND FRESH field notes, source records, research threads, videos, documents, timelines, and public records.",
-}
+const archiveDescription = "Search QNotables field notes, source records, research threads, videos, documents, timelines, and public records."
+
+export const metadata = pageMetadata({
+  title: "Archives",
+  description: archiveDescription,
+  path: "/archives",
+})
 
 export default async function ArchivesPage() {
   // Fetch posts and videos from database
@@ -91,6 +96,7 @@ export default async function ArchivesPage() {
 
   return (
     <div className="min-h-screen tactical-grid">
+      <JsonLd data={collectionSchema("QNotables Archives", archiveDescription, "/archives")} />
       <SiteHeader />
       <TopAd />
 

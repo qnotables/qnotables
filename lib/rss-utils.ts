@@ -30,24 +30,7 @@ export const FALLBACK_AUTHOR = "HOT AND FRESH Desk"
  * Always returns an absolute origin with NO trailing slash.
  */
 export function getSiteUrl(): string {
-  const candidates = [
-    process.env.NEXT_PUBLIC_SITE_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : undefined,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-  ].filter(Boolean) as string[]
-
-  let raw = candidates[0] || "https://hotandfresh.news"
-
-  // Ensure a protocol is present.
-  if (!/^https?:\/\//i.test(raw)) {
-    raw = `https://${raw}`
-  }
-
-  // Strip trailing slash(es).
-  return raw.replace(/\/+$/, "")
+  return "https://www.qnotables.ai"
 }
 
 /** True when a real public site URL has been configured by the operator. */

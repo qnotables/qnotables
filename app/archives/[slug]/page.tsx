@@ -15,6 +15,8 @@ import { resolveFirstPostMedia, resolveSocialImage } from "@/lib/post-media"
 import { PostFeaturedMedia } from "@/components/post-featured-media"
 import { getArchiveVotes, incrementArchiveViews } from "@/app/actions/archive-vote-actions"
 import { ArchiveVotes } from "@/components/archive-votes"
+import { JsonLd } from "@/components/json-ld"
+import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
@@ -25,40 +27,31 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   if (!post) {
     video = await getPublishedVideoById(slug)
-    if (!video) return { title: "Not found — HOT AND FRESH" }
+    if (!video) return pageMetadata({ title: "Record not found", path: `/archives/${slug}`, noIndex: true })
   }
 
   const site = getSiteUrl()
-  const title = post?.title || video?.title
-  const desc = post?.excerpt || post?.subtitle || video?.description || "Archived HOT AND FRESH record."
-  const canonical = `${site}/archives/${post?.slug || video?.id}`
-  const ogImage = post
+  const title = post?.title || video?.title || "Archive record"
+  const desc = post?.excerpt || post?.subtitle || video?.description || "Archived QNotables record."
+  const path = `/archives/${post?.slug || video?.id}`
+  const ogImage = socialImageUrl(post
     ? resolveSocialImage({
         content: post.body,
         customImage: post.og_image_url,
         coverImage: post.cover_image_url,
         siteUrl: site,
       })
-    : video?.thumbnail_url
+    : video?.thumbnail_url)
 
+  const base = pageMetadata({ title, description: desc, path, image: ogImage, type: "article" })
   return {
-    title: `${title} — HOT AND FRESH`,
-    description: desc,
-    alternates: { canonical },
+    ...base,
     openGraph: {
-      title,
-      description: desc,
-      url: canonical,
-      images: ogImage ? [{ url: ogImage }] : undefined,
+      ...base.openGraph,
       type: "article",
       publishedTime: post?.published_at || video?.date,
       modifiedTime: post?.updated_at,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description: desc,
-      images: ogImage ? [ogImage] : undefined,
+      authors: post?.source_author ? [post.author_name] : undefined,
     },
   }
 }
@@ -97,6 +90,34 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
   }
 
   const featuredMedia = post ? resolveFirstPostMedia(post.body) : null
+  const title = post?.title || video?.title || "Archive record"
+  const description = post?.excerpt || post?.subtitle || video?.description || "Archived QNotables record."
+  const articlePath = `/archives/${post?.slug || video?.id}`
+  const articleImage = post
+    ? resolveSocialImage({
+        content: post.body,
+        customImage: post.og_image_url,
+        coverImage: post.cover_image_url,
+        siteUrl: getSiteUrl(),
+      })
+    : video?.thumbnail_url
+  const schemas = [
+    articleSchema({
+      title,
+      description,
+      path: articlePath,
+      image: articleImage,
+      published: post?.published_at || video?.date,
+      modified: post?.updated_at,
+      author: post?.source_author,
+      type: "NewsArticle",
+    }),
+    breadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Archives", path: "/archives" },
+      { name: title, path: articlePath },
+    ]),
+  ]
 
   // Fetch vote counts + increment views for blog posts
   const voteData = post
@@ -127,6 +148,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
+      <JsonLd data={schemas} />
       <SiteHeader />
 
       <main className="flex-1">

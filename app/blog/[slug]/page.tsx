@@ -64,10 +64,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = await getPost(slug)
   if (!post) notFound()
 
-  // Redirect /blog/slug to /archives/slug
-  if (slug !== post.slug) {
-    redirect(`/archives/${post.slug}`)
-  }
+  // Blog URLs are legacy aliases; archive URLs are the sole canonical.
+  redirect(`/archives/${post.slug}`)
+
+  return null
 
   const featuredMedia = resolveFirstPostMedia(post.content)
   const relatedPosts = post.id ? await getRelatedPosts(post.id, 2) : []

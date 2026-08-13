@@ -17,7 +17,9 @@ import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, getDeskLabel } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
-import { getSiteUrl, firstImageFromBody } from "@/lib/rss-utils"
+import { firstImageFromBody } from "@/lib/rss-utils"
+import { JsonLd } from "@/components/json-ld"
+import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 
 // A UUID looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. Anything else is a slug.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -69,40 +71,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       .eq(column, slug)
       .maybeSingle()
 
-    if (!data) return { title: "Thread — HOT AND FRESH" }
+    if (!data) return pageMetadata({ title: "Thread not found", path: `/forum/${slug}`, noIndex: true })
 
-    const site = getSiteUrl()
-    const canonical = `${site}/forum/${data.slug ?? slug}`
-    const description = (data.excerpt ?? data.body ?? "").slice(0, 160).replace(/\s+/g, " ")
-
-    const bodyImage = firstImageFromBody(data.body)
-    const ogImage = bodyImage ?? `${site}/images/og-default.png`
-
-    // Drafts and hidden/removed threads must never be indexed
+    const path = `/forum/${data.slug ?? slug}`
+    const description = (data.excerpt ?? data.body ?? "QNotables community discussion.").slice(0, 160).replace(/\s+/g, " ")
     const shouldIndex = data.status === "published" && !data.is_soft_deleted
 
-    return {
-      title: `${data.title} — HOT AND FRESH`,
+    return pageMetadata({
+      title: data.title,
       description,
-      alternates: { canonical },
-      robots: shouldIndex ? undefined : { index: false, follow: false },
-      openGraph: {
-        title: data.title,
-        description,
-        url: canonical,
-        siteName: "HOT AND FRESH",
-        type: "article",
-        images: [{ url: ogImage }],
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: data.title,
-        description,
-        images: [ogImage],
-      },
-    }
+      path,
+      image: socialImageUrl(firstImageFromBody(data.body)),
+      type: "article",
+      noIndex: !shouldIndex,
+    })
   } catch {
-    return { title: "Thread — HOT AND FRESH" }
+    return pageMetadata({ title: "Thread", path: "/forum", noIndex: true })
   }
 }
 
@@ -137,6 +121,25 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   if (!thread || thread.is_soft_deleted) notFound()
   const t = thread
+  const threadPath = `/forum/${t.slug || t.id}`
+  const threadDescription = (t.excerpt || t.body || "QNotables community discussion.").slice(0, 160).replace(/\s+/g, " ")
+  const schemas = [
+    articleSchema({
+      title: t.title,
+      description: threadDescription,
+      path: threadPath,
+      image: firstImageFromBody(t.body),
+      published: t.created_at,
+      modified: t.updated_at,
+      author: t.profiles?.display_name,
+      type: "DiscussionForumPosting",
+    }),
+    breadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "The Town Hall", path: "/forum" },
+      { name: t.title, path: threadPath },
+    ]),
+  ]
 
   // Drafts are only viewable by their author (or an admin). Everyone else 404s.
   const isDraft = t.status === "draft"
@@ -234,6 +237,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
+      <JsonLd data={schemas} />
       <SiteHeader />
 
       {/* Increment view count on published threads (client fires once on mount) */}

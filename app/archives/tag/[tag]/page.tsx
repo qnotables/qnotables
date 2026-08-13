@@ -5,12 +5,18 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { getPostsByTag } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
+import { pageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params
-  return { title: `${tag} — Archives — Hot and Fresh`, description: `Field notes tagged with ${tag}.` }
+  const decoded = decodeURIComponent(tag)
+  return pageMetadata({
+    title: `#${decoded} — Archives`,
+    description: `QNotables field notes tagged with ${decoded}.`,
+    path: `/archives/tag/${encodeURIComponent(decoded)}`,
+  })
 }
 
 export default async function TagPage({ params }: { params: Promise<{ tag: string }> }) {

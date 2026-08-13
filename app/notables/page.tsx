@@ -4,14 +4,14 @@ import { TopAd, BottomAd } from "@/components/ad-display"
 import { NotablesFeed } from "@/components/notables/notables-feed"
 import { getNotables, getNotablesBoards } from "@/app/actions/notables-actions"
 import { Rss } from "lucide-react"
+import { JsonLd } from "@/components/json-ld"
+import { collectionSchema, pageMetadata } from "@/lib/seo"
+
+const description = "Browse the latest QResearch notables imported from Qnotables.com. Search by keyword, tag, or date."
 
 export const dynamic = "force-dynamic"
 
-export const metadata = {
-  title: "Notables | Qnotables.ai",
-  description:
-    "Browse the latest QResearch notables imported from Qnotables.com. Search by keyword, filter by tag or date.",
-}
+export const metadata = pageMetadata({ title: "Notables", description, path: "/notables" })
 
 export default async function NotablesPage() {
   const [{ items, total }, boards] = await Promise.all([
@@ -21,6 +21,7 @@ export default async function NotablesPage() {
 
   return (
     <div className="min-h-screen tactical-grid">
+      <JsonLd data={collectionSchema("QNotables Notables", description, "/notables")} />
       <SiteHeader />
       <TopAd />
 

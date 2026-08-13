@@ -4,6 +4,15 @@ import { Oswald, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { CartProvider } from '@/lib/shop/cart-context'
 import { MusicPlayerProvider } from '@/lib/music-player-context'
+import { JsonLd } from '@/components/json-ld'
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_TITLE,
+  SITE_NAME,
+  SITE_URL,
+  organizationSchema,
+} from '@/lib/seo'
 import './globals.css'
 
 const oswald = Oswald({
@@ -17,37 +26,32 @@ const plexMono = IBM_Plex_Mono({
   weight: ['400', '500', '600'],
 })
 
-const DEFAULT_OG_IMAGE = '/images/og-default.png'
-
 export const metadata: Metadata = {
-  title: 'Hot and Fresh — Global News Aggregator',
-  description:
-    'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: DEFAULT_TITLE,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
   generator: 'v0.app',
+  alternates: { canonical: SITE_URL },
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
   },
   openGraph: {
     type: 'website',
-    siteName: 'Hot and Fresh',
-    title: 'Hot and Fresh — Global News Aggregator',
-    description:
-      'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
-    images: [
-      {
-        url: DEFAULT_OG_IMAGE,
-        width: 1316,
-        height: 877,
-        alt: 'Q Research — For God and Country',
-      },
-    ],
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: SITE_URL,
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1316, height: 877, alt: `${SITE_NAME} preview` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hot and Fresh — Global News Aggregator',
-    description:
-      'Hot and Fresh aggregates and ranks the most important headlines from trusted sources around the world, updated around the clock.',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE],
   },
 }
@@ -72,6 +76,7 @@ export default function RootLayout({
       className={`${oswald.variable} ${plexMono.variable} bg-background`}
     >
       <body className="font-mono antialiased">
+        <JsonLd data={organizationSchema} />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
