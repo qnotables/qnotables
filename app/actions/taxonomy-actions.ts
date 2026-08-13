@@ -7,8 +7,8 @@ import {
   type Desk,
   type ContentType,
   parseLegacyCategory,
-  isValidDesk,
-  isValidContentType,
+  validateDesk,
+  validateContentType,
 } from "@/lib/taxonomy"
 
 // ---------------------------------------------------------------------------
@@ -208,11 +208,11 @@ export async function applyTaxonomy(
       }
 
       // Validate values against allowlists before writing
-      if (!isValidDesk(input.desk)) {
+      if (validateDesk(input.desk) !== input.desk) {
         errors.push(`Row ${input.id}: invalid desk "${input.desk}"`)
         continue
       }
-      if (!isValidContentType(input.contentType)) {
+      if (validateContentType(input.contentType) !== input.contentType) {
         errors.push(`Row ${input.id}: invalid content_type "${input.contentType}"`)
         continue
       }

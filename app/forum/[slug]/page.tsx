@@ -15,7 +15,7 @@ import { ReportButton } from "@/components/report-button"
 import { ThreadViewCounter } from "@/components/thread-view-counter"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
-import { normalizeCategoryName, preprocessBody, getDeskLabel } from "@/lib/forum-utils"
+import { normalizeCategoryName, getDeskLabel } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
 import { getSiteUrl, firstImageFromBody } from "@/lib/rss-utils"
 

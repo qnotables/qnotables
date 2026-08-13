@@ -752,7 +752,7 @@ export function createShareUrl(platform: SharePlatform, params: ShareUrlParams):
 
   switch (platform) {
     case "twitter":
-      return `https://twitter.com/intent/tweet?text=${title}&url=${url}${tags ? `&hashtags=${encodeURIComponent(tags)}` : ""}`
+      return `https://x.com/intent/post?text=${title}&url=${url}${tags ? `&hashtags=${encodeURIComponent(tags)}` : ""}`
     case "facebook":
       return `https://www.facebook.com/sharer/sharer.php?u=${url}`
     case "truthsocial":

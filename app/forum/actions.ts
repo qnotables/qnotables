@@ -615,10 +615,21 @@ export async function removeThreadMedia(threadId: string) {
   const cleanBody = stripMediaFromBody(thread.body ?? "")
   const { error } = await supabase
     .from("forum_threads")
-    .update({ body: cleanBody })
+    .update({ body: cleanBody, content_json: null, content_format: "markdown" })
     .eq("id", threadId)
 
   if (error) return { error: error.message }
+  await supabase
+    .from("forum_attachments")
+    .update({ status: "hidden", updated_at: new Date().toISOString() })
+    .eq("thread_id", threadId)
+    .eq("status", "active")
+  await supabase.from("forum_audit_logs").insert({
+    actor_id: user.id,
+    action: "thread_media_hidden",
+    target_type: "thread",
+    target_id: threadId,
+  })
   revalidatePath(`/forum/${threadId}`)
   revalidatePath("/forum")
   return { error: null, cleanBody }
@@ -645,10 +656,21 @@ export async function removeReplyMedia(replyId: string) {
   const cleanBody = stripMediaFromBody(reply.body ?? "")
   const { error } = await supabase
     .from("forum_replies")
-    .update({ body: cleanBody })
+    .update({ body: cleanBody, content_json: null, content_format: "markdown" })
     .eq("id", replyId)
 
   if (error) return { error: error.message }
+  await supabase
+    .from("forum_attachments")
+    .update({ status: "hidden", updated_at: new Date().toISOString() })
+    .eq("reply_id", replyId)
+    .eq("status", "active")
+  await supabase.from("forum_audit_logs").insert({
+    actor_id: user.id,
+    action: "reply_media_hidden",
+    target_type: "reply",
+    target_id: replyId,
+  })
   if (reply.thread_id) revalidatePath(`/forum/${reply.thread_id}`)
   return { error: null, cleanBody }
 }

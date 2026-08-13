@@ -9,7 +9,7 @@ import { timeAgo } from "@/lib/time"
 import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { TiptapEditor } from "@/components/tiptap-editor"
 import { ShareButtons } from "@/components/share-buttons"
-import { FORUM_CATEGORIES, normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
+import { FORUM_CATEGORIES, normalizeCategoryName } from "@/lib/forum-utils"
 
 interface ThreadArticleProps {
   id: string
