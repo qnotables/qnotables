@@ -414,10 +414,23 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
 // ─── Blog card ───────────────────────────────────────────────────────────────
 
 function BlogHotCard({ item }: { item: SituationBlogItem }) {
-  const allTags = [
-    ...(item.tag ? [item.tag] : []),
-    ...(item.tags?.filter((t) => t !== item.tag) ?? []),
-  ].slice(0, 3)
+  // Merge the primary tag with the rest, then de-duplicate case-insensitively
+  // so React keys stay unique even when the same tag appears in different casing
+  // (e.g. "notables" and "Notables"). Preserves first-seen order and original casing.
+  const allTags = (() => {
+    const merged = [...(item.tag ? [item.tag] : []), ...(item.tags ?? [])]
+    const seen = new Set<string>()
+    const unique: string[] = []
+    for (const raw of merged) {
+      const tag = raw?.trim()
+      if (!tag) continue
+      const norm = tag.toLowerCase()
+      if (seen.has(norm)) continue
+      seen.add(norm)
+      unique.push(tag)
+    }
+    return unique.slice(0, 3)
+  })()
 
   const media = resolveFirstPostMedia(item.content)
 
@@ -477,9 +490,9 @@ function BlogHotCard({ item }: { item: SituationBlogItem }) {
       {/* Tags */}
       {allTags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1 px-4">
-          {allTags.map((t) => (
+          {allTags.map((t, i) => (
             <span
-              key={t}
+              key={`${t}-${i}`}
               className="label-mono px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground border border-border"
             >
               {t.toUpperCase()}
