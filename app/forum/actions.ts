@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isAdminEmail } from "@/lib/admin"
+import { isApprovedIframeSrc } from "@/lib/media-utils"
 import {
   parseTags,
   serializeTags,
@@ -26,6 +27,71 @@ import {
   SPAM_LIMITS,
 } from "@/lib/forum-spam-guard"
 
+const ALLOWED_TIPTAP_NODES = new Set([
+  "doc", "paragraph", "text", "heading", "bulletList", "orderedList", "listItem",
+  "blockquote", "codeBlock", "hardBreak", "horizontalRule", "image", "videoBlock", "embedBlock",
+])
+
+function collectMediaUrls(document: unknown): string[] {
+  const urls = new Set<string>()
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return
+    const item = node as { type?: string; attrs?: Record<string, unknown>; content?: unknown[] }
+    if (["image", "videoBlock"].includes(item.type ?? "")) {
+      const src = item.attrs?.src
+      if (typeof src === "string" && src.startsWith("https://")) urls.add(src)
+    }
+    item.content?.forEach(walk)
+  }
+  walk(document)
+  return [...urls]
+}
+
+function parseRichContent(raw: string, format: string) {
+  if (format !== "tiptap") {
+    const clean = sanitizeBody(raw)
+    return { body: clean, contentJson: null, plainText: clean.replace(/<[^>]*>/g, " ") }
+  }
+
+  let document: unknown
+  try {
+    document = JSON.parse(raw)
+  } catch {
+    throw new Error("The rich-text document is invalid. Please refresh and try again.")
+  }
+
+  if (!document || typeof document !== "object" || (document as { type?: string }).type !== "doc") {
+    throw new Error("The rich-text document is invalid.")
+  }
+
+  const textParts: string[] = []
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") throw new Error("Invalid editor content.")
+    const item = node as { type?: string; text?: string; content?: unknown[]; attrs?: Record<string, unknown> }
+    if (!item.type || !ALLOWED_TIPTAP_NODES.has(item.type)) throw new Error("Unsupported editor content.")
+    if (item.type === "text" && typeof item.text === "string") textParts.push(item.text)
+    if (item.attrs) {
+      for (const key of ["src", "originalUrl", "embedUrl"] as const) {
+        const value = item.attrs[key]
+        if (typeof value === "string" && value && !/^https:\/\//i.test(value)) {
+          throw new Error("Media and embed URLs must use HTTPS.")
+        }
+      }
+      if (item.type === "embedBlock") {
+        const embedUrl = item.attrs.embedUrl
+        if (typeof embedUrl !== "string" || !isApprovedIframeSrc(embedUrl)) {
+          throw new Error("That embed provider is not approved for Town Hall posts.")
+        }
+      }
+    }
+    item.content?.forEach(walk)
+  }
+  walk(document)
+
+  const plainText = textParts.join(" ").replace(/\s+/g, " ").trim()
+  return { body: JSON.stringify(document), contentJson: document, plainText }
+}
+
 export async function createThread(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const rawBody = String(formData.get("body") ?? "").trim()
@@ -35,9 +101,16 @@ export async function createThread(formData: FormData) {
   const source_url = String(formData.get("source_url") ?? "").trim() || null
   const intent = String(formData.get("intent") ?? "publish")
   const status = intent === "draft" ? "draft" : "published"
+  const contentFormat = String(formData.get("content_format") ?? "markdown")
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
+  let richContent: ReturnType<typeof parseRichContent>
+  try {
+    richContent = parseRichContent(rawBody, contentFormat)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid post content." }
+  }
 
-  if (title.length < 4 || rawBody.length < 4) {
+  if (title.length < 4 || richContent.plainText.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
   }
   const titleIssue = checkTitleQuality(title)
@@ -85,8 +158,7 @@ export async function createThread(formData: FormData) {
     return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
   }
 
-  // Sanitize body before storage
-  const body = sanitizeBody(rawBody)
+  const body = richContent.body
 
   // Check if user is new — for moderation queue
   const { data: profile } = await supabase
@@ -100,7 +172,7 @@ export async function createThread(formData: FormData) {
 
   const now = new Date().toISOString()
   const slug = generateThreadSlug(title, crypto.randomUUID())
-  const excerpt = buildExcerpt(body, 200)
+  const excerpt = buildExcerpt(richContent.plainText, 200)
   const { data, error } = await supabase
     .from("forum_threads")
     .insert({
@@ -114,7 +186,9 @@ export async function createThread(formData: FormData) {
       tags,
       source_url,
       status,
-      content_format: "markdown",
+      content_format: contentFormat,
+      content_json: richContent.contentJson,
+      content_version: 1,
       is_pending: isPending,
       last_activity_at: now,
       updated_at: now,
@@ -124,6 +198,17 @@ export async function createThread(formData: FormData) {
     .single()
 
   if (error) return { error: error.message }
+
+  const mediaUrls = collectMediaUrls(richContent.contentJson)
+  if (mediaUrls.length > 0) {
+    const { error: attachmentError } = await supabase
+      .from("forum_attachments")
+      .update({ thread_id: data.id, status: "active", attached_at: now, updated_at: now })
+      .eq("owner_id", user.id)
+      .eq("status", "orphaned")
+      .in("url", mediaUrls)
+    if (attachmentError) return { error: "Thread was saved, but its uploaded media could not be attached." }
+  }
 
   // Auto-flag if body looks spammy (even if not hard-rejected)
   const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
@@ -157,9 +242,17 @@ export async function updateThread(formData: FormData) {
   const desk = normalizeDeskSlug(String(formData.get("desk") ?? category ?? "other"))
   const rawTags = String(formData.get("tags") ?? "").trim()
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
+  const contentFormat = String(formData.get("content_format") ?? "markdown")
+  const expectedVersion = Number(formData.get("content_version") ?? 1)
+  let richContent: ReturnType<typeof parseRichContent>
+  try {
+    richContent = parseRichContent(rawBody, contentFormat)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid post content." }
+  }
 
   if (!id) return { error: "Missing thread." }
-  if (title.length < 4 || rawBody.length < 4) {
+  if (title.length < 4 || richContent.plainText.length < 4) {
     return { error: "Title and body must each be at least 4 characters." }
   }
   const titleIssue = checkTitleQuality(title)
@@ -167,7 +260,7 @@ export async function updateThread(formData: FormData) {
   if (containsScriptTags(rawBody) || containsUnsafeHtml(rawBody)) {
     return { error: "Post contains unsafe content." }
   }
-  const body = sanitizeBody(rawBody)
+  const body = richContent.body
 
   const supabase = await createClient()
   const {
@@ -175,12 +268,37 @@ export async function updateThread(formData: FormData) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to edit." }
 
-  const { error } = await supabase
+  const { data: current } = await supabase
+    .from("forum_threads")
+    .select("body, content_json, content_format, content_version")
+    .eq("id", id)
+    .eq("author_id", user.id)
+    .maybeSingle()
+  if (!current) return { error: "You do not have permission to edit this thread." }
+  if (current.content_version !== expectedVersion) {
+    return { error: "This thread changed in another tab. Reload before saving.", conflict: true }
+  }
+
+  const { error: revisionError } = await supabase.from("forum_revisions").insert({
+    content_type: "thread",
+    content_id: id,
+    author_id: user.id,
+    body: current.body ?? "",
+    content_json: current.content_json,
+    content_format: current.content_format ?? "markdown",
+    content_version: current.content_version ?? 1,
+  })
+  if (revisionError) return { error: revisionError.message }
+
+  const { data: updated, error } = await supabase
     .from("forum_threads")
     .update({
       title,
       body,
-      excerpt: buildExcerpt(body, 200),
+      content_json: richContent.contentJson,
+      content_format: contentFormat,
+      content_version: expectedVersion + 1,
+      excerpt: buildExcerpt(richContent.plainText, 200),
       category,
       desk,
       tags,
@@ -188,8 +306,12 @@ export async function updateThread(formData: FormData) {
     })
     .eq("id", id)
     .eq("author_id", user.id)
+    .eq("content_version", expectedVersion)
+    .select("id")
+    .maybeSingle()
 
   if (error) return { error: error.message }
+  if (!updated) return { error: "This thread changed in another tab. Reload before saving.", conflict: true }
 
   revalidatePath(`/forum/${id}`)
   revalidatePath("/forum")
@@ -247,9 +369,16 @@ export async function createReply(formData: FormData) {
   const threadId = String(formData.get("thread_id") ?? "")
   const rawBody = String(formData.get("body") ?? "").trim()
   const parentReplyId = String(formData.get("parent_reply_id") ?? "") || null
+  const contentFormat = String(formData.get("content_format") ?? "markdown")
+  let richContent: ReturnType<typeof parseRichContent>
+  try {
+    richContent = parseRichContent(rawBody, contentFormat)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid reply content." }
+  }
 
   if (!threadId) return { error: "Missing thread." }
-  if (rawBody.length < 2) return { error: "Reply is too short." }
+  if (richContent.plainText.length < 2) return { error: "Reply is too short." }
 
   // Hard safety checks
   if (containsScriptTags(rawBody)) return { error: "Reply contains disallowed content." }
@@ -289,7 +418,7 @@ export async function createReply(formData: FormData) {
     return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
   }
 
-  const body = sanitizeBody(rawBody)
+  const body = richContent.body
 
   // Check new-user status
   const { data: profile } = await supabase
@@ -307,12 +436,27 @@ export async function createReply(formData: FormData) {
       body,
       author_id: user.id,
       parent_reply_id: parentReplyId,
+      content_format: contentFormat,
+      content_json: richContent.contentJson,
+      content_version: 1,
       is_pending: isPending,
     })
     .select("id")
     .single()
 
   if (error) return { error: error.message }
+
+  const mediaUrls = collectMediaUrls(richContent.contentJson)
+  if (mediaUrls.length > 0 && replyData?.id) {
+    const now = new Date().toISOString()
+    const { error: attachmentError } = await supabase
+      .from("forum_attachments")
+      .update({ reply_id: replyData.id, status: "active", attached_at: now, updated_at: now })
+      .eq("owner_id", user.id)
+      .eq("status", "orphaned")
+      .in("url", mediaUrls)
+    if (attachmentError) return { error: "Reply was saved, but its uploaded media could not be attached." }
+  }
 
   // Auto-flag
   const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
@@ -354,8 +498,16 @@ export async function createReply(formData: FormData) {
 export async function updateReply(formData: FormData) {
   const replyId = String(formData.get("reply_id") ?? "")
   const rawBody = String(formData.get("body") ?? "").trim()
+  const contentFormat = String(formData.get("content_format") ?? "markdown")
+  const expectedVersion = Number(formData.get("content_version") ?? 1)
+  let richContent: ReturnType<typeof parseRichContent>
+  try {
+    richContent = parseRichContent(rawBody, contentFormat)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid reply content." }
+  }
   if (!replyId) return { error: "Missing reply." }
-  if (rawBody.length < 2) return { error: "Reply is too short." }
+  if (richContent.plainText.length < 2) return { error: "Reply is too short." }
   if (containsScriptTags(rawBody) || containsUnsafeHtml(rawBody)) {
     return { error: "Reply contains unsafe content." }
   }
@@ -368,7 +520,7 @@ export async function updateReply(formData: FormData) {
 
   const { data: reply } = await supabase
     .from("forum_replies")
-    .select("thread_id, author_id")
+    .select("thread_id, author_id, body, content_json, content_format, content_version")
     .eq("id", replyId)
     .maybeSingle()
 
@@ -383,14 +535,39 @@ export async function updateReply(formData: FormData) {
     .maybeSingle()
   if (thread?.is_locked) return { error: "This thread is locked." }
 
-  const body = sanitizeBody(rawBody)
-  const { error } = await supabase
+  if (reply.content_version !== expectedVersion) {
+    return { error: "This reply changed in another tab. Reload before saving your edits.", conflict: true }
+  }
+
+  const { error: revisionError } = await supabase.from("forum_revisions").insert({
+    content_type: "reply",
+    content_id: replyId,
+    author_id: user.id,
+    body: reply.body ?? "",
+    content_json: reply.content_json,
+    content_format: reply.content_format ?? "markdown",
+    content_version: reply.content_version ?? 1,
+  })
+  if (revisionError) return { error: revisionError.message }
+
+  const body = richContent.body
+  const { data: updated, error } = await supabase
     .from("forum_replies")
-    .update({ body, updated_at: new Date().toISOString(), content_format: "markdown" })
+    .update({
+      body,
+      content_json: richContent.contentJson,
+      content_format: contentFormat,
+      content_version: expectedVersion + 1,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", replyId)
     .eq("author_id", user.id)
+    .eq("content_version", expectedVersion)
+    .select("id")
+    .maybeSingle()
 
   if (error) return { error: error.message }
+  if (!updated) return { error: "This reply changed in another tab. Reload before saving.", conflict: true }
   revalidatePath(`/forum/${reply.thread_id}`)
   return { error: null }
 }

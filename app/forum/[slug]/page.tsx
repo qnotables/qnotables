@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
-import { Markdown } from "@/components/markdown"
+import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { ReplyVotes } from "@/components/reply-votes"
 import { ReplyModControls } from "@/components/reply-mod-controls"
 import { ReplyEditForm } from "@/components/reply-edit-form"
@@ -27,6 +27,7 @@ interface Thread {
   slug: string | null
   title: string
   body: string
+  content_version: number
   excerpt: string | null
   created_at: string
   updated_at: string | null
@@ -52,6 +53,8 @@ interface Reply {
   author_id: string
   parent_reply_id: string | null
   is_hidden: boolean
+  content_format: string | null
+  content_version: number
   profiles: { display_name: string } | null
 }
 
@@ -120,7 +123,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     const { data, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, slug, title, body, excerpt, created_at, updated_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, status, category, desk, tags, view_count, reply_count, profiles(display_name)",
+        "id, slug, title, body, content_version, excerpt, created_at, updated_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, status, category, desk, tags, view_count, reply_count, profiles(display_name)",
       )
       .eq(column, slug)
       .maybeSingle()
@@ -145,7 +148,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   try {
     const repliesQuery = supabase
       .from("forum_replies")
-      .select("id, body, created_at, updated_at, author_id, parent_reply_id, is_hidden, profiles(display_name)")
+      .select("id, body, created_at, updated_at, author_id, parent_reply_id, is_hidden, content_format, content_version, profiles(display_name)")
       .eq("thread_id", t.id)
       .eq("is_pending", false)
       .order("created_at", { ascending: true })
@@ -307,8 +310,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         <ThreadArticle
           id={t.id}
           title={t.title}
-          body={t.body}
-          createdAt={t.created_at}
+  body={t.body}
+  contentVersion={t.content_version}
+  createdAt={t.created_at}
           authorId={t.author_id}
           authorName={t.profiles?.display_name ?? "operator"}
           isOwner={user?.id === t.author_id}
@@ -377,11 +381,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                   </div>
                 </div>
                 <div className="mt-2">
-                  <Markdown content={preprocessBody(r.body)} />
+                  <TiptapRenderer content={r.body} />
                 </div>
                 {user?.id === r.author_id && !t.is_locked && (
                   <div className="mt-2 border-t border-border/50 pt-2">
-                    <ReplyEditForm replyId={r.id} initialBody={r.body} locked={Boolean(t.is_locked)} />
+                    <ReplyEditForm replyId={r.id} initialBody={r.body} contentVersion={r.content_version} locked={Boolean(t.is_locked)} />
                   </div>
                 )}
               </div>
@@ -429,14 +433,15 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                         </div>
                       </div>
                       <div className="mt-2 text-sm">
-                        <Markdown content={preprocessBody(nested.body)} />
+                        <TiptapRenderer content={nested.body} />
                       </div>
                       {user?.id === nested.author_id && !t.is_locked && (
                         <div className="mt-2 border-t border-border/50 pt-2">
                           <ReplyEditForm
-                            replyId={nested.id}
-                            initialBody={nested.body}
-                            locked={Boolean(t.is_locked)}
+replyId={nested.id}
+  initialBody={nested.body}
+  contentVersion={nested.content_version}
+  locked={Boolean(t.is_locked)}
                           />
                         </div>
                       )}

@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { del, put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit, SPAM_LIMITS } from "@/lib/forum-spam-guard"
@@ -121,22 +121,16 @@ export async function POST(request: NextRequest) {
     const isImage = ALLOWED_IMAGE_TYPES.has(file.type)
     const isVideo = ALLOWED_VIDEO_TYPES.has(file.type)
 
-    // Videos only allowed in blog folder
-    if (!isImage && !(isVideo && folder === "blog")) {
+    if (!isImage && !isVideo) {
       return NextResponse.json(
-        {
-          success: false,
-          error: folder === "blog"
-            ? "Only images (JPG, PNG, WEBP, GIF) and videos (MP4, WEBM, MOV) are allowed."
-            : "Only JPG, PNG, WEBP, and GIF images are allowed.",
-        },
+        { success: false, error: "Only images (JPG, PNG, WEBP, GIF) and videos (MP4, WEBM, MOV) are allowed." },
         { status: 400 },
       )
     }
 
-    // Validate size
-    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
-    const maxLabel = isVideo ? "500 MB" : "5 MB"
+    // Forum videos are intentionally capped lower than editorial blog uploads.
+    const maxBytes = isVideo ? (folder === "forum" ? 50 * 1024 * 1024 : MAX_VIDEO_BYTES) : MAX_IMAGE_BYTES
+    const maxLabel = isVideo ? (folder === "forum" ? "50 MB" : "500 MB") : "5 MB"
     if (file.size > maxBytes) {
       return NextResponse.json(
         { success: false, error: `${isVideo ? "Video" : "Image"} must be ${maxLabel} or smaller.` },
@@ -165,12 +159,33 @@ export async function POST(request: NextRequest) {
     const ext = safeExtension(file.name, file.type)
     const filename = safeFilename(user.id, folder, ext)
 
-    const blob = await put(filename, file, { access: "public" })
+    const blob = await put(filename, file, { access: "public", addRandomSuffix: false })
+
+    const { data: attachment, error: attachmentError } = await supabase
+      .from("forum_attachments")
+      .insert({
+        owner_id: user.id,
+        storage_key: filename,
+        url: blob.url,
+        original_name: file.name.slice(0, 255),
+        mime_type: file.type,
+        byte_size: file.size,
+        status: "orphaned",
+      })
+      .select("id")
+      .single()
+
+    if (attachmentError) {
+      await del(blob.url)
+      throw new Error("Could not register uploaded media.")
+    }
 
     return NextResponse.json({
       success: true,
+      attachmentId: attachment.id,
       url: blob.url,
       filename: filename.split("/").pop() ?? filename,
+      storageKey: filename,
       size: file.size,
       contentType: file.type,
     })

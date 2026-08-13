@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react"
 import { ChevronDown } from "lucide-react"
 import { createThread } from "@/app/forum/actions"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { TiptapEditor } from "@/components/tiptap-editor"
 import { FORUM_CATEGORIES, FORUM_DESKS } from "@/lib/forum-utils"
 
 const TITLE_MAX = 140
@@ -171,16 +171,16 @@ export function NewThreadForm() {
             (Markdown — bold, images, links, code)
           </span>
         </label>
-        <MarkdownEditor
+        <TiptapEditor
           name="body"
           id="body"
           required
-          rows={10}
+          uploadFolder="forum"
           isSignedIn
-          placeholder={
-            "Tip: paste an image directly into this box to upload it."
-          }
+          onChange={() => setDirty(true)}
+          placeholder="Build your opening post with headings, lists, quotes, links, images, video, and approved embeds."
         />
+        <input type="hidden" name="content_format" value="tiptap" />
       </div>
 
       {error ? (

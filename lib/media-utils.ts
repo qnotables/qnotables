@@ -50,6 +50,8 @@ export const APPROVED_IFRAME_DOMAINS: readonly string[] = [
   "drive.google.com",
   "twitter.com",
   "www.twitter.com",
+  "x.com",
+  "www.x.com",
   "www.tiktok.com",
   "tiktok.com",
   "spotify.com",
@@ -135,7 +137,7 @@ const SAFE_IFRAME_ATTRS = new Set([
   "frameborder",
 ])
 
-function isApprovedIframeSrc(src: string): boolean {
+export function isApprovedIframeSrc(src: string): boolean {
   try {
     const u = new URL(src)
     if (!["http:", "https:"].includes(u.protocol)) return false

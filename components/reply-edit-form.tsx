@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { Pencil } from "lucide-react"
 import { updateReply } from "@/app/forum/actions"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { TiptapEditor } from "@/components/tiptap-editor"
 
 /**
  * Inline edit control for a reply the current user owns. Renders an "Edit"
@@ -14,10 +14,12 @@ import { MarkdownEditor } from "@/components/markdown-editor"
 export function ReplyEditForm({
   replyId,
   initialBody,
+  contentVersion = 1,
   locked = false,
 }: {
   replyId: string
   initialBody: string
+  contentVersion?: number
   locked?: boolean
 }) {
   const [editing, setEditing] = useState(false)
@@ -55,15 +57,17 @@ export function ReplyEditForm({
 
   return (
     <form action={action} className="mt-2 flex flex-col gap-3">
-      <MarkdownEditor
+      <TiptapEditor
         name="body"
         id={`edit-reply-${replyId}`}
         required
-        rows={4}
+        uploadFolder="forum"
         isSignedIn
         defaultValue={initialBody}
         placeholder="Edit your reply…"
       />
+      <input type="hidden" name="content_format" value="tiptap" />
+      <input type="hidden" name="content_version" value={contentVersion} />
       {error ? (
         <p className="label-mono border border-destructive/50 bg-destructive/10 px-4 py-2 text-destructive">
           {error}
