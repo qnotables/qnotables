@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { generateSlug } from "@/lib/slug-utils"
+import { classifyStory, validateCategory } from "@/lib/classifier"
 import type { ScrapedItem, ScraperSource, SourceResult, ScrapeRunResult } from "./types"
 import { parseRssSource } from "./rss-parser"
 import { parseHtmlSource } from "./html-parser"
@@ -34,7 +35,7 @@ async function generateUniqueSlug(title: string, supabase: AnySupabaseClient): P
   return `${slug}-${counter}`
 }
 
-async function saveDraftPost(item: ScrapedItem, category: string | undefined, supabase: AnySupabaseClient): Promise<void> {
+async function saveDraftPost(item: ScrapedItem, sourceCategory: string | undefined, supabase: AnySupabaseClient): Promise<void> {
   const now = new Date().toISOString()
   const slug = await generateUniqueSlug(item.title, supabase)
 
@@ -46,6 +47,13 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
     .filter(Boolean)
     .join("\n\n")
 
+  // If the scraper source already carries a valid explicit category, honour it.
+  // Otherwise run the classifier on title + excerpt so every new draft arrives
+  // with a validated, subject-based category rather than defaulting to OTHER.
+  const classifiedCategory = sourceCategory
+    ? validateCategory(sourceCategory)
+    : classifyStory(item.title, item.excerpt || "").category
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase.from("blog_posts").insert([
     {
@@ -54,7 +62,8 @@ async function saveDraftPost(item: ScrapedItem, category: string | undefined, su
       excerpt: item.excerpt || "",
       body,
       status: "draft",
-      post_type: category || "Source Archive",
+      category: classifiedCategory,
+      post_type: sourceCategory || "Source Archive",
       priority: "low",
       featured: false,
       source_name: item.sourceName,

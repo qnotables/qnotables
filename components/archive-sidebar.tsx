@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Folder, Tag, Archive, Calendar, Radio, TrendingUp } from "lucide-react"
+import { Folder, Tag, Archive, Calendar, Radio, TrendingUp, Monitor } from "lucide-react"
+import { DESKS, DESK_LABELS, type Desk } from "@/lib/taxonomy"
 
 interface ArchiveSidebarProps {
   categories: string[]
@@ -9,6 +10,8 @@ interface ArchiveSidebarProps {
   sources: string[]
   months: Array<{ year: number; month: number; count: number }>
   years: number[]
+  /** Optional: subset of desks that actually have posts */
+  activeDesks?: Desk[]
   stats?: {
     totalRecords: number
     featured: number
@@ -17,7 +20,8 @@ interface ArchiveSidebarProps {
   }
 }
 
-export function ArchiveSidebar({ categories, tags, sources, months, years, stats }: ArchiveSidebarProps) {
+export function ArchiveSidebar({ categories, tags, sources, months, years, activeDesks, stats }: ArchiveSidebarProps) {
+  const desksToShow = activeDesks && activeDesks.length > 0 ? activeDesks : DESKS
   return (
     <aside className="space-y-6">
       {/* Archive Stats */}
@@ -47,6 +51,25 @@ export function ArchiveSidebar({ categories, tags, sources, months, years, stats
           </div>
         </div>
       )}
+
+      {/* Desks */}
+      <div className="border border-border rounded p-4 bg-card/50">
+        <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
+          <Monitor className="h-4 w-4 text-primary" />
+          <h3 className="label-mono text-xs font-semibold text-primary">DESKS</h3>
+        </div>
+        <div className="space-y-1.5">
+          {desksToShow.map((desk) => (
+            <Link
+              key={desk}
+              href={`/archives/desk/${encodeURIComponent(desk)}`}
+              className="label-mono block border-l-2 border-transparent px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground hover:bg-muted/30 rounded-r transition-all"
+            >
+              {DESK_LABELS[desk]}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {/* Categories */}
       {categories.length > 0 && (

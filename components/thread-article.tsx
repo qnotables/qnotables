@@ -6,15 +6,16 @@ import { Clock, Pencil, Trash2, X, Loader2, Pin, Lock, Star, Eye, EyeOff, ImageO
 import { updateThread, deleteThread, removeThreadMedia } from "@/app/forum/actions"
 import { moderateThread } from "@/app/dashboard/actions"
 import { timeAgo } from "@/lib/time"
-import { Markdown } from "@/components/markdown"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { TiptapRenderer } from "@/components/tiptap-renderer"
+import { TiptapEditor } from "@/components/tiptap-editor"
 import { ShareButtons } from "@/components/share-buttons"
-import { FORUM_CATEGORIES, normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
+import { FORUM_CATEGORIES, normalizeCategoryName } from "@/lib/forum-utils"
 
 interface ThreadArticleProps {
   id: string
   title: string
   body: string
+  contentVersion: number
   createdAt: string
   authorId: string | null
   authorName: string
@@ -74,6 +75,7 @@ export function ThreadArticle({
   id,
   title,
   body,
+  contentVersion,
   createdAt,
   authorId,
   authorName,
@@ -200,7 +202,9 @@ export function ThreadArticle({
             <label htmlFor="edit-body" className="label-mono text-muted-foreground">
               Body
             </label>
-            <MarkdownEditor id="edit-body" name="body" defaultValue={body} required rows={8} />
+            <TiptapEditor id="edit-body" name="body" defaultValue={body} required uploadFolder="forum" isSignedIn />
+            <input type="hidden" name="content_format" value="tiptap" />
+            <input type="hidden" name="content_version" value={contentVersion} />
           </div>
 
           {error ? <p className="label-mono text-destructive">{error}</p> : null}
@@ -297,7 +301,7 @@ export function ThreadArticle({
 
       {/* Body */}
       <div className="mt-5">
-        <Markdown content={preprocessBody(localBody)} />
+        <TiptapRenderer content={localBody} />
       </div>
 
       {/* Footer: share + mod controls */}

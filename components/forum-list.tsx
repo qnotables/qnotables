@@ -20,6 +20,7 @@ import {
 import { timeAgo } from "@/lib/time"
 import {
   FORUM_CATEGORIES,
+  FORUM_DESKS,
   SORT_OPTIONS,
   type SortOption,
   type VideoEmbed,
@@ -33,12 +34,16 @@ import {
 
 export interface ThreadListItem {
   id: string
+  slug?: string | null
   title: string
   body: string
+  excerpt?: string | null
   category: string | null
+  desk?: string | null
   tags: string | null
   created_at: string
   last_activity_at?: string
+  viewCount?: number
   author_id: string
   authorName: string
   replyCount: number
@@ -183,11 +188,13 @@ function VideoPreview({ video }: { video: VideoEmbed }) {
 }
 
 function ThreadCard({ t }: { t: ThreadListItem }) {
-  const excerpt = buildExcerpt(t.body, 160)
+  const excerpt = t.excerpt?.trim() || buildExcerpt(t.body, 160)
   const thumb = extractFirstImage(t.body)
   const video = extractFirstVideo(t.body)
   const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
   const categoryName = normalizeCategoryName(t.category)
+  const href = `/forum/${t.slug || t.id}`
+  const deskInfo = FORUM_DESKS.find((d) => d.slug === (t.desk ?? "other"))
 
   return (
     <div
@@ -235,12 +242,17 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
               <Lock className="h-2.5 w-2.5" /> LOCKED
             </span>
           )}
+          {deskInfo && deskInfo.slug !== "other" && (
+            <span className="label-mono inline-block border border-border/70 bg-muted/30 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {deskInfo.label.toUpperCase()}
+            </span>
+          )}
           <CategoryBadge category={categoryName} />
           <MediaBadgeRow body={t.body} />
         </div>
 
         {/* Title */}
-        <Link href={`/forum/${t.id}`} className="block">
+        <Link href={href} className="block">
           <h2 className="stencil text-balance text-base leading-snug text-foreground transition-colors group-hover:text-primary md:text-lg">
             {t.title}
           </h2>
@@ -283,13 +295,18 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
               active {timeAgo(t.last_activity_at)}
             </span>
           )}
+          {typeof t.viewCount === "number" && t.viewCount > 0 && (
+            <span className="flex items-center gap-1">
+              {t.viewCount.toLocaleString()} view{t.viewCount === 1 ? "" : "s"}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Open thread arrow */}
       <div className="flex flex-shrink-0 items-center pr-3">
         <Link
-          href={`/forum/${t.id}`}
+          href={href}
           className="label-mono hidden border border-border px-3 py-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:block"
           aria-label={`Open thread: ${t.title}`}
         >
@@ -306,20 +323,23 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
   const pathname = usePathname()
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortOption>("latest")
-  // Category is owned by the URL — sidebar links and the dropdown stay in sync
+  // Category/desk are owned by the URL — sidebar links and the dropdowns stay in sync
   const filterCategory = searchParams.get("category") ?? ""
+  const filterDesk = searchParams.get("desk") ?? ""
   const [filterTag, setFilterTag] = useState("")
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  function setFilterCategory(value: string) {
+  function setUrlFilter(key: "category" | "desk", value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value) {
-      params.set("category", value)
+      params.set(key, value)
     } else {
-      params.delete("category")
+      params.delete(key)
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
+  const setFilterCategory = (value: string) => setUrlFilter("category", value)
+  const setFilterDesk = (value: string) => setUrlFilter("desk", value)
 
   // Effective "last activity" timestamp for a thread (falls back to creation).
   const activityTime = (t: ThreadListItem) =>
@@ -344,6 +364,11 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
     // Category filter — normalize both sides to slug so null→"other" is caught
     if (filterCategory) {
       rows = rows.filter((t) => normalizeCategorySlug(t.category) === filterCategory.toLowerCase())
+    }
+
+    // Desk filter
+    if (filterDesk) {
+      rows = rows.filter((t) => (t.desk ?? "other").toLowerCase() === filterDesk.toLowerCase())
     }
 
     // Tag filter
@@ -374,12 +399,12 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
     }
 
     return [...pinned.sort(sortFn), ...rest.sort(sortFn)]
-  }, [threads, query, sort, filterCategory, filterTag])
+  }, [threads, query, sort, filterCategory, filterDesk, filterTag])
 
   // Reset visible window whenever the result set changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [query, sort, filterCategory, filterTag])
+  }, [query, sort, filterCategory, filterDesk, filterTag])
 
   const visible = filtered.slice(0, visibleCount)
   const hasMore = filtered.length > visibleCount
@@ -417,6 +442,26 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
               return (
                 <option key={c.slug} value={c.slug}>
                   {c.name} ({count})
+                </option>
+              )
+            })}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        </div>
+
+        {/* Desk filter — only show desks that have at least one thread */}
+        <div className="relative">
+          <select
+            value={filterDesk}
+            onChange={(e) => setFilterDesk(e.target.value)}
+            className="label-mono appearance-none border border-border bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
+          >
+            <option value="">All Desks</option>
+            {FORUM_DESKS.filter((d) => threads.some((t) => (t.desk ?? "other") === d.slug)).map((d) => {
+              const count = threads.filter((t) => (t.desk ?? "other") === d.slug).length
+              return (
+                <option key={d.slug} value={d.slug}>
+                  {d.label} ({count})
                 </option>
               )
             })}
@@ -474,7 +519,7 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
         <div className="border border-border bg-card p-8 text-center">
           <p className="stencil text-lg text-foreground">No threads matched your filters.</p>
           <button
-            onClick={() => { setQuery(""); setFilterTag(""); setFilterCategory("") }}
+            onClick={() => { setQuery(""); setFilterTag(""); setFilterCategory(""); setFilterDesk("") }}
             className="label-mono mt-3 text-sm text-primary hover:underline"
           >
             Clear filters

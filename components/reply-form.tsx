@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { createReply } from "@/app/forum/actions"
-import { MarkdownEditor } from "@/components/markdown-editor"
+import { TiptapEditor } from "@/components/tiptap-editor"
 
 export function ReplyForm({
   threadId,
@@ -50,15 +50,16 @@ export function ReplyForm({
           (Markdown supported)
         </span>
       </label>
-      <MarkdownEditor
+      <TiptapEditor
         key={resetKey}
         name="body"
-        id="reply-body"
+        id={`reply-body-${parentReplyId ?? "root"}`}
         required
-        rows={parentReplyId ? 3 : 5}
+        uploadFolder="forum"
         isSignedIn={isSignedIn}
-        placeholder="Argue the claim, not the operator. Paste an image to embed it."
+        placeholder="Argue the claim, not the operator. Add evidence with links or media."
       />
+      <input type="hidden" name="content_format" value="tiptap" />
       {error ? (
         <p className="label-mono border border-destructive/50 bg-destructive/10 px-4 py-2 text-destructive">
           {error}

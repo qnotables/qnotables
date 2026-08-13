@@ -21,7 +21,7 @@ export default async function ForumPage({
 }: {
   searchParams: Promise<{ category?: string }>
 }) {
-  await searchParams // trigger Suspense boundary; category is read client-side via useSearchParams
+  await searchParams // trigger Suspense boundary; category/desk/search/sort are all read client-side via useSearchParams
   const supabase = await createClient()
 
   // Fetch trending for sidebar — runs in parallel with thread queries below
@@ -32,7 +32,7 @@ export default async function ForumPage({
 
   // Fetch threads with author profiles and reply counts
   let threads: any[] = []
-  let lastActivityMap = new Map<string, string>()
+  const lastActivityMap = new Map<string, string>()
   let memberCount = 0
 
   try {
@@ -40,10 +40,11 @@ export default async function ForumPage({
       supabase
         .from("forum_threads")
         .select(
-          "id, title, body, category, tags, created_at, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name), forum_replies(count)",
+          "id, slug, title, body, excerpt, category, desk, tags, created_at, last_activity_at, reply_count, view_count, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name)",
         )
         .eq("is_soft_deleted", false)
         .eq("is_pending", false)
+        .eq("status", "published")
         .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false }),
       supabase
@@ -69,15 +70,19 @@ export default async function ForumPage({
   }
 
   const rows: ThreadListItem[] = threads.map((t: any) => {
-    const replyCount = t.forum_replies?.[0]?.count ?? 0
+    const replyCount = t.reply_count ?? 0
     return {
       id: t.id,
+      slug: t.slug ?? null,
       title: t.title,
       body: t.body ?? "",
+      excerpt: t.excerpt ?? null,
       category: t.category ?? null,
+      desk: t.desk ?? "other",
       tags: t.tags ?? null,
       created_at: t.created_at,
-      last_activity_at: lastActivityMap.get(t.id) ?? t.created_at,
+      last_activity_at: t.last_activity_at ?? lastActivityMap.get(t.id) ?? t.created_at,
+      viewCount: t.view_count ?? 0,
       author_id: t.author_id,
       authorName: t.profiles?.display_name ?? "operator",
       replyCount,

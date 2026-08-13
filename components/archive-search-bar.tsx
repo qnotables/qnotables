@@ -1,11 +1,14 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Search, Filter, X, Calendar, Folder, Tag, TrendingUp, Video, FileText, Link as LinkIcon } from "lucide-react"
+import { DESKS, CONTENT_TYPES, DESK_LABELS, CONTENT_TYPE_LABELS, type Desk, type ContentType } from "@/lib/taxonomy"
 
 interface ArchiveFilters {
   search: string
   category: string
+  desk: string
+  contentType: string
   postType: string
   mediaType: string
   year: string
@@ -22,12 +25,18 @@ interface ArchiveSearchProps {
   months: Array<{ year: number; month: number }>
   sources: string[]
   tags: string[]
+  /** Optional: desks available in the current result set */
+  desks?: string[]
+  /** Optional: content types available in the current result set */
+  contentTypes?: string[]
 }
 
-export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, months, sources, tags }: ArchiveSearchProps) {
+export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, months, sources, tags, desks, contentTypes }: ArchiveSearchProps) {
   const [filters, setFilters] = useState<ArchiveFilters>({
     search: "",
     category: "",
+    desk: "",
+    contentType: "",
     postType: "",
     mediaType: "",
     year: "",
@@ -48,6 +57,8 @@ export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, mon
     const cleared: ArchiveFilters = {
       search: "",
       category: "",
+      desk: "",
+      contentType: "",
       postType: "",
       mediaType: "",
       year: "",
@@ -106,16 +117,46 @@ export function ArchiveSearchBar({ categories, postTypes, mediaTypes, years, mon
               </div>
             )}
 
+            {/* Desk */}
+            <div>
+              <label className="label-mono mb-1.5 block text-xs font-semibold text-muted-foreground">DESK</label>
+              <select
+                value={filters.desk}
+                onChange={(e) => handleFilterChange("desk", e.target.value)}
+                className="w-full bg-background px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+              >
+                <option value="">All Desks</option>
+                {DESKS.map((d) => (
+                  <option key={d} value={d}>{DESK_LABELS[d]}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Content Type */}
+            <div>
+              <label className="label-mono mb-1.5 block text-xs font-semibold text-muted-foreground">CONTENT TYPE</label>
+              <select
+                value={filters.contentType}
+                onChange={(e) => handleFilterChange("contentType", e.target.value)}
+                className="w-full bg-background px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+              >
+                <option value="">All Types</option>
+                {CONTENT_TYPES.map((ct) => (
+                  <option key={ct} value={ct}>{CONTENT_TYPE_LABELS[ct]}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Post Type */}
             {postTypes.length > 0 && (
               <div>
-                <label className="label-mono mb-1.5 block text-xs font-semibold text-muted-foreground">TYPE</label>
+                <label className="label-mono mb-1.5 block text-xs font-semibold text-muted-foreground">POST TYPE</label>
                 <select
                   value={filters.postType}
                   onChange={(e) => handleFilterChange("postType", e.target.value)}
                   className="w-full bg-background px-3 py-2 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                 >
-                  <option value="">All Types</option>
+                  <option value="">All Post Types</option>
                   {postTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}

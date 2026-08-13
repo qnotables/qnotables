@@ -530,7 +530,7 @@ export function TiptapEditor({
             imageFiles.slice(0, MAX_TIPTAP_IMAGES - imageDone).forEach(uploadImageFile)
             return true
           }
-          if (videoFiles.length > 0 && uploadFolder === "blog") {
+          if (videoFiles.length > 0 && isSignedIn) {
             event.preventDefault()
             uploadVideoFileRef.current(videoFiles[0])
             return true
@@ -588,8 +588,8 @@ export function TiptapEditor({
   const uploadVideoFile = useCallback(
     async (file: File) => {
       if (!ALLOWED_VIDEO_TYPES.has(file.type)) return
-      if (file.size > MAX_VIDEO_BYTES) return
-      if (uploadFolder !== "blog") return
+      const maxVideoBytes = uploadFolder === "forum" ? 50 * 1024 * 1024 : MAX_VIDEO_BYTES
+      if (file.size > maxVideoBytes) return
 
       const tempId = crypto.randomUUID()
       setMedia((prev) => [

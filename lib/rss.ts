@@ -8,6 +8,7 @@ import {
   feed as fallbackFeed,
   trending as fallbackTrending,
 } from "@/lib/news-data"
+import { classifyStory } from "@/lib/classifier"
 import { getLatestPost } from "@/lib/blog-posts"
 import { isSafeImageUrl, normalizeAbsoluteUrl } from "@/lib/rss-utils"
 
@@ -388,17 +389,7 @@ const parser: Parser<unknown, ParsedItem> = new Parser({
   },
 })
 
-// Keyword rules that map article title/content onto one of our desks.
-// Ordered most-specific first so overlaps resolve sensibly.
-const CATEGORIZATION_RULES: { desk: Category; keywords: string[] }[] = [
-  { desk: "ENERGY", keywords: ["energy", "oil", "gas", "grid", "renewable", "solar", "wind", "nuclear", "electric", "fuel", "petroleum", "power"] },
-  { desk: "DEFENSE", keywords: ["defen", "military", "war", "army", "navy", "air force", "weapon", "security", "conflict", "missile", "troops", "nato", "combat", "strike"] },
-  { desk: "TECH", keywords: ["tech", "software", "hardware", "computing", "internet", "gadget", "cyber", "startup", "artificial intelligence", " ai", "app", "digital", "robot", "data"] },
-  { desk: "SCIENCE", keywords: ["science", "spacex", "space", "astronom", "physics", "biology", "chemistry", "environment", "climate", "study", "scientist", "nature", "discovery"] },
-  { desk: "ECONOMY", keywords: ["econom", "business", "market", "trade", "finance", "financial", "stock", "inflation", "bank", "money", "jobs", "industry", "tariff", "commerce"] },
-  { desk: "POLITICS", keywords: ["politic", "election", "government", "parliament", "congress", "senate", "policy", "diplomac", "minister", "president", "vote", "law", "legislat"] },
-  { desk: "WORLD", keywords: ["world", "international", "global", "foreign", "asia", "africa", "europe", "middle east", "americas", "ukraine", "china", "russia", "asia-pacific"] },
-]
+
 
 function stripHtml(input = ""): string {
   return input
@@ -476,18 +467,9 @@ function imageFrom(item: ParsedItem): string | undefined {
   return undefined
 }
 
-// Categorize an article based on keywords found in title + summary.
+// Classify an article using the subject-based classifier.
 function categorizeArticle(headline: string, summary: string): Category {
-  const text = `${headline} ${summary}`.toLowerCase()
-  
-  for (const rule of CATEGORIZATION_RULES) {
-    if (rule.keywords.some((kw) => text.includes(kw))) {
-      return rule.desk
-    }
-  }
-  
-  // Default to OTHER if no other category matches
-  return "OTHER"
+  return classifyStory(headline, summary).category as Category
 }
 
 /**

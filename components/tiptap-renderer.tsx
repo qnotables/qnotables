@@ -12,6 +12,8 @@ import type { ReactNode } from "react"
 import { ForumImage } from "@/components/forum-image"
 import { Markdown } from "@/components/markdown"
 import { omitPostMedia, resolveFirstPostMedia } from "@/lib/post-media"
+import { preprocessBody } from "@/lib/forum-utils"
+import { isApprovedIframeSrc } from "@/lib/media-utils"
 export { isTiptapJson } from "@/lib/tiptap-utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -272,7 +274,7 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
               )}
             </div>
           ) : (
-            isSafeUrl(embedUrl) && (
+            isSafeUrl(embedUrl) && isApprovedIframeSrc(embedUrl) && (
               <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
                 <iframe
                   src={embedUrl}
@@ -362,7 +364,7 @@ export function TiptapRenderer({ content, omitFirstMedia = false }: TiptapRender
 
   // Legacy Markdown fallback — if not a JSON doc, delegate to Markdown component
   if (!doc) {
-    return <Markdown content={renderedContent} />
+    return <Markdown content={preprocessBody(renderedContent)} />
   }
 
   const nodes = doc.content ?? []

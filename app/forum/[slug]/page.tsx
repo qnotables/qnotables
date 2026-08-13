@@ -7,28 +7,41 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
-import { Markdown } from "@/components/markdown"
+import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { ReplyVotes } from "@/components/reply-votes"
 import { ReplyModControls } from "@/components/reply-mod-controls"
+import { ReplyEditForm } from "@/components/reply-edit-form"
 import { ReportButton } from "@/components/report-button"
+import { ThreadViewCounter } from "@/components/thread-view-counter"
 import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
-import { normalizeCategoryName, preprocessBody } from "@/lib/forum-utils"
+import { normalizeCategoryName, getDeskLabel } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
 import { getSiteUrl, firstImageFromBody } from "@/lib/rss-utils"
 
+// A UUID looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. Anything else is a slug.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 interface Thread {
   id: string
+  slug: string | null
   title: string
   body: string
+  content_version: number
+  excerpt: string | null
   created_at: string
+  updated_at: string | null
   author_id: string
   is_locked: boolean
   is_pinned: boolean
   is_featured: boolean
   is_soft_deleted: boolean
+  status: string | null
   category: string | null
+  desk: string | null
   tags: string | null
+  view_count: number | null
+  reply_count: number | null
   profiles: { display_name: string } | null
 }
 
@@ -36,9 +49,12 @@ interface Reply {
   id: string
   body: string
   created_at: string
+  updated_at: string | null
   author_id: string
   parent_reply_id: string | null
   is_hidden: boolean
+  content_format: string | null
+  content_version: number
   profiles: { display_name: string } | null
 }
 
@@ -46,25 +62,30 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   try {
     const { slug } = await params
     const supabase = await createClient()
+    const column = UUID_RE.test(slug) ? "id" : "slug"
     const { data } = await supabase
       .from("forum_threads")
-      .select("title, body, category")
-      .eq("id", slug)
+      .select("slug, title, body, excerpt, category, status, is_soft_deleted")
+      .eq(column, slug)
       .maybeSingle()
 
     if (!data) return { title: "Thread — HOT AND FRESH" }
 
     const site = getSiteUrl()
-    const canonical = `${site}/forum/${slug}`
-    const description = data.body?.slice(0, 160).replace(/\s+/g, " ") ?? ""
+    const canonical = `${site}/forum/${data.slug ?? slug}`
+    const description = (data.excerpt ?? data.body ?? "").slice(0, 160).replace(/\s+/g, " ")
 
     const bodyImage = firstImageFromBody(data.body)
     const ogImage = bodyImage ?? `${site}/images/og-default.png`
+
+    // Drafts and hidden/removed threads must never be indexed
+    const shouldIndex = data.status === "published" && !data.is_soft_deleted
 
     return {
       title: `${data.title} — HOT AND FRESH`,
       description,
       alternates: { canonical },
+      robots: shouldIndex ? undefined : { index: false, follow: false },
       openGraph: {
         title: data.title,
         description,
@@ -98,12 +119,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   // --- Thread fetch (fatal: 404 if missing, throws to error boundary on DB error) ---
   let thread: Thread | null = null
   try {
+    const column = UUID_RE.test(slug) ? "id" : "slug"
     const { data, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, title, body, created_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, category, tags, profiles(display_name)",
+        "id, slug, title, body, content_version, excerpt, created_at, updated_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, status, category, desk, tags, view_count, reply_count, profiles(display_name)",
       )
-      .eq("id", slug)
+      .eq(column, slug)
       .maybeSingle()
 
     if (error) throw new Error(`Thread fetch failed: ${error.message}`)
@@ -116,13 +138,18 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   if (!thread || thread.is_soft_deleted) notFound()
   const t = thread
 
+  // Drafts are only viewable by their author (or an admin). Everyone else 404s.
+  const isDraft = t.status === "draft"
+  const isOwner = user?.id === t.author_id
+  if (isDraft && !isOwner && !isAdmin) notFound()
+
   // --- Replies (non-fatal: degrade to empty list) ---
   let replies: Reply[] = []
   try {
     const repliesQuery = supabase
       .from("forum_replies")
-      .select("id, body, created_at, author_id, parent_reply_id, is_hidden, profiles(display_name)")
-      .eq("thread_id", slug)
+      .select("id, body, created_at, updated_at, author_id, parent_reply_id, is_hidden, content_format, content_version, profiles(display_name)")
+      .eq("thread_id", t.id)
       .eq("is_pending", false)
       .order("created_at", { ascending: true })
 
@@ -172,48 +199,93 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   const categoryName = normalizeCategoryName(t.category)
 
   // --- Prev/next threads (non-fatal: nav simply won't render) ---
-  let newerThread: { id: string; title: string } | null = null
-  let olderThread: { id: string; title: string } | null = null
-  try {
-    const [newerResult, olderResult] = await Promise.all([
-      supabase
-        .from("forum_threads")
-        .select("id, title")
-        .eq("is_soft_deleted", false)
-        .eq("is_pending", false)
-        .gt("created_at", t.created_at)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("forum_threads")
-        .select("id, title")
-        .eq("is_soft_deleted", false)
-        .eq("is_pending", false)
-        .lt("created_at", t.created_at)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
-    newerThread = newerResult.data
-    olderThread = olderResult.data
-  } catch (err) {
-    console.error("[forum/[slug]] prev/next fetch error:", err)
+  let newerThread: { id: string; slug: string | null; title: string } | null = null
+  let olderThread: { id: string; slug: string | null; title: string } | null = null
+  if (!isDraft) {
+    try {
+      const [newerResult, olderResult] = await Promise.all([
+        supabase
+          .from("forum_threads")
+          .select("id, slug, title")
+          .eq("is_soft_deleted", false)
+          .eq("is_pending", false)
+          .eq("status", "published")
+          .gt("created_at", t.created_at)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("forum_threads")
+          .select("id, slug, title")
+          .eq("is_soft_deleted", false)
+          .eq("is_pending", false)
+          .eq("status", "published")
+          .lt("created_at", t.created_at)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+      newerThread = newerResult.data
+      olderThread = olderResult.data
+    } catch (err) {
+      console.error("[forum/[slug]] prev/next fetch error:", err)
+    }
   }
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
+      {/* Increment view count on published threads (client fires once on mount) */}
+      {!isDraft && <ThreadViewCounter threadId={t.id} />}
+
+      {/* Article structured data — only for public, published threads */}
+      {!isDraft && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "DiscussionForumPosting",
+              headline: t.title,
+              url: `${getSiteUrl()}/forum/${t.slug || t.id}`,
+              datePublished: t.created_at,
+              dateModified: t.updated_at ?? t.created_at,
+              author: { "@type": "Person", name: t.profiles?.display_name ?? "operator" },
+              articleSection: getDeskLabel(t.desk),
+              commentCount: t.reply_count ?? replies.length,
+              interactionStatistic: {
+                "@type": "InteractionCounter",
+                interactionType: "https://schema.org/ViewAction",
+                userInteractionCount: t.view_count ?? 0,
+              },
+            }),
+          }}
+        />
+      )}
+
       <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-        {/* Back link */}
-        <div className="mb-6 flex items-center gap-3">
+        {/* Breadcrumb */}
+        <nav className="mb-6 flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
           <Link
             href="/forum"
             className="label-mono inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" /> The Town Hall
           </Link>
+          {t.desk &&
+            t.desk !== "other" &&
+            getDeskLabel(t.desk).toLowerCase() !== (categoryName ?? "").toLowerCase() && (
+              <>
+                <span className="text-muted-foreground">/</span>
+                <Link
+                  href={`/forum?desk=${t.desk}`}
+                  className="label-mono border border-border px-2 py-0.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  {getDeskLabel(t.desk).toUpperCase()}
+                </Link>
+              </>
+            )}
           {categoryName && (
             <>
               <span className="text-muted-foreground">/</span>
@@ -222,14 +294,25 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
               </span>
             </>
           )}
-        </div>
+        </nav>
+
+        {/* Draft banner — visible only to author/admin viewing an unpublished thread */}
+        {isDraft && (
+          <div className="mb-6 border border-primary/40 bg-primary/10 px-4 py-3">
+            <p className="label-mono text-sm text-primary">
+              DRAFT — this thread is not published. Only you can see it. Edit it and choose “Post
+              Thread” to publish.
+            </p>
+          </div>
+        )}
 
         {/* Original post */}
         <ThreadArticle
           id={t.id}
           title={t.title}
-          body={t.body}
-          createdAt={t.created_at}
+  body={t.body}
+  contentVersion={t.content_version}
+  createdAt={t.created_at}
           authorId={t.author_id}
           authorName={t.profiles?.display_name ?? "operator"}
           isOwner={user?.id === t.author_id}
@@ -240,7 +323,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           is_locked={Boolean(t.is_locked)}
           is_featured={Boolean(t.is_featured)}
           is_soft_deleted={Boolean(t.is_soft_deleted)}
-          shareUrl={`${getSiteUrl()}/forum/${t.id}`}
+          shareUrl={`${getSiteUrl()}/forum/${t.slug || t.id}`}
         />
 
         {/* OP report */}
@@ -275,6 +358,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
                     </span>
+                    {r.updated_at && r.updated_at !== r.created_at && (
+                      <span className="text-[10px] italic text-muted-foreground/70">(edited)</span>
+                    )}
                     {r.is_hidden && (
                       <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
                         HIDDEN
@@ -284,7 +370,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                   <div className="flex items-center gap-2">
                     {isAdmin && <ReplyModControls replyId={r.id} isHidden={r.is_hidden} />}
                     {user && user.id !== r.author_id && (
-                      <ReportButton contentType="forum_reply" contentId={r.id} isSignedIn={Boolean(user)} compact />
+                      <ReportButton contentType="forum_reply" contentId={r.id} isSignedIn={Boolean(user)} />
                     )}
                     <ReplyVotes
                       replyId={r.id}
@@ -295,8 +381,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                   </div>
                 </div>
                 <div className="mt-2">
-                  <Markdown content={preprocessBody(r.body)} />
+                  <TiptapRenderer content={r.body} />
                 </div>
+                {user?.id === r.author_id && !t.is_locked && (
+                  <div className="mt-2 border-t border-border/50 pt-2">
+                    <ReplyEditForm replyId={r.id} initialBody={r.body} contentVersion={r.content_version} locked={Boolean(t.is_locked)} />
+                  </div>
+                )}
               </div>
 
               {/* Nested replies */}
@@ -315,6 +406,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
                           </span>
+                          {nested.updated_at && nested.updated_at !== nested.created_at && (
+                            <span className="text-[10px] italic text-muted-foreground/70">(edited)</span>
+                          )}
                           {nested.is_hidden && (
                             <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
                               HIDDEN
@@ -339,8 +433,18 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
                         </div>
                       </div>
                       <div className="mt-2 text-sm">
-                        <Markdown content={preprocessBody(nested.body)} />
+                        <TiptapRenderer content={nested.body} />
                       </div>
+                      {user?.id === nested.author_id && !t.is_locked && (
+                        <div className="mt-2 border-t border-border/50 pt-2">
+                          <ReplyEditForm
+replyId={nested.id}
+  initialBody={nested.body}
+  contentVersion={nested.content_version}
+  locked={Boolean(t.is_locked)}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -383,7 +487,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           >
             {newerThread ? (
               <Link
-                href={`/forum/${newerThread.id}`}
+                href={`/forum/${newerThread.slug || newerThread.id}`}
                 className="group flex items-center gap-3 border border-border bg-card p-4 transition-colors hover:border-primary"
               >
                 <ArrowLeft className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -399,7 +503,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
             )}
             {olderThread && (
               <Link
-                href={`/forum/${olderThread.id}`}
+                href={`/forum/${olderThread.slug || olderThread.id}`}
                 className="group flex items-center justify-end gap-3 border border-border bg-card p-4 text-right transition-colors hover:border-primary"
               >
                 <span className="min-w-0">

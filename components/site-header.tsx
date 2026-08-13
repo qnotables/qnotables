@@ -158,7 +158,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         } flex-col gap-1 border-t border-border px-4 pb-3 md:flex md:flex-row md:items-center md:gap-0 md:border-t md:px-6 md:py-0`}
         aria-label="News categories"
       >
-        {["NOTABLES", ...categories].map((cat) => (
+        {Array.from(new Set(["NOTABLES", ...categories])).map((cat) => (
           <a
             key={cat}
             href={cat === "NOTABLES" ? "/notables" : `/#desk-${cat}`}
