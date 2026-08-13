@@ -16,6 +16,7 @@ import type { SituationForumItem, SituationBlogItem } from "@/components/situati
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { FlashStory } from "@/components/flash-story"
+import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
 import { getRecentForumThreads } from "@/lib/forum"
@@ -173,6 +174,18 @@ export default async function Page() {
         <div className="mt-12">
           <GallerySection />
         </div>
+
+        {/* RSS source directory */}
+        <section className="mt-12" aria-labelledby="rss-sources-heading">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="h-2 w-2 bg-primary" />
+            <h2 id="rss-sources-heading" className="stencil text-xl text-foreground">
+              RSS Sources
+            </h2>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <RssFeedCards />
+        </section>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
         <div className="mt-6">

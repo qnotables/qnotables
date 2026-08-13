@@ -57,7 +57,7 @@ const FEED_STORIES: Record<string, Partial<Story>> = {
 }
 
 export function RssFeedCards() {
-  const enabledSources = RSS_SOURCES.filter((s) => s.enabled).slice(0, 2)
+  const enabledSources = RSS_SOURCES.filter((source) => source.enabled)
 
   const stories: Story[] = enabledSources.map((source) => {
     const meta = FEED_STORIES[source.id] ?? {
