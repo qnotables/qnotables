@@ -573,18 +573,26 @@ async function fetchAllRSSSources(): Promise<Story[]> {
     enabledSources.map((source) => fetchRSSSource(source))
   )
 
-  // Combine results, filtering out failures
-  const allStories: Story[] = []
-  results.forEach((result, index) => {
-    if (result.status === "fulfilled") {
-      allStories.push(...result.value)
-    } else {
-      console.error(
-        `[v0] Failed to fetch RSS source "${enabledSources[index]?.name}":`,
-        result.reason
-      )
-    }
+  // Interleave successful feeds so one prolific source cannot fill every
+  // homepage slot before the other publishers get represented.
+  const storiesBySource = results.map((result, index) => {
+    if (result.status === "fulfilled") return result.value
+
+    console.error(
+      `[v0] Failed to fetch RSS source "${enabledSources[index]?.name}":`,
+      result.reason
+    )
+    return []
   })
+
+  const allStories: Story[] = []
+  const longestFeed = Math.max(0, ...storiesBySource.map((stories) => stories.length))
+  for (let storyIndex = 0; storyIndex < longestFeed; storyIndex += 1) {
+    for (const sourceStories of storiesBySource) {
+      const story = sourceStories[storyIndex]
+      if (story) allStories.push(story)
+    }
+  }
 
   return allStories
 }
@@ -603,6 +611,7 @@ export async function getNews(): Promise<NewsBundle> {
   const blogPostStory = blogPostToStory(latestBlogPost)
   
   const stories = await fetchAllRSSSources()
+  const homepageFeedLimit = Math.max(30, RSS_SOURCES.filter((source) => source.enabled).length)
 
   // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
   if (blogPostStory && blogPostStory.image) {
@@ -617,7 +626,7 @@ export async function getNews(): Promise<NewsBundle> {
       image: s.image || topFallbackImages[i],
     }))
 
-    const feed = stories.filter((s) => !used.has(s.id)).slice(0, 30)
+    const feed = stories.filter((s) => !used.has(s.id)).slice(0, homepageFeedLimit)
 
     const allStories = [blogPostStory, ...stories]
     const trending = allStories
@@ -644,7 +653,7 @@ export async function getNews(): Promise<NewsBundle> {
     }
   }
 
-  // Dedupe by headline and sort newest-first.
+  // Dedupe while preserving the source-balanced order from the aggregator.
   const seen = new Set<string>()
   const unique = stories.filter((s) => {
     const key = s.headline.toLowerCase()
@@ -652,8 +661,6 @@ export async function getNews(): Promise<NewsBundle> {
     seen.add(key)
     return true
   })
-  unique.sort((a, b) => a.minutesAgo - b.minutesAgo)
-
   const withImages = unique.filter((s) => s.image)
   const featured: Story = withImages[0]
     ? { ...withImages[0], image: withImages[0].image ?? fallbackFeatured.image, priority: "FLASH" }
@@ -669,7 +676,7 @@ export async function getNews(): Promise<NewsBundle> {
     if (!s.image) s.image = topFallbackImages[i]
   })
 
-  const feed = unique.filter((s) => !used.has(s.id)).slice(0, 30)
+  const feed = unique.filter((s) => !used.has(s.id)).slice(0, homepageFeedLimit)
 
   const trending = [...unique]
     .sort((a, b) => b.reports - a.reports)
