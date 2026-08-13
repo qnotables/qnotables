@@ -5,7 +5,7 @@ import { categories } from "@/lib/news-data"
 
 export function DeskNav() {
   const { active, setActive } = useDeskFilter()
-  const allDesks = ["NOTABLES", ...categories]
+  const allDesks = Array.from(new Set(["NOTABLES", ...categories]))
 
   return (
     <div className="mb-6 flex flex-wrap gap-1 border border-border bg-card px-3 py-2">
