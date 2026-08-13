@@ -356,6 +356,36 @@ export const RSS_SOURCES: RSSSource[] = [
     enabled: true,
   },
   {
+    id: "Federalist",
+    name: "The Federalist",
+    url: "https://thefederalist.com/feed/",
+    enabled: true,
+  },
+  {
+    id: "RedState",
+    name: "RedState",
+    url: "https://redstate.com/feed",
+    enabled: true,
+  },
+  {
+    id: "Just the News",
+    name: "Just the News",
+    url: "https://justthenews.com/rss.xml",
+    enabled: true,
+  },
+  {
+    id: "LindellTV",
+    name: "LindellTV",
+    url: "https://lindelltv.com/feed/",
+    enabled: true,
+  },
+  {
+    id: "Gateway Pundit",
+    name: "The Gateway Pundit",
+    url: "https://www.thegatewaypundit.com/feed/",
+    enabled: true,
+  },
+  {
     id: "Christian Post",
     name: "The Christian Post",
     url: "https://www.christianpost.com/rss",
