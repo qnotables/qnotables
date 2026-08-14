@@ -316,7 +316,6 @@ export default function NewToQPage() {
       &ldquo;red-pill&rdquo; moment and changed how I viewed the people and
       institutions in positions of power.
     </p>
-
     <p>
       The ceremony was originally linked through RT&apos;s YouTube channel.
       After YouTube removed RT from the platform, I preserved the complete
