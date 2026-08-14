@@ -316,7 +316,6 @@ export default function NewToQPage() {
       &ldquo;red-pill&rdquo; moment and changed how I viewed the people and
       institutions in positions of power.
     </p>
-
     <p>
       The ceremony was originally linked through RT&apos;s YouTube channel.
       After YouTube removed RT from the platform, I preserved the complete
@@ -326,12 +325,21 @@ export default function NewToQPage() {
   </div>
 
   {/* Image — right side */}
-  <div className="overflow-hidden rounded-md border border-border">
-    <img
-      src="/images/gotthard-tunnel-ceremony.jpg"
-      alt="Gotthard Base Tunnel opening ceremony"
-      className="h-auto w-full object-cover"
-    />
+  <div className="space-y-4">
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/gotthard-tunnel-ceremony.jpg"
+        alt="Gotthard Base Tunnel opening ceremony"
+        className="h-auto w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/armor-of-god-prayer.png"
+        alt="Q Drop 2904 - The Armor of God Prayer, 26 Feb 2019"
+        className="h-auto w-full object-cover"
+      />
+    </div>
   </div>
 </div>
 

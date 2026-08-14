@@ -3,8 +3,9 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 
 export const metadata = {
-  title: "Control Room — HOT AND FRESH",
-  description: "Admin control room for HOT AND FRESH.",
+  title: "Control Room — QNotables",
+  description: "Administrative control room for QNotables.",
+  robots: { index: false, follow: false },
 }
 
 export default async function DashboardLayout({

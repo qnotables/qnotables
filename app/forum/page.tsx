@@ -10,11 +10,16 @@ import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
 import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
 import { getNews } from "@/lib/rss"
+import { JsonLd } from "@/components/json-ld"
+import { collectionSchema, pageMetadata } from "@/lib/seo"
 
-export const metadata = {
-  title: "The Town Hall — Hot and Fresh",
-  description: "Open forum for operators. Start a thread, file a reply, argue the claim.",
-}
+const forumDescription = "Open community forum for QNotables readers to start threads, share research, and discuss the record."
+
+export const metadata = pageMetadata({
+  title: "The Town Hall",
+  description: forumDescription,
+  path: "/forum",
+})
 
 export default async function ForumPage({
   searchParams,
@@ -109,6 +114,7 @@ export default async function ForumPage({
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
+      <JsonLd data={collectionSchema("The Town Hall", forumDescription, "/forum")} />
       <SiteHeader />
       <TopAd />
 

@@ -5,12 +5,18 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { getPostsByCategory } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
+import { pageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params
-  return { title: `${category} — Archives — Hot and Fresh`, description: `Field notes and research in the ${category} category.` }
+  const decoded = decodeURIComponent(category)
+  return pageMetadata({
+    title: `${decoded} — Archives`,
+    description: `QNotables field notes and research in the ${decoded} category.`,
+    path: `/archives/category/${encodeURIComponent(decoded)}`,
+  })
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
