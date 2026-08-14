@@ -39,7 +39,7 @@ export function StoryCard({ story, variant = "default" }: { story: Story; varian
           >
             {s.headline}
           </h3>
-          <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-muted-foreground">
             {s.summary}
           </p>
         </a>
