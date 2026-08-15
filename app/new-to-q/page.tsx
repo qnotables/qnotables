@@ -575,6 +575,17 @@ export default function NewToQPage() {
         title="Rumble video"
       />
     </div>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md border border-border">
+      <video
+        src="/videos/wwg1wga.mp4"
+        className="aspect-video w-full"
+        controls
+        playsInline
+      >
+        <track kind="captions" />
+      </video>
+    </div>
   </div>
 </section>
 
