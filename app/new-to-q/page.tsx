@@ -187,23 +187,25 @@ export default function NewToQPage() {
       alt="Donald Trump - We Are Doing This For Humanity"
       className="w-1/2 flex-shrink-0 rounded-md self-start"
     />
-    <p className="leading-relaxed text-muted-foreground">
-      The world we have known may not be exactly as it appears. The research
-      conducted by anons covers serious and often controversial subjects,
-      including:
-    <ul className="grid gap-2 pl-5 sm:grid-cols-2">
-      <li className="list-disc">Political corruption</li>
-      <li className="list-disc">Secret societies</li>
-      <li className="list-disc">Treason</li>
-      <li className="list-disc">Drug and human trafficking</li>
-      <li className="list-disc">Pedophilia among powerful individuals</li>
-      <li className="list-disc">Blackmail and coercion</li>
-      <li className="list-disc">Propaganda and psychological manipulation</li>
-      <li className="list-disc">False-flag operations</li>
-      <li className="list-disc">Satanic rituals and ceremonies</li>
-      <li className="list-disc">Intelligence leaks</li>
-    </ul>
-    </p>
+    <div className="leading-relaxed text-muted-foreground">
+      <p>
+        The world we have known may not be exactly as it appears. The research
+        conducted by anons covers serious and often controversial subjects,
+        including:
+      </p>
+      <ul className="mt-2 grid gap-2 pl-5 sm:grid-cols-2">
+        <li className="list-disc">Political corruption</li>
+        <li className="list-disc">Secret societies</li>
+        <li className="list-disc">Treason</li>
+        <li className="list-disc">Drug and human trafficking</li>
+        <li className="list-disc">Pedophilia among powerful individuals</li>
+        <li className="list-disc">Blackmail and coercion</li>
+        <li className="list-disc">Propaganda and psychological manipulation</li>
+        <li className="list-disc">False-flag operations</li>
+        <li className="list-disc">Satanic rituals and ceremonies</li>
+        <li className="list-disc">Intelligence leaks</li>
+      </ul>
+    </div>
 
 
   </div>
@@ -359,6 +361,54 @@ export default function NewToQPage() {
     Symbolism Will Be Their Downfall
   </h2>
 
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-tom-hanks.png"
+        alt="Photo shared by Oprah Winfrey on Instagram of Tom Hanks holding a sign reading 'I am not allowed to talk'"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-medusa.png"
+        alt="Fashion editorial photo styled as Medusa, with snakes wrapped around the subject"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-capitol-owl.png"
+        alt="Satellite image of the U.S. Capitol grounds with an owl shape outlined in red overlaid on the layout"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  </div>
+
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-madonna.png"
+        alt="Madonna performing on stage in a red and black horned costume, surrounded by dancers wearing horned masks"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-beyonce.png"
+        alt="Close-up of Beyoncé on stage wearing a leather glove, with her hand raised near her face"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-dc-map.png"
+        alt="Historic map of Washington, D.C. with yellow lines drawn between streets and landmarks forming geometric shapes"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  </div>
+
   <div className="space-y-6 leading-relaxed text-muted-foreground">
     <p>
       This website is only a starting point—a place to help you build your own
@@ -380,6 +430,14 @@ export default function NewToQPage() {
       </p>
     </div>
 
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/secret-societies-collage.png"
+        alt="Meme collage titled 'You Probably Thought #SecretSocieties Aren't Real' made up of close-up photos of people covering one eye"
+        className="h-auto w-full object-cover"
+      />
+    </div>
+
     <p>
       I am not here to tell you what to think or how to feel. That decision
       belongs to you. My purpose is to point you toward information, provide
@@ -396,8 +454,8 @@ export default function NewToQPage() {
 
     <figure className="overflow-hidden rounded-md border border-border">
       <img
-        src="/images/ephesians-6-12.jpg"
-        alt="Ephesians 6:12"
+        src="/images/ephesians-6-12-battle-is-real.png"
+        alt="Ephesians 6:12 - Our battle is not against flesh and blood, but against the rulers, against the powers, against the world forces of darkness, against the spiritual forces of wickedness in the heavenly places. The Battle is real."
         className="h-auto w-full object-cover"
       />
     </figure>
@@ -444,9 +502,17 @@ export default function NewToQPage() {
 </section>
 
 <section>
-  <h2 className="stencil mb-4 text-2xl text-foreground">
+    <h2 className="stencil mb-4 text-2xl text-foreground">
     Learn to Trust Yourself
   </h2>
+
+  <div className="mb-6 overflow-hidden rounded-md border border-border">
+    <img
+      src="/images/q-drop-3892-uss-valley-forge.png"
+      alt="Research collage connecting Q drop 3892 about the Obama/Biden administration to a U.S. Naval Institute tweet about the film Silent Running and an aircraft carrier photo index for the USS Valley Forge (CV-45), with red arrows linking each piece of evidence"
+      className="h-auto w-full object-cover"
+    />
+  </div>
 
   <div className="space-y-4 leading-relaxed text-muted-foreground">
     <p>
@@ -481,6 +547,55 @@ export default function NewToQPage() {
     <blockquote className="border-l-4 border-primary pl-4 italic text-foreground">
       Think for yourself. Research for yourself. Decide for yourself.
     </blockquote>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://www.youtube.com/embed/G2qIXXafxCQ"
+        className="aspect-video w-full"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        title="Think for yourself, research for yourself, decide for yourself"
+      />
+    </div>
+
+    <div className="mt-6 overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/hillary-village-q-roasted.png"
+        alt="Meme of Trump at a podium with a glowing hand effect, captioned 'Hillary believes it takes a village' and 'Which only makes sense after all in places like Haiti, where she's taken a number of them,' overlaid with a Q post screenshot referencing 'Roasted'"
+        className="h-auto w-full object-cover"
+      />
+    </div>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://rumble.com/embed/v1gd7gh/?pub=25xjr"
+        className="aspect-video w-full"
+        frameBorder="0"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+        title="Rumble video"
+      />
+    </div>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md border border-border">
+      <video
+        src="/videos/wwg1wga.mp4"
+        className="aspect-video w-full"
+        controls
+        playsInline
+      >
+        <track kind="captions" />
+      </video>
+    </div>
+
+    <div className="mt-6 overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/night-shift-boat.png"
+        alt="'Night Shift' illustration of a cartoon frog sailing a small wooden boat with a blue sail across a dark, stormy sea at night in the rain"
+        className="h-auto w-full object-cover"
+      />
+    </div>
   </div>
 </section>
 
