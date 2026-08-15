@@ -452,8 +452,8 @@ export default function NewToQPage() {
 
     <figure className="overflow-hidden rounded-md border border-border">
       <img
-        src="/images/ephesians-6-12.jpg"
-        alt="Ephesians 6:12"
+        src="/images/ephesians-6-12-battle-is-real.png"
+        alt="Ephesians 6:12 - Our battle is not against flesh and blood, but against the rulers, against the powers, against the world forces of darkness, against the spiritual forces of wickedness in the heavenly places. The Battle is real."
         className="h-auto w-full object-cover"
       />
     </figure>
