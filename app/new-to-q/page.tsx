@@ -586,6 +586,14 @@ export default function NewToQPage() {
         <track kind="captions" />
       </video>
     </div>
+
+    <div className="mt-6 overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/night-shift-boat.png"
+        alt="'Night Shift' illustration of a cartoon frog sailing a small wooden boat with a blue sail across a dark, stormy sea at night in the rain"
+        className="h-auto w-full object-cover"
+      />
+    </div>
   </div>
 </section>
 
