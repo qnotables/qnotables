@@ -556,6 +556,14 @@ export default function NewToQPage() {
         title="Think for yourself, research for yourself, decide for yourself"
       />
     </div>
+
+    <div className="mt-6 overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/hillary-village-q-roasted.png"
+        alt="Meme of Trump at a podium with a glowing hand effect, captioned 'Hillary believes it takes a village' and 'Which only makes sense after all in places like Haiti, where she's taken a number of them,' overlaid with a Q post screenshot referencing 'Roasted'"
+        className="h-auto w-full object-cover"
+      />
+    </div>
   </div>
 </section>
 
