@@ -383,6 +383,30 @@ export default function NewToQPage() {
     </div>
   </div>
 
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-madonna.png"
+        alt="Madonna performing on stage in a red and black horned costume, surrounded by dancers wearing horned masks"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-beyonce.png"
+        alt="Close-up of Beyoncé on stage wearing a leather glove, with her hand raised near her face"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-dc-map.png"
+        alt="Historic map of Washington, D.C. with yellow lines drawn between streets and landmarks forming geometric shapes"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  </div>
+
   <div className="space-y-6 leading-relaxed text-muted-foreground">
     <p>
       This website is only a starting point—a place to help you build your own
