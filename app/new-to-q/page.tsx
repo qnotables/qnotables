@@ -359,6 +359,30 @@ export default function NewToQPage() {
     Symbolism Will Be Their Downfall
   </h2>
 
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-tom-hanks.png"
+        alt="Photo shared by Oprah Winfrey on Instagram of Tom Hanks holding a sign reading 'I am not allowed to talk'"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-medusa.png"
+        alt="Fashion editorial photo styled as Medusa, with snakes wrapped around the subject"
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/symbolism-capitol-owl.png"
+        alt="Satellite image of the U.S. Capitol grounds with an owl shape outlined in red overlaid on the layout"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  </div>
+
   <div className="space-y-6 leading-relaxed text-muted-foreground">
     <p>
       This website is only a starting point—a place to help you build your own
