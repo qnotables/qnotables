@@ -187,23 +187,25 @@ export default function NewToQPage() {
       alt="Donald Trump - We Are Doing This For Humanity"
       className="w-1/2 flex-shrink-0 rounded-md self-start"
     />
-    <p className="leading-relaxed text-muted-foreground">
-      The world we have known may not be exactly as it appears. The research
-      conducted by anons covers serious and often controversial subjects,
-      including:
-    <ul className="grid gap-2 pl-5 sm:grid-cols-2">
-      <li className="list-disc">Political corruption</li>
-      <li className="list-disc">Secret societies</li>
-      <li className="list-disc">Treason</li>
-      <li className="list-disc">Drug and human trafficking</li>
-      <li className="list-disc">Pedophilia among powerful individuals</li>
-      <li className="list-disc">Blackmail and coercion</li>
-      <li className="list-disc">Propaganda and psychological manipulation</li>
-      <li className="list-disc">False-flag operations</li>
-      <li className="list-disc">Satanic rituals and ceremonies</li>
-      <li className="list-disc">Intelligence leaks</li>
-    </ul>
-    </p>
+    <div className="leading-relaxed text-muted-foreground">
+      <p>
+        The world we have known may not be exactly as it appears. The research
+        conducted by anons covers serious and often controversial subjects,
+        including:
+      </p>
+      <ul className="mt-2 grid gap-2 pl-5 sm:grid-cols-2">
+        <li className="list-disc">Political corruption</li>
+        <li className="list-disc">Secret societies</li>
+        <li className="list-disc">Treason</li>
+        <li className="list-disc">Drug and human trafficking</li>
+        <li className="list-disc">Pedophilia among powerful individuals</li>
+        <li className="list-disc">Blackmail and coercion</li>
+        <li className="list-disc">Propaganda and psychological manipulation</li>
+        <li className="list-disc">False-flag operations</li>
+        <li className="list-disc">Satanic rituals and ceremonies</li>
+        <li className="list-disc">Intelligence leaks</li>
+      </ul>
+    </div>
 
 
   </div>
