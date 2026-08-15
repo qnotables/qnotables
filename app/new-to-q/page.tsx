@@ -564,6 +564,17 @@ export default function NewToQPage() {
         className="h-auto w-full object-cover"
       />
     </div>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://rumble.com/embed/v1gd7gh/?pub=25xjr"
+        className="aspect-video w-full"
+        frameBorder="0"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+        title="Rumble video"
+      />
+    </div>
   </div>
 </section>
 
