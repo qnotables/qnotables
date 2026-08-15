@@ -428,6 +428,14 @@ export default function NewToQPage() {
       </p>
     </div>
 
+    <div className="overflow-hidden rounded-md border border-border">
+      <img
+        src="/images/secret-societies-collage.png"
+        alt="Meme collage titled 'You Probably Thought #SecretSocieties Aren't Real' made up of close-up photos of people covering one eye"
+        className="h-auto w-full object-cover"
+      />
+    </div>
+
     <p>
       I am not here to tell you what to think or how to feel. That decision
       belongs to you. My purpose is to point you toward information, provide
