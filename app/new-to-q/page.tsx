@@ -500,9 +500,17 @@ export default function NewToQPage() {
 </section>
 
 <section>
-  <h2 className="stencil mb-4 text-2xl text-foreground">
+    <h2 className="stencil mb-4 text-2xl text-foreground">
     Learn to Trust Yourself
   </h2>
+
+  <div className="mb-6 overflow-hidden rounded-md border border-border">
+    <img
+      src="/images/q-drop-3892-uss-valley-forge.png"
+      alt="Research collage connecting Q drop 3892 about the Obama/Biden administration to a U.S. Naval Institute tweet about the film Silent Running and an aircraft carrier photo index for the USS Valley Forge (CV-45), with red arrows linking each piece of evidence"
+      className="h-auto w-full object-cover"
+    />
+  </div>
 
   <div className="space-y-4 leading-relaxed text-muted-foreground">
     <p>
