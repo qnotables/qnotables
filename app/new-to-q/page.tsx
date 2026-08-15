@@ -545,6 +545,17 @@ export default function NewToQPage() {
     <blockquote className="border-l-4 border-primary pl-4 italic text-foreground">
       Think for yourself. Research for yourself. Decide for yourself.
     </blockquote>
+
+    <div className="mt-6 w-full overflow-hidden rounded-md">
+      <iframe
+        src="https://www.youtube.com/embed/G2qIXXafxCQ"
+        className="aspect-video w-full"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        title="Think for yourself, research for yourself, decide for yourself"
+      />
+    </div>
   </div>
 </section>
 
