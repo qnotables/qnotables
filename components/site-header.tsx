@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, Search, ShoppingBag } from "lucide-react"
@@ -14,12 +14,81 @@ import { SearchOverlay } from "@/components/search-overlay"
 
 type WireStory = { id: string; headline: string; summary: string; source: string; url?: string }
 
+// Scroll must move at least this many pixels before we react, so accidental
+// or tiny scroll jitter doesn't flicker the header.
+const SCROLL_DELTA_THRESHOLD = 10
+// The header is never hidden until the page has scrolled past this point.
+const HIDE_AFTER_SCROLL_Y = 80
+
 export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: WireStory[] }) {
   const [now, setNow] = useState<string>("")
   const [wireStories, setWireStories] = useState<WireStory[]>(initialWireStories || [])
   const { active, setActive } = useDeskFilter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+
+  const headerRef = useRef<HTMLElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const [hiddenByScroll, setHiddenByScroll] = useState(false)
+  const lastScrollYRef = useRef(0)
+  const tickingRef = useRef(false)
+
+  // Measure the real header height (ticker + status bar + masthead + nav can
+  // all vary by breakpoint/content) so we can reserve the same space below it
+  // and avoid layout shift.
+  useLayoutEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+
+    const updateHeight = () => setHeaderHeight(el.offsetHeight)
+    updateHeight()
+
+    const resizeObserver = new ResizeObserver(updateHeight)
+    resizeObserver.observe(el)
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  // Scroll-direction show/hide with a threshold and a "don't hide near the
+  // top" guard. Uses a passive listener + requestAnimationFrame so it never
+  // blocks scrolling.
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY
+
+    const handleScroll = () => {
+      if (tickingRef.current) return
+      tickingRef.current = true
+
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY
+        const delta = currentY - lastScrollYRef.current
+
+        if (currentY <= HIDE_AFTER_SCROLL_Y) {
+          setHiddenByScroll(false)
+          lastScrollYRef.current = currentY
+          tickingRef.current = false
+          return
+        }
+
+        if (Math.abs(delta) < SCROLL_DELTA_THRESHOLD) {
+          tickingRef.current = false
+          return
+        }
+
+        setHiddenByScroll(delta > 0)
+        lastScrollYRef.current = currentY
+        tickingRef.current = false
+      })
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  // Anything happening inside the header (focus, mobile menu, search) always
+  // wins over the scroll-driven hide state.
+  const showHeader = !hiddenByScroll || menuOpen || searchOpen
+
+  const revealHeader = useCallback(() => setHiddenByScroll(false), [])
 
   useEffect(() => {
     const tick = () => {
@@ -70,7 +139,12 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         onClose={() => setSearchOpen(false)}
         wireStories={wireStories}
       />
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+      <header
+        ref={headerRef}
+        onFocusCapture={revealHeader}
+        className="fixed inset-x-0 top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none"
+        style={{ transform: showHeader ? "translateY(0)" : "translateY(-100%)" }}
+      >
         {/* ticker */}
         <NewsTicker items={tickerItems} />
 
@@ -195,6 +269,10 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         ))}
       </nav>
     </header>
+
+    {/* Reserves space for the now-fixed header so page content doesn't jump
+        underneath it. Kept in sync with the header's real, measured height. */}
+    <div aria-hidden="true" style={{ height: headerHeight }} />
     </>
   )
 }
