@@ -7,7 +7,7 @@ export function PostFeaturedMedia({ media, title, compact = false }: { media: Po
   return (
     <div className={frameClass}>
       {media.kind === "image" ? (
-        <Image src={media.src} alt={media.alt || title} fill className="object-cover" sizes={compact ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 1024px) 100vw, 1024px"} />
+        <Image src={media.src} alt={media.alt || title} fill className="object-cover object-top" sizes={compact ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 1024px) 100vw, 1024px"} />
       ) : media.kind === "video" ? (
         <video src={media.src} poster={media.poster} controls playsInline preload="metadata" className="h-full w-full object-contain" title={media.title || title} />
       ) : (
