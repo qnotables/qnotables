@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/server"
 import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, getDeskLabel } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
-import { firstImageFromBody } from "@/lib/rss-utils"
+import { firstImageFromBody, getSiteUrl } from "@/lib/rss-utils"
 import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 
