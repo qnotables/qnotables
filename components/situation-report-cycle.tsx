@@ -192,7 +192,32 @@ function extractFirstBlogMedia(content?: string): { kind: "video" | "embed" | "i
 
 // ─── Strip markdown ──────────────────────────────────────────────────────────
 
+/** Walk a Tiptap JSON doc and collect only its text runs, skipping node attrs
+ *  (embedBlock/videoBlock/image URLs, provider names, etc). */
+function extractTiptapText(nodes?: TiptapNode[]): string {
+  if (!nodes) return ""
+  let out = ""
+  for (const node of nodes) {
+    if (typeof (node as { text?: string }).text === "string") out += (node as { text?: string }).text + " "
+    if (node.content) out += extractTiptapText(node.content) + " "
+  }
+  return out
+}
+
 function stripMarkdown(md: string): string {
+  // Forum/blog bodies are stored as Tiptap JSON. If we blindly regex-strip a
+  // raw JSON string, node attrs like embedBlock URLs leak into the preview
+  // text verbatim, so extract the actual text runs first.
+  const trimmed = md.trim()
+  if (trimmed.startsWith("{") && trimmed.includes('"type":"doc"')) {
+    try {
+      const doc = JSON.parse(trimmed) as TiptapNode
+      return extractTiptapText(doc.content).replace(/\s+/g, " ").trim()
+    } catch {
+      // fall through to markdown stripping below
+    }
+  }
+
   return md
     .replace(/\[([^\]]+)\]\([^\)]*\)/g, "$1")
     .replace(/!\[[^\]]*\]\([^\)]*\)/g, "")
