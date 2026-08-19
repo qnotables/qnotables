@@ -1,8 +1,12 @@
 "use client"
 
+import { useState } from "react"
+import { Pause, Play } from "lucide-react"
+
 type TickerItem = { headline: string; url?: string }
 
 export function NewsTicker({ items }: { items: TickerItem[] }) {
+  const [paused, setPaused] = useState(false)
   const displayItems = items.length ? items : [{ headline: "Awaiting live wire feed…" }]
   // duplicate for a seamless loop
   const loop = [...displayItems, ...displayItems]
@@ -13,7 +17,10 @@ export function NewsTicker({ items }: { items: TickerItem[] }) {
         <span className="label-mono font-semibold">BREAKING</span>
       </div>
       <div className="group relative flex-1 overflow-hidden">
-        <div className="flex w-max animate-[ticker_216s_linear_infinite] items-center gap-8 py-2 pl-4 group-hover:[animation-play-state:paused]">
+        <div
+          className="flex w-max animate-[ticker_216s_linear_infinite] items-center gap-8 py-2 pl-4 group-hover:[animation-play-state:paused]"
+          style={paused ? { animationPlayState: "paused" } : undefined}
+        >
           {loop.map((item, i) => (
             <span
               key={i}
@@ -36,6 +43,15 @@ export function NewsTicker({ items }: { items: TickerItem[] }) {
           ))}
         </div>
       </div>
+      <button
+        type="button"
+        onClick={() => setPaused((prev) => !prev)}
+        aria-label={paused ? "Play news ticker" : "Pause news ticker"}
+        aria-pressed={paused}
+        className="flex shrink-0 items-center justify-center border-l border-border px-3 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
+      </button>
     </div>
   )
 }
