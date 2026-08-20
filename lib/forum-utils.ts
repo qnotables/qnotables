@@ -214,9 +214,49 @@ export function isDirectImageUrl(url: string): boolean {
   }
 }
 
+// Minimal shape for a Tiptap JSON node — just enough to walk text runs.
+// Kept local (rather than imported) so this module stays dependency-free.
+interface TiptapNode {
+  type?: string
+  text?: string
+  content?: TiptapNode[]
+}
+
+/** Walk a Tiptap JSON doc and collect only its text runs, skipping node attrs
+ *  (embedBlock/videoBlock/image URLs, provider names, etc). */
+function extractTiptapText(nodes?: TiptapNode[]): string {
+  if (!nodes) return ""
+  let out = ""
+  for (const node of nodes) {
+    if (typeof node.text === "string") out += node.text + " "
+    if (node.content) out += extractTiptapText(node.content) + " "
+  }
+  return out
+}
+
 /** Strips markdown syntax and returns plain text suitable for excerpts. */
 export function buildExcerpt(raw: string, maxLen = 180): string {
+  // Thread bodies are stored as Tiptap JSON. Regex-stripping raw JSON leaks
+  // node attrs (e.g. embedBlock originalUrl) straight into the excerpt, so
+  // extract the actual text runs first when the body looks like a Tiptap doc.
+  const trimmed = raw.trim()
+  if (trimmed.startsWith("{") && trimmed.includes('"type":"doc"')) {
+    try {
+      const doc = JSON.parse(trimmed) as TiptapNode
+      const plain = extractTiptapText(doc.content).replace(/\s+/g, " ").trim()
+      if (plain.length <= maxLen) return plain
+      const truncated = plain.slice(0, maxLen)
+      const lastSpace = truncated.lastIndexOf(" ")
+      return (lastSpace > maxLen * 0.7 ? truncated.slice(0, lastSpace) : truncated) + "…"
+    } catch {
+      // fall through to markdown stripping below
+    }
+  }
+
   let text = raw
+    // Remove HTML comments — legacy embed markers (e.g. <!-- IFRAMEEMBED: {...} -->)
+    // and any other leftover comment-encoded metadata
+    .replace(/<!--[\s\S]*?-->/g, "")
     // Remove fenced code blocks entirely
     .replace(/```[\s\S]*?```/g, "")
     // Remove inline code
