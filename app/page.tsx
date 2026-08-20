@@ -137,6 +137,7 @@ export default async function Page() {
                   readMinutes={story.readMinutes}
                   image={story.image}
                   source={story.source}
+                  url={story.url}
                   type="feed"
                 />
               ))}
