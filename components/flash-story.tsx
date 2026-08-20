@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Clock, Archive } from "lucide-react"
 import { CardImage } from "@/components/card-image"
+import { ShareButtons } from "@/components/share-buttons"
 
 interface FlashStoryProps {
   title: string
@@ -11,6 +12,7 @@ interface FlashStoryProps {
   image?: string
   slug?: string
   source?: string
+  url?: string
   type: "archive" | "feed"
 }
 
@@ -23,9 +25,11 @@ export function FlashStory({
   image,
   slug,
   source,
+  url,
   type
 }: FlashStoryProps) {
-  const href = type === "archive" && slug ? `/archives/${slug}` : "#"
+  const href = type === "archive" && slug ? `/archives/${slug}` : url || "#"
+  const linkProps = href !== "#" && href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {}
   
   return (
     <div className="border border-border bg-card overflow-hidden hover:border-primary/60 transition-colors">
@@ -76,7 +80,7 @@ export function FlashStory({
         </div>
 
         {/* Title */}
-        <Link href={href} className="block group mb-3">
+        <Link href={href} {...linkProps} className="block group mb-3">
           <h3 className="stencil text-2xl md:text-3xl leading-tight text-foreground group-hover:text-primary transition-colors">
             {title}
           </h3>
@@ -87,13 +91,17 @@ export function FlashStory({
           {excerpt}
         </p>
 
-        {/* Read button */}
-        <Link
-          href={href}
-          className="label-mono text-sm font-semibold text-primary hover:underline inline-flex items-center gap-2"
-        >
-          READ MORE → 
-        </Link>
+        {/* Read button + share */}
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={href}
+            {...linkProps}
+            className="label-mono text-sm font-semibold text-primary hover:underline inline-flex items-center gap-2"
+          >
+            READ MORE → 
+          </Link>
+          <ShareButtons title={title} url={href !== "#" ? href : undefined} excerpt={excerpt} source={source} />
+        </div>
       </div>
     </div>
   )
