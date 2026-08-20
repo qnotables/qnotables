@@ -188,7 +188,13 @@ function VideoPreview({ video }: { video: VideoEmbed }) {
 }
 
 function ThreadCard({ t }: { t: ThreadListItem }) {
-  const excerpt = t.excerpt?.trim() || buildExcerpt(t.body, 160)
+  // Always derive the excerpt fresh from the full body rather than trusting
+  // the stored `excerpt` column: some legacy rows were truncated *before*
+  // markdown/JSON was stripped, leaving broken syntax (e.g. a markdown image
+  // tag cut off mid-URL with no closing paren) that can never be cleanly
+  // stripped after the fact. `body` is never truncated, so strip-then-
+  // truncate here always produces clean text.
+  const excerpt = buildExcerpt(t.body, 160)
   const thumb = extractFirstImage(t.body)
   const video = extractFirstVideo(t.body)
   const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
