@@ -25,7 +25,9 @@ export function DailyVerseWidget() {
     function styliseLinks() {
       const links = document.getElementById("dailyVersesWrapper")?.getElementsByTagName("a") ?? []
       for (const link of Array.from(links)) {
-        link.style.color = "#fb8122"
+        // Use the theme's primary token (not a hardcoded hex) so link color
+        // stays legible and on-brand in both light and dark mode.
+        link.style.color = "var(--primary)"
         link.style.textDecoration = "none"
       }
     }
@@ -51,7 +53,7 @@ export function DailyVerseWidget() {
         style={{
           fontFamily: "'Libre Baskerville', serif",
           fontSize: "11pt",
-          color: "#e3decc",
+          color: "var(--card-foreground)",
           textAlign: "center",
         }}
       />
