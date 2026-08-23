@@ -81,15 +81,24 @@ export async function runNotablesScrape(
   const allErrors: string[] = []
   let allItems: Omit<NotablesRecord, "id">[] = []
 
-  // 1. Try RSS sources
-  for (const src of RSS_SOURCES) {
-    const result = await parseNotablesRss(src.url, src.name)
+  // 1. Fetch independent RSS sources concurrently. Each parser has its own
+  // timeout and returns a structured error, so one slow source cannot block
+  // the others or turn a partial import into a fatal run.
+  const sourceResults = await Promise.all(
+    RSS_SOURCES.map(async (src) => ({ src, result: await parseNotablesRss(src.url, src.name) })),
+  )
+
+  for (const { src, result } of sourceResults) {
     if (result.error) {
       allErrors.push(`[RSS:${src.name}] ${result.error}`)
       console.warn(`[notables-scraper] RSS error for ${src.name}:`, result.error)
     }
-    allItems = allItems.concat(result.items)
+    allItems.push(...result.items)
   }
+
+  // Deduplicate the current run before querying or inserting. Multiple feeds
+  // can expose the same post, which otherwise creates a duplicate insert race.
+  allItems = [...new Map(allItems.map((item) => [item.hash_unique, item])).values()]
 
   // 2. HTML fallback if RSS returned nothing
   if (allItems.length === 0) {

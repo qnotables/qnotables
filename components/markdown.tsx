@@ -204,7 +204,7 @@ export function Markdown({ content, omitFirstMedia = false }: { content: string;
   const { cleanContent, embeds } = processEmbeds(renderedContent)
   
   return (
-    <div className="flex flex-col gap-4 leading-relaxed text-foreground/90">
+    <div className="flex flex-col gap-6 leading-relaxed text-foreground/90">
       {embeds.length > 0 && <div className="space-y-6">{embeds}</div>}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
