@@ -281,6 +281,7 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [page, setPage] = useState(1)
+  const [feedError, setFeedError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -302,6 +303,11 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
           page: p,
           pageSize: PAGE_SIZE,
         })
+        if (result.error) {
+          setFeedError(result.error)
+          return
+        }
+        setFeedError(null)
         setItems(result.items)
         setTotal(result.total)
       })
@@ -341,6 +347,11 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
     setPage(1)
     startTransition(async () => {
       const result = await getNotables({ page: 1, pageSize: PAGE_SIZE })
+      if (result.error) {
+        setFeedError(result.error)
+        return
+      }
+      setFeedError(null)
       setItems(result.items)
       setTotal(result.total)
     })
@@ -411,6 +422,13 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
           </button>
         </form>
       </div>
+
+      {feedError && (
+        <div role="status" className="border border-primary/40 bg-primary/10 px-4 py-3">
+          <p className="label-mono text-xs font-semibold text-foreground">REFRESH FAILED</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feedError}</p>
+        </div>
+      )}
 
       {/* Count */}
       <div className="flex items-center justify-between">

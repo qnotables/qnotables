@@ -14,10 +14,11 @@ export const dynamic = "force-dynamic"
 export const metadata = pageMetadata({ title: "Notables", description, path: "/notables" })
 
 export default async function NotablesPage() {
-  const [{ items, total }, boards] = await Promise.all([
+  const [result, boards] = await Promise.all([
     getNotables({ page: 1, pageSize: 20 }),
     getNotablesBoards(),
   ])
+  const { items, total, error } = result
 
   return (
     <div className="min-h-screen tactical-grid">
@@ -57,16 +58,21 @@ export default async function NotablesPage() {
             </div>
           </div>
 
-          {/* Empty state notice */}
-          {total === 0 && (
+          {/* Availability / empty-state notice */}
+          {error ? (
+            <div role="status" className="mt-6 border border-primary/40 bg-primary/10 px-4 py-4 text-sm text-foreground">
+              <p className="label-mono font-semibold">FEED TEMPORARILY UNAVAILABLE</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{error}</p>
+            </div>
+          ) : total === 0 ? (
             <div className="mt-6 border border-dashed border-border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
               <p className="label-mono">
-                No notables have been imported yet. The scraper runs daily from Qnotables.com.
+                No notables have been imported yet. The scraper runs daily from the configured source.
                 An admin can also trigger a manual import from the{" "}
                 <span className="text-foreground">Dashboard &rsaquo; Scraper</span> page.
               </p>
             </div>
-          )}
+          ) : null}
         </header>
 
         {/* Feed with search + filters */}

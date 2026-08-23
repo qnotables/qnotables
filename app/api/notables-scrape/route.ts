@@ -32,15 +32,22 @@ async function handle(request: NextRequest) {
   try {
     const result = await runNotablesScrape(triggeredBy)
 
-    return NextResponse.json({
-      success: true,
-      triggeredBy: result.triggeredBy,
-      newItems: result.newItems,
-      skippedDupes: result.skippedDupes,
-      startedAt: result.startedAt,
-      finishedAt: result.finishedAt,
-      errors: result.errors,
-    })
+    const madeProgress = result.newItems > 0 || result.skippedDupes > 0
+    const success = result.errors.length === 0 || madeProgress
+
+    return NextResponse.json(
+      {
+        success,
+        partial: result.errors.length > 0 && madeProgress,
+        triggeredBy: result.triggeredBy,
+        newItems: result.newItems,
+        skippedDupes: result.skippedDupes,
+        startedAt: result.startedAt,
+        finishedAt: result.finishedAt,
+        errors: result.errors,
+      },
+      { status: success ? 200 : 502 },
+    )
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     console.error("[notables-scraper] Fatal error:", message)

@@ -40,11 +40,44 @@ function getSupabase() {
 
 // ── Public: Fetch notables with filters & pagination ─────────────────────────
 
-export async function getNotables(filters: NotablesFilters = {}): Promise<{
+export type NotablesResult = {
   items: NotablesPost[]
   total: number
-}> {
-  const supabase = getSupabase()
+  error?: string
+}
+
+function plainText(value: unknown): string {
+  if (typeof value !== "string") return ""
+  return value
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function normalizeUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null
+  const candidate = value.startsWith("//") ? `https:${value}` : value
+  try {
+    const url = new URL(candidate)
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
+export async function getNotables(filters: NotablesFilters = {}): Promise<NotablesResult> {
+  let supabase
+  try {
+    supabase = getSupabase()
+  } catch (error) {
+    console.error("[notables] Database configuration unavailable", error)
+    return { items: [], total: 0, error: "The notables feed is temporarily unavailable." }
+  }
   const { search, tag, dateFrom, dateTo, page = 1, pageSize = 20 } = filters
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
@@ -74,16 +107,24 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
 
   const { data, error, count } = await query
 
-  if (error) throw new Error(`Failed to fetch notables: ${error.message}`)
+  if (error) {
+    console.error("[notables] Feed query failed", { code: error.code, message: error.message })
+    return { items: [], total: 0, error: "The notables feed could not be refreshed. Please try again shortly." }
+  }
 
-  // Map notables table columns to what NotablesCard expects
+  // Map imported records into a stable, presentation-safe shape.
   const items: NotablesPost[] = (data ?? []).map((row: Record<string, unknown>) => {
-    const media = Array.isArray(row.media) ? row.media as string[] : []
-    const links = Array.isArray(row.links) ? row.links as string[] : []
+    const media = Array.isArray(row.media)
+      ? row.media.map(normalizeUrl).filter((url): url is string => Boolean(url))
+      : []
+    const links = Array.isArray(row.links)
+      ? row.links.map(normalizeUrl).filter((url): url is string => Boolean(url))
+      : []
     const firstImage = media.find((m) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(m)) ?? null
+    const excerpt = plainText(row.raw_text ?? row.body).slice(0, 300)
     return {
       id: row.id as string,
-      title: row.title as string,
+      title: plainText(row.title) || "Untitled notable",
       body: row.body as string | null,
       raw_text: row.raw_text as string | null,
       source: row.source as string | null,
@@ -98,9 +139,9 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
       // aliases for NotablesCard
       cover_image: firstImage,
       og_image_url: null,
-      excerpt: row.raw_text ? (row.raw_text as string).slice(0, 300) : null,
-      tag: row.board as string | null,
-      source_url: row.thread_url as string | null,
+      excerpt: excerpt || null,
+      tag: plainText(row.board) || null,
+      source_url: normalizeUrl(row.thread_url),
       published_at: (row.created_at_source as string | null) ?? (row.scraped_at as string),
       created_at: row.scraped_at as string,
     }
@@ -112,16 +153,24 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<{
 // ── Public: Get distinct tags for filter dropdown ─────────────────────────────
 
 export async function getNotablesBoards(): Promise<string[]> {
-  const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from("notables")
-    .select("board")
-    .not("board", "is", null)
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from("notables")
+      .select("board")
+      .not("board", "is", null)
 
-  if (error) return []
+    if (error) {
+      console.error("[notables] Board query failed", { code: error.code, message: error.message })
+      return []
+    }
 
-  const boards = [...new Set((data ?? []).map((r: { board: string }) => r.board))]
-  return boards.filter(Boolean)
+    const boards = [...new Set((data ?? []).map((r: { board: string }) => plainText(r.board)))]
+    return boards.filter(Boolean).sort()
+  } catch (error) {
+    console.error("[notables] Board lookup unavailable", error)
+    return []
+  }
 }
 
 // ── Admin: Trigger a manual notables scrape ───────────────────────────────────
@@ -143,12 +192,18 @@ export async function triggerNotablesScrape(): Promise<{
     revalidatePath("/notables")
     revalidatePath("/dashboard/scraper")
 
+    const hasErrors = result.errors.length > 0
+    const madeProgress = result.newItems > 0 || result.skippedDupes > 0
     return {
-      success: true,
+      success: madeProgress || !hasErrors,
       newItems: result.newItems,
       skippedDupes: result.skippedDupes,
       errors: result.errors,
-      message: `Notables scrape complete. ${result.newItems} new item(s), ${result.skippedDupes} duplicate(s) skipped.`,
+      message: hasErrors
+        ? madeProgress
+          ? `Notables scrape completed with warnings. ${result.newItems} new item(s), ${result.skippedDupes} duplicate(s) skipped.`
+          : "Notables scrape could not reach any configured source. No existing records were changed."
+        : `Notables scrape complete. ${result.newItems} new item(s), ${result.skippedDupes} duplicate(s) skipped.`,
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
