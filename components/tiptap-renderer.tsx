@@ -370,7 +370,7 @@ export function TiptapRenderer({ content, omitFirstMedia = false }: TiptapRender
   const nodes = doc.content ?? []
 
   return (
-    <div className="tiptap-content leading-relaxed text-foreground/90">
+    <div className="tiptap-content flex flex-col gap-6 leading-relaxed text-foreground/90">
       {nodes.map((node, i) => renderNode(node, i))}
     </div>
   )
