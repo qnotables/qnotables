@@ -128,7 +128,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <article className="mt-8">
               {featuredMedia && (
                 <div className="mb-8">
-                  <PostFeaturedMedia media={featuredMedia} title={post.title} />
+                  <PostFeaturedMedia media={featuredMedia} title={post.title} zoomable />
                 </div>
               )}
               {isTiptapJson(post.content) ? (

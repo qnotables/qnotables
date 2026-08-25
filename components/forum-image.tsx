@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { X, ExternalLink } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ForumImageProps {
   src: string
   alt: string
+  fullWidth?: boolean
 }
 
-export function ForumImage({ src, alt }: ForumImageProps) {
+export function ForumImage({ src, alt, fullWidth = false }: ForumImageProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const openLightbox = useCallback(() => setLightboxOpen(true), [])
@@ -38,7 +40,10 @@ export function ForumImage({ src, alt }: ForumImageProps) {
         alt={alt}
         onClick={openLightbox}
         loading="lazy"
-        className="my-2 block w-full max-h-[700px] cursor-zoom-in rounded border border-border bg-muted/30 object-contain transition-opacity hover:opacity-90"
+        className={cn(
+          "my-2 block cursor-zoom-in border border-border bg-muted/30 object-contain transition-opacity hover:opacity-90",
+          fullWidth ? "h-auto w-full max-h-none" : "max-h-[700px] max-w-full",
+        )}
         title="Click to enlarge"
       />
 
