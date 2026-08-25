@@ -1,7 +1,18 @@
 import Image from "next/image"
 import type { PostMedia } from "@/lib/post-media"
+import { ForumImage } from "@/components/forum-image"
 
-export function PostFeaturedMedia({ media, title, compact = false }: { media: PostMedia; title: string; compact?: boolean }) {
+export function PostFeaturedMedia({
+  media,
+  title,
+  compact = false,
+  zoomable = false,
+}: {
+  media: PostMedia
+  title: string
+  compact?: boolean
+  zoomable?: boolean
+}) {
   const frameClass = compact
     ? "relative aspect-[16/7] w-full overflow-hidden bg-muted"
     : media.kind === "image"
@@ -12,7 +23,15 @@ export function PostFeaturedMedia({ media, title, compact = false }: { media: Po
     <div className={frameClass}>
       {media.kind === "image" ? (
         compact ? (
-          <Image src={media.src} alt={media.alt || title} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" />
+          <Image
+            src={media.src}
+            alt={media.alt || title}
+            fill
+            className="object-cover object-top"
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
+        ) : zoomable ? (
+          <ForumImage src={media.src} alt={media.alt || title} fullWidth />
         ) : (
           // Preserve the source image's natural aspect ratio so article images are never cropped.
           // eslint-disable-next-line @next/next/no-img-element
