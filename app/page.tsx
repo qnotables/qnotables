@@ -44,10 +44,12 @@ export default async function Page() {
   const forumItems: SituationForumItem[] = recentThreads.map((t) => ({
     type: "forum",
     id: t.id,
+    slug: t.slug,
     title: t.title,
     body: t.body,
     authorName: t.authorName,
     createdAt: t.createdAt,
+    lastActivityAt: t.lastActivityAt,
     replyCount: t.replyCount,
     category: t.category,
     isFeatured: t.isFeatured,

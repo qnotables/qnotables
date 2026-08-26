@@ -8,11 +8,13 @@ export interface ForumThreadLatestReply {
 
 export interface ForumThread {
   id: string
+  slug?: string
   title: string
   body: string
   authorName: string
   createdAt: string
   updatedAt?: string
+  lastActivityAt?: string
   replyCount: number
   category?: string
   isPinned?: boolean
@@ -145,22 +147,29 @@ export async function getTopForumThreads(limit = 3): Promise<ForumThread[]> {
 }
 
 /**
- * Returns the N most recent forum threads, sorted newest first,
- * enriched with each thread's latest visible reply.
+ * Returns the N most recently active public forum threads, enriched with each
+ * thread's latest visible reply. Activity includes replies, not only creation.
  */
 export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
   try {
     const supabase = await createClient()
 
-    const { data: threads } = await supabase
+    const { data: threads, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, title, body, created_at, category, is_pinned, is_featured, profiles(display_name), forum_replies(count)"
+        "id, slug, title, body, created_at, updated_at, last_activity_at, reply_count, category, is_pinned, is_featured, profiles(display_name)"
       )
       .eq("is_soft_deleted", false)
+      .eq("is_pending", false)
+      .eq("status", "published")
+      .order("last_activity_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(limit)
 
+    if (error) {
+      console.error("[v0] Failed to fetch recent forum activity:", error)
+      return []
+    }
     if (!threads || threads.length === 0) return []
 
     const topIds = threads.map((t: any) => t.id)
@@ -187,11 +196,14 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
 
     return threads.map((t: any) => ({
       id: t.id,
+      slug: t.slug || undefined,
       title: t.title,
       body: t.body,
       authorName: t.profiles?.display_name || "Anonymous",
       createdAt: t.created_at,
-      replyCount: (t.forum_replies?.[0]?.count ?? 0) as number,
+      updatedAt: t.updated_at || undefined,
+      lastActivityAt: t.last_activity_at || t.created_at,
+      replyCount: Number(t.reply_count ?? 0),
       category: t.category || undefined,
       isPinned: t.is_pinned || false,
       isFeatured: t.is_featured || false,
