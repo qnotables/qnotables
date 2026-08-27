@@ -2,6 +2,7 @@
 
 import { Share2, Mail, MessageCircle, Link2, Check } from "lucide-react"
 import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { createShareUrl, type SharePlatform } from "@/lib/rss-utils"
 
 export interface ShareButtonsProps {
@@ -76,8 +77,10 @@ export function ShareButtons({
   const [canNativeShare, setCanNativeShare] = useState(false)
   // Resolve the share URL client-side to avoid hydration mismatches.
   const [shareUrl, setShareUrl] = useState(url || "")
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const shareTitle = title || headline || "HOT AND FRESH"
   const shareExcerpt = excerpt || source
@@ -154,20 +157,42 @@ export function ShareButtons({
     }
   }, [shareTitle, shareExcerpt, shareUrl])
 
-  // Close on outside click or Escape key.
+  // Render the menu at the document level so card overflow cannot clip it.
+  // Keep it aligned to the trigger and inside the viewport while open.
   useEffect(() => {
     if (!showMenu) return
+
+    function positionMenu() {
+      const trigger = containerRef.current?.getBoundingClientRect()
+      if (!trigger) return
+      const menuWidth = 208
+      const menuHeight = menuRef.current?.offsetHeight ?? 360
+      const gap = 8
+      const left = Math.min(Math.max(8, trigger.right - menuWidth), window.innerWidth - menuWidth - 8)
+      const top = trigger.top >= menuHeight + gap
+        ? trigger.top - menuHeight - gap
+        : Math.min(trigger.bottom + gap, window.innerHeight - menuHeight - 8)
+      setMenuPosition({ top: Math.max(8, top), left })
+    }
+
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setShowMenu(false)
       }
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") setShowMenu(false)
     }
+
+    positionMenu()
+    window.addEventListener("resize", positionMenu)
+    window.addEventListener("scroll", positionMenu, true)
     document.addEventListener("mousedown", handleClick)
     document.addEventListener("keydown", handleKey)
     return () => {
+      window.removeEventListener("resize", positionMenu)
+      window.removeEventListener("scroll", positionMenu, true)
       document.removeEventListener("mousedown", handleClick)
       document.removeEventListener("keydown", handleKey)
     }
@@ -191,12 +216,13 @@ export function ShareButtons({
         <span>SHARE</span>
       </button>
 
-      {showMenu && (
+      {showMenu && typeof document !== "undefined" && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           aria-label="Share options"
-          // Render above or below the trigger — using bottom-full prevents viewport overflow on mobile.
-          className="absolute bottom-full left-0 z-50 mb-2 flex min-w-[200px] flex-col rounded border border-border bg-card py-1 shadow-lg"
+          className="fixed z-50 flex min-w-52 flex-col rounded border border-border bg-card py-1 shadow-lg"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
         >
           {/* Copy link */}
           <button
@@ -244,7 +270,8 @@ export function ShareButtons({
               <span>{p.label}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

@@ -29,10 +29,13 @@ import { PostFeaturedMedia } from "@/components/post-featured-media"
 export interface SituationForumItem {
   type: "forum"
   id: string
+  slug?: string
   title: string
   body: string
   authorName: string
   createdAt: string
+  lastActivityAt?: string
+  latestImageUrl?: string
   replyCount: number
   category?: string
   isFeatured?: boolean
@@ -227,7 +230,7 @@ function stripMarkdown(md: string): string {
 }
 
 
-// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ───────────────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ─────────��─────────
 
 interface TiptapNode {
   type?: string
@@ -298,11 +301,17 @@ function PriorityBadge({ priority }: { priority?: string }) {
 
 function ForumHotCard({ item }: { item: SituationForumItem }) {
   const reply = item.latestReply
+  const threadHref = `/forum/${item.slug || item.id}`
+  const activityAt = item.lastActivityAt || reply?.createdAt || item.createdAt
 
-  // Extract first embeddable media: prefer reply body, fall back to OP body
+  // Prefer the newest active image attached anywhere in the thread. Fall back
+  // to embedded media in the latest reply, then embedded media in the OP.
   const replyMedia = reply ? extractFirstForumMedia(reply.body) : null
   const opMedia = extractFirstForumMedia(item.body)
-  const media = replyMedia ?? opMedia
+  const latestAttachedImage = item.latestImageUrl
+    ? ({ kind: "image", src: item.latestImageUrl } as const)
+    : null
+  const media = latestAttachedImage ?? replyMedia ?? opMedia
 
   // Strip markdown for text preview — may be empty if body was media-only
   const previewText = reply ? stripMarkdown(reply.body).trim().slice(0, 160) : ""
@@ -378,7 +387,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
       </div>
 
       {/* Title */}
-      <Link href={`/forum/${item.id}`}>
+      <Link href={threadHref}>
         <h3 className="stencil text-xl md:text-2xl leading-tight text-foreground line-clamp-3 px-4 hover:text-primary transition-colors cursor-pointer">
           {item.title}
         </h3>
@@ -409,7 +418,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         <span>{item.authorName}</span>
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          <span>{timeAgo(item.createdAt)}</span>
+          <span>{timeAgo(activityAt)}</span>
         </div>
         <div className="flex items-center gap-1">
           <MessageCircle className="h-3 w-3" />
@@ -419,14 +428,14 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         </div>
         <ShareButtons
           title={item.title}
-          url={`${getSiteUrl()}/forum/${item.id}`}
+          url={`${getSiteUrl()}${threadHref}`}
           className="ml-auto"
         />
       </div>
 
       {/* CTA */}
       <Link
-        href={`/forum/${item.id}`}
+        href={threadHref}
         className="label-mono mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline px-4 pb-4"
       >
         <MessageSquare className="h-3.5 w-3.5" />
@@ -890,7 +899,7 @@ export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: Sit
   )
 }
 
-// ─── Main cycle component ─────────────────────────────────────────────────────
+// ─── Main cycle component ─────────���───────────────────────────────────────────
 
 interface SituationReportCycleProps {
   forumItems: SituationForumItem[]
