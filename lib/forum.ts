@@ -15,6 +15,7 @@ export interface ForumThread {
   createdAt: string
   updatedAt?: string
   lastActivityAt?: string
+  latestImageUrl?: string
   replyCount: number
   category?: string
   isPinned?: boolean
@@ -177,20 +178,62 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
     // Fetch the most recent visible reply for each thread in one query
     const { data: recentReplies } = await supabase
       .from("forum_replies")
-      .select("thread_id, body, created_at, profiles(display_name)")
+      .select("id, thread_id, body, created_at, profiles(display_name)")
       .in("thread_id", topIds)
       .eq("is_pending", false)
       .eq("is_hidden", false)
       .order("created_at", { ascending: false })
 
     const latestReplyMap = new Map<string, ForumThreadLatestReply>()
+    const replyThreadMap = new Map<string, string>()
     for (const r of recentReplies ?? []) {
+      replyThreadMap.set(r.id, r.thread_id)
       if (!latestReplyMap.has(r.thread_id)) {
         latestReplyMap.set(r.thread_id, {
           body: r.body ?? "",
           authorName: (r as any).profiles?.display_name || "Anonymous",
           createdAt: r.created_at,
         })
+      }
+    }
+
+    const replyIds = [...replyThreadMap.keys()]
+    const [threadAttachmentsResult, replyAttachmentsResult] = await Promise.all([
+      supabase
+        .from("forum_attachments")
+        .select("thread_id, url, created_at")
+        .in("thread_id", topIds)
+        .eq("status", "active")
+        .like("mime_type", "image/%")
+        .order("created_at", { ascending: false }),
+      replyIds.length
+        ? supabase
+            .from("forum_attachments")
+            .select("reply_id, url, created_at")
+            .in("reply_id", replyIds)
+            .eq("status", "active")
+            .like("mime_type", "image/%")
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+    ])
+
+    const imageCandidates = [
+      ...(threadAttachmentsResult.data ?? []).map((attachment: any) => ({
+        threadId: attachment.thread_id,
+        url: attachment.url,
+        createdAt: attachment.created_at,
+      })),
+      ...(replyAttachmentsResult.data ?? []).map((attachment: any) => ({
+        threadId: replyThreadMap.get(attachment.reply_id),
+        url: attachment.url,
+        createdAt: attachment.created_at,
+      })),
+    ].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+
+    const latestImageMap = new Map<string, string>()
+    for (const image of imageCandidates) {
+      if (image.threadId && !latestImageMap.has(image.threadId)) {
+        latestImageMap.set(image.threadId, image.url)
       }
     }
 
@@ -203,6 +246,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
       createdAt: t.created_at,
       updatedAt: t.updated_at || undefined,
       lastActivityAt: t.last_activity_at || t.created_at,
+      latestImageUrl: latestImageMap.get(t.id),
       replyCount: Number(t.reply_count ?? 0),
       category: t.category || undefined,
       isPinned: t.is_pinned || false,

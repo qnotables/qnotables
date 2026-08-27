@@ -35,6 +35,7 @@ export interface SituationForumItem {
   authorName: string
   createdAt: string
   lastActivityAt?: string
+  latestImageUrl?: string
   replyCount: number
   category?: string
   isFeatured?: boolean
@@ -229,7 +230,7 @@ function stripMarkdown(md: string): string {
 }
 
 
-// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ───────────────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ─────────��─────────
 
 interface TiptapNode {
   type?: string
@@ -303,10 +304,14 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
   const threadHref = `/forum/${item.slug || item.id}`
   const activityAt = item.lastActivityAt || reply?.createdAt || item.createdAt
 
-  // Extract first embeddable media: prefer reply body, fall back to OP body
+  // Prefer the newest active image attached anywhere in the thread. Fall back
+  // to embedded media in the latest reply, then embedded media in the OP.
   const replyMedia = reply ? extractFirstForumMedia(reply.body) : null
   const opMedia = extractFirstForumMedia(item.body)
-  const media = replyMedia ?? opMedia
+  const latestAttachedImage = item.latestImageUrl
+    ? ({ kind: "image", src: item.latestImageUrl } as const)
+    : null
+  const media = latestAttachedImage ?? replyMedia ?? opMedia
 
   // Strip markdown for text preview — may be empty if body was media-only
   const previewText = reply ? stripMarkdown(reply.body).trim().slice(0, 160) : ""
@@ -894,7 +899,7 @@ export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: Sit
   )
 }
 
-// ─── Main cycle component ─────────────────────────────────────────────────────
+// ─── Main cycle component ─────────���───────────────────────────────────────────
 
 interface SituationReportCycleProps {
   forumItems: SituationForumItem[]

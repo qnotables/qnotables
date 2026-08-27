@@ -50,6 +50,7 @@ export default async function Page() {
     authorName: t.authorName,
     createdAt: t.createdAt,
     lastActivityAt: t.lastActivityAt,
+    latestImageUrl: t.latestImageUrl,
     replyCount: t.replyCount,
     category: t.category,
     isFeatured: t.isFeatured,
