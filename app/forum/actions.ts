@@ -35,11 +35,13 @@ const ALLOWED_TIPTAP_NODES = new Set([
 async function notifySlackAboutForumReply({
   authorName,
   body,
+  imageUrls,
   threadSlug,
   threadTitle,
 }: {
   authorName: string
   body: string
+  imageUrls: string[]
   threadSlug?: string
   threadTitle?: string
 }) {
@@ -59,7 +61,17 @@ async function notifySlackAboutForumReply({
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        blocks: [
+          { type: "section", text: { type: "mrkdwn", text } },
+          ...imageUrls.slice(0, 10).map((imageUrl) => ({
+            type: "image",
+            image_url: imageUrl,
+            alt_text: `Image shared by ${authorName}`,
+          })),
+        ],
+      }),
       signal: AbortSignal.timeout(5_000),
     })
     if (!response.ok) console.error("Slack forum-reply notification failed", response.status)
@@ -68,12 +80,12 @@ async function notifySlackAboutForumReply({
   }
 }
 
-function collectMediaUrls(document: unknown): string[] {
+function collectMediaUrls(document: unknown, types = ["image", "videoBlock"]): string[] {
   const urls = new Set<string>()
   const walk = (node: unknown) => {
     if (!node || typeof node !== "object") return
     const item = node as { type?: string; attrs?: Record<string, unknown>; content?: unknown[] }
-    if (["image", "videoBlock"].includes(item.type ?? "")) {
+    if (types.includes(item.type ?? "")) {
       const src = item.attrs?.src
       if (typeof src === "string" && src.startsWith("https://")) urls.add(src)
     }
@@ -515,6 +527,7 @@ export async function createReply(formData: FormData) {
   await notifySlackAboutForumReply({
     authorName: profile?.display_name || "Anonymous",
     body: richContent.plainText,
+    imageUrls: collectMediaUrls(richContent.contentJson, ["image"]),
     threadSlug: thread?.slug,
     threadTitle: thread?.title,
   })
