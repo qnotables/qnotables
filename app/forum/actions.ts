@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { after } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isAdminEmail } from "@/lib/admin"
 import { isApprovedIframeSrc } from "@/lib/media-utils"
+import { notifyTownHallActivity } from "@/lib/town-hall-notifications"
 import {
   parseTags,
   serializeTags,
@@ -198,6 +200,14 @@ export async function createThread(formData: FormData) {
     .single()
 
   if (error) return { error: error.message }
+
+  after(() => notifyTownHallActivity({
+    kind: "thread",
+    threadId: data.id,
+    threadSlug: data.slug,
+    threadTitle: title,
+    pending: isPending,
+  }))
 
   const mediaUrls = collectMediaUrls(richContent.contentJson)
   if (mediaUrls.length > 0) {
@@ -445,6 +455,19 @@ export async function createReply(formData: FormData) {
     .single()
 
   if (error) return { error: error.message }
+
+  const { data: thread } = await supabase
+    .from("forum_threads")
+    .select("id, slug, title")
+    .eq("id", threadId)
+    .maybeSingle()
+  after(() => notifyTownHallActivity({
+    kind: "reply",
+    threadId,
+    threadSlug: thread?.slug,
+    threadTitle: thread?.title,
+    pending: isPending,
+  }))
 
   const mediaUrls = collectMediaUrls(richContent.contentJson)
   if (mediaUrls.length > 0 && replyData?.id) {
