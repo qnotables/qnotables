@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
+import { NewsletterSignupDialog } from "@/components/newsletter-signup-dialog"
 
 export const metadata: Metadata = {
   title: "New to Q? | HOT AND FRESH",
@@ -465,12 +466,7 @@ export default function NewToQPage() {
       website and future projects currently in development.
     </p>
 
-    <a
-      href="#mailing-list"
-      className="inline-flex rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-    >
-      Subscribe for Updates
-    </a>
+    <NewsletterSignupDialog />
 
     <div className="space-y-3 border-y border-border py-6 text-center">
       <p className="stencil text-xl text-foreground">
