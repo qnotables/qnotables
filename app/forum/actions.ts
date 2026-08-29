@@ -32,6 +32,42 @@ const ALLOWED_TIPTAP_NODES = new Set([
   "blockquote", "codeBlock", "hardBreak", "horizontalRule", "image", "videoBlock", "embedBlock",
 ])
 
+async function notifySlackAboutForumReply({
+  authorName,
+  body,
+  threadSlug,
+  threadTitle,
+}: {
+  authorName: string
+  body: string
+  threadSlug?: string
+  threadTitle?: string
+}) {
+  const webhookUrl = process.env.SLACK_TOWN_HALL_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qnotables.ai"
+  const threadLink = threadSlug ? `\n${siteUrl}/forum/${threadSlug}` : ""
+  const text = [
+    "New forum reply",
+    threadTitle ? `Thread: ${threadTitle}` : null,
+    `Author: ${authorName}`,
+    body.slice(0, 1_500),
+  ].filter(Boolean).join("\n") + threadLink
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!response.ok) console.error("Slack forum-reply notification failed", response.status)
+  } catch (error) {
+    console.error("Slack forum-reply notification failed", error)
+  }
+}
+
 function collectMediaUrls(document: unknown): string[] {
   const urls = new Set<string>()
   const walk = (node: unknown) => {
@@ -423,7 +459,7 @@ export async function createReply(formData: FormData) {
   // Check new-user status
   const { data: profile } = await supabase
     .from("profiles")
-    .select("created_at, post_count")
+    .select("created_at, post_count, display_name")
     .eq("id", user.id)
     .maybeSingle()
 
@@ -469,6 +505,19 @@ export async function createReply(formData: FormData) {
       auto_flagged: true,
     })
   }
+
+  const { data: thread } = await admin
+    .from("forum_threads")
+    .select("title, slug")
+    .eq("id", threadId)
+    .maybeSingle()
+
+  await notifySlackAboutForumReply({
+    authorName: profile?.display_name || "Anonymous",
+    body: richContent.plainText,
+    threadSlug: thread?.slug,
+    threadTitle: thread?.title,
+  })
 
   if (!isPending) {
     const { count } = await admin
