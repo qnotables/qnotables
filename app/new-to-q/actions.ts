@@ -1,16 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-
-export type NewsletterState = {
-  status: "idle" | "success" | "error"
-  message: string
-}
-
-export const initialNewsletterState: NewsletterState = {
-  status: "idle",
-  message: "",
-}
+import type { NewsletterState } from "./newsletter-state"
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

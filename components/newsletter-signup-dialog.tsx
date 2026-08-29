@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react"
 import { MailIcon } from "lucide-react"
-import { subscribeToNewsletter, initialNewsletterState } from "@/app/new-to-q/actions"
+import { subscribeToNewsletter } from "@/app/new-to-q/actions"
+import { initialNewsletterState } from "@/app/new-to-q/newsletter-state"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
