@@ -10,7 +10,9 @@ export async function subscribeToNewsletter(
   formData: FormData,
 ): Promise<NewsletterState> {
   const emailValue = formData.get("email")
+  const sourceValue = formData.get("source")
   const email = typeof emailValue === "string" ? emailValue.trim().toLowerCase() : ""
+  const source = sourceValue === "homepage-daily-briefing" ? sourceValue : "new-to-q"
 
   if (!EMAIL_PATTERN.test(email) || email.length > 254) {
     return {
@@ -22,7 +24,7 @@ export async function subscribeToNewsletter(
   const supabase = await createClient()
   const { error } = await supabase.rpc("subscribe_to_newsletter", {
     subscriber_email: email,
-    subscriber_source: "new-to-q",
+    subscriber_source: source,
   })
 
   if (error) {
