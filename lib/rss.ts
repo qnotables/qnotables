@@ -403,6 +403,12 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://www.christianpost.com/category/world/rss",
     enabled: true,
   },
+  {
+    id: "Fox Business",
+    name: "Fox Business",
+    url: "https://moxie.foxbusiness.com/google-publisher/latest.xml",
+    enabled: true,
+  },
 ]
 
 type ParsedItem = {
