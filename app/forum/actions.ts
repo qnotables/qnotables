@@ -35,11 +35,13 @@ const ALLOWED_TIPTAP_NODES = new Set([
 async function notifySlackAboutForumReply({
   authorName,
   body,
+  imageUrls,
   threadSlug,
   threadTitle,
 }: {
   authorName: string
   body: string
+  imageUrls: string[]
   threadSlug?: string
   threadTitle?: string
 }) {
@@ -59,7 +61,17 @@ async function notifySlackAboutForumReply({
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        blocks: [
+          { type: "section", text: { type: "mrkdwn", text } },
+          ...imageUrls.slice(0, 10).map((imageUrl) => ({
+            type: "image",
+            image_url: imageUrl,
+            alt_text: `Image shared by ${authorName}`,
+          })),
+        ],
+      }),
       signal: AbortSignal.timeout(5_000),
     })
     if (!response.ok) console.error("Slack forum-reply notification failed", response.status)
@@ -68,12 +80,60 @@ async function notifySlackAboutForumReply({
   }
 }
 
-function collectMediaUrls(document: unknown): string[] {
+async function notifySlackAboutForumThread({
+  authorName,
+  title,
+  body,
+  imageUrls,
+  threadSlug,
+}: {
+  authorName: string
+  title: string
+  body: string
+  imageUrls: string[]
+  threadSlug: string
+}) {
+  const webhookUrl = process.env.SLACK_TOWN_HALL_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qnotables.ai"
+  const text = [
+    "New forum post",
+    `Title: ${title}`,
+    `Author: ${authorName}`,
+    body.slice(0, 1_500),
+    `${siteUrl}/forum/${threadSlug}`,
+  ].join("\n")
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text,
+        blocks: [
+          { type: "section", text: { type: "mrkdwn", text } },
+          ...imageUrls.slice(0, 10).map((imageUrl) => ({
+            type: "image",
+            image_url: imageUrl,
+            alt_text: `Image shared by ${authorName}`,
+          })),
+        ],
+      }),
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!response.ok) console.error("Slack forum-post notification failed", response.status)
+  } catch (error) {
+    console.error("Slack forum-post notification failed", error)
+  }
+}
+
+function collectMediaUrls(document: unknown, types = ["image", "videoBlock"]): string[] {
   const urls = new Set<string>()
   const walk = (node: unknown) => {
     if (!node || typeof node !== "object") return
     const item = node as { type?: string; attrs?: Record<string, unknown>; content?: unknown[] }
-    if (["image", "videoBlock"].includes(item.type ?? "")) {
+    if (types.includes(item.type ?? "")) {
       const src = item.attrs?.src
       if (typeof src === "string" && src.startsWith("https://")) urls.add(src)
     }
@@ -199,7 +259,7 @@ export async function createThread(formData: FormData) {
   // Check if user is new — for moderation queue
   const { data: profile } = await supabase
     .from("profiles")
-    .select("created_at, post_count")
+    .select("created_at, post_count, display_name")
     .eq("id", user.id)
     .maybeSingle()
 
@@ -244,6 +304,16 @@ export async function createThread(formData: FormData) {
       .eq("status", "orphaned")
       .in("url", mediaUrls)
     if (attachmentError) return { error: "Thread was saved, but its uploaded media could not be attached." }
+  }
+
+  if (status === "published") {
+    await notifySlackAboutForumThread({
+      authorName: profile?.display_name || "Anonymous",
+      title,
+      body: richContent.plainText,
+      imageUrls: collectMediaUrls(richContent.contentJson, ["image"]),
+      threadSlug: data.slug || data.id,
+    })
   }
 
   // Auto-flag if body looks spammy (even if not hard-rejected)
@@ -515,6 +585,7 @@ export async function createReply(formData: FormData) {
   await notifySlackAboutForumReply({
     authorName: profile?.display_name || "Anonymous",
     body: richContent.plainText,
+    imageUrls: collectMediaUrls(richContent.contentJson, ["image"]),
     threadSlug: thread?.slug,
     threadTitle: thread?.title,
   })
