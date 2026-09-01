@@ -32,7 +32,7 @@ export function FlashStory({
   const linkProps = href !== "#" && href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {}
   
   return (
-    <div className="border border-border bg-card overflow-hidden hover:border-primary/60 transition-colors">
+    <article className="flex h-full min-w-0 flex-col border border-border bg-card transition-colors hover:border-primary/60">
       {/* Image section */}
       {image && (
         <div className="relative aspect-video w-full overflow-hidden bg-background border-b border-border">
@@ -58,9 +58,9 @@ export function FlashStory({
       )}
 
       {/* Content section */}
-      <div className="p-4 md:p-6">
+      <div className="flex flex-1 flex-col p-4 md:p-6">
         {/* Metadata */}
-        <div className="label-mono flex items-center gap-3 text-xs text-muted-foreground mb-3">
+        <div className="label-mono mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>{new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           {readMinutes && (
             <>
@@ -87,12 +87,12 @@ export function FlashStory({
         </Link>
 
         {/* Excerpt */}
-        <p className="text-sm md:text-base text-muted-foreground line-clamp-2 mb-4">
+        <p className="mb-4 line-clamp-4 flex-1 text-sm text-muted-foreground md:text-base">
           {excerpt}
         </p>
 
         {/* Read button + share */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href={href}
             {...linkProps}
@@ -100,9 +100,15 @@ export function FlashStory({
           >
             READ MORE → 
           </Link>
-          <ShareButtons title={title} url={href !== "#" ? href : undefined} excerpt={excerpt} source={source} />
+          <ShareButtons
+            title={title}
+            url={href !== "#" ? href : undefined}
+            excerpt={excerpt}
+            source={source}
+            className="shrink-0"
+          />
         </div>
       </div>
-    </div>
+    </article>
   )
 }

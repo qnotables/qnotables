@@ -230,7 +230,7 @@ function stripMarkdown(md: string): string {
 }
 
 
-// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ─────────��─────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ──────────────────
 
 interface TiptapNode {
   type?: string
@@ -258,7 +258,7 @@ function Thumbnail({ src, alt, label, badge }: ThumbnailProps) {
           src={src}
           alt={alt}
           fill
-          className="object-cover object-top opacity-90 transition-opacity duration-300"
+          className="object-cover object-center opacity-90 transition-opacity duration-300"
           sizes="(max-width: 768px) 100vw, 640px"
         />
       ) : (
