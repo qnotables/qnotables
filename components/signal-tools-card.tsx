@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, NotebookPen } from "lucide-react"
+import { getAdminUser } from "@/lib/admin"
 
 const SIGNAL_TOOLS = [
   {
@@ -7,6 +8,7 @@ const SIGNAL_TOOLS = [
     description: "View the desk",
     icon: LayoutDashboard,
     href: "/dashboard",
+    adminOnly: true,
   },
   {
     label: "Archives",
@@ -79,7 +81,10 @@ const SIGNAL_TOOLS_SECONDARY = [
   },
 ]
 
-export function SignalToolsCard() {
+export async function SignalToolsCard() {
+  const isAdmin = Boolean(await getAdminUser())
+  const visibleSignalTools = SIGNAL_TOOLS.filter((tool) => !("adminOnly" in tool && tool.adminOnly) || isAdmin)
+
   return (
     <div className="border border-border bg-background p-4 md:p-5 overflow-hidden">
       <div className="mb-4">
@@ -87,7 +92,7 @@ export function SignalToolsCard() {
       </div>
 
       <div className="flex justify-center gap-3 mb-4">
-        {SIGNAL_TOOLS.map((tool) => {
+        {visibleSignalTools.map((tool) => {
           const Icon = tool.icon
           const isExternal = tool.href.startsWith("http") || tool.href.startsWith("mailto:")
           return (
