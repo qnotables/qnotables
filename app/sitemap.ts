@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { getAllPosts } from "@/lib/blog-posts"
+import { getAllArchives } from "@/lib/archive"
 import { getCategories, getTags, getAvailableMonths } from "@/lib/archives"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { absoluteUrl } from "@/lib/seo"
@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   const [posts, categories, tags, months, threads] = await Promise.all([
-    getAllPosts().catch(() => []),
+    getAllArchives().catch(() => []),
     getCategories().catch(() => []),
     getTags().catch(() => []),
     getAvailableMonths().catch(() => []),
@@ -58,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const post of posts) {
     entries.push({
       url: absoluteUrl(`/archives/${encodeURIComponent(post.slug)}`),
-      lastModified: new Date(post.updatedAt || post.publishedAt || post.date),
+      lastModified: new Date(post.updated_at || post.published_at || post.created_at),
       changeFrequency: "weekly",
       priority: 0.7,
     })

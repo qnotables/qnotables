@@ -7,10 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
-import { TiptapRenderer } from "@/components/tiptap-renderer"
-import { ReplyVotes } from "@/components/reply-votes"
-import { ReplyModControls } from "@/components/reply-mod-controls"
-import { ReplyEditForm } from "@/components/reply-edit-form"
+import { ForumReplyThread } from "@/components/forum-reply-thread"
 import { ReportButton } from "@/components/report-button"
 import { ThreadViewCounter } from "@/components/thread-view-counter"
 import { createClient } from "@/lib/supabase/server"
@@ -195,9 +192,16 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     console.error("[forum/[slug]] votes fetch error:", err)
   }
 
-  const topLevelReplies = replies.filter((r) => !r.parent_reply_id)
-  const nestedReplies = (parent: Reply) =>
-    replies.filter((r) => r.parent_reply_id === parent.id)
+  const replyVotes = Object.fromEntries(
+    replies.map((reply) => [
+      reply.id,
+      {
+        up: voteMap.get(reply.id)?.filter((vote) => vote === "up").length ?? 0,
+        down: voteMap.get(reply.id)?.filter((vote) => vote === "down").length ?? 0,
+        userVote: userVoteMap.get(reply.id) as "up" | "down" | undefined,
+      },
+    ]),
+  )
 
   const categoryName = normalizeCategoryName(t.category)
 
@@ -347,115 +351,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         </div>
 
         {/* Reply list */}
-        <div className="flex flex-col gap-3">
-          {topLevelReplies.map((r) => (
-            <div key={r.id}>
-              <div className={`border p-5 ${r.is_hidden ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card"}`}>
-                <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground">
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/u/${r.author_id}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      {r.profiles?.display_name ?? "operator"}
-                    </Link>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" /> {timeAgo(r.created_at)}
-                    </span>
-                    {r.updated_at && r.updated_at !== r.created_at && (
-                      <span className="text-[10px] italic text-muted-foreground/70">(edited)</span>
-                    )}
-                    {r.is_hidden && (
-                      <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
-                        HIDDEN
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isAdmin && <ReplyModControls replyId={r.id} isHidden={r.is_hidden} />}
-                    {user && user.id !== r.author_id && (
-                      <ReportButton contentType="forum_reply" contentId={r.id} isSignedIn={Boolean(user)} />
-                    )}
-                    <ReplyVotes
-                      replyId={r.id}
-                      initialUpVotes={voteMap.get(r.id)?.filter((v) => v === "up").length ?? 0}
-                      initialDownVotes={voteMap.get(r.id)?.filter((v) => v === "down").length ?? 0}
-                      userVote={userVoteMap.get(r.id) as "up" | "down" | undefined}
-                    />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <TiptapRenderer content={r.body} />
-                </div>
-                {user?.id === r.author_id && !t.is_locked && (
-                  <div className="mt-2 border-t border-border/50 pt-2">
-                    <ReplyEditForm replyId={r.id} initialBody={r.body} contentVersion={r.content_version} locked={Boolean(t.is_locked)} />
-                  </div>
-                )}
-              </div>
-
-              {/* Nested replies */}
-              {nestedReplies(r).length > 0 && (
-                <div className="ml-4 flex flex-col gap-3 border-l-2 border-border py-3">
-                  {nestedReplies(r).map((nested) => (
-                    <div key={nested.id} className={`border p-4 ${nested.is_hidden ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted/20"}`}>
-                      <div className="label-mono mb-2 flex items-center justify-between gap-3 text-muted-foreground text-sm">
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={`/u/${nested.author_id}`}
-                            className="text-primary underline-offset-4 hover:underline"
-                          >
-                            {nested.profiles?.display_name ?? "operator"}
-                          </Link>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> {timeAgo(nested.created_at)}
-                          </span>
-                          {nested.updated_at && nested.updated_at !== nested.created_at && (
-                            <span className="text-[10px] italic text-muted-foreground/70">(edited)</span>
-                          )}
-                          {nested.is_hidden && (
-                            <span className="label-mono flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
-                              HIDDEN
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isAdmin && <ReplyModControls replyId={nested.id} isHidden={nested.is_hidden} />}
-                          {user && user.id !== nested.author_id && (
-                            <ReportButton contentType="forum_reply" contentId={nested.id} isSignedIn={Boolean(user)} compact />
-                          )}
-                          <ReplyVotes
-                            replyId={nested.id}
-                            initialUpVotes={
-                              voteMap.get(nested.id)?.filter((v) => v === "up").length ?? 0
-                            }
-                            initialDownVotes={
-                              voteMap.get(nested.id)?.filter((v) => v === "down").length ?? 0
-                            }
-                            userVote={userVoteMap.get(nested.id) as "up" | "down" | undefined}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-2 text-sm">
-                        <TiptapRenderer content={nested.body} />
-                      </div>
-                      {user?.id === nested.author_id && !t.is_locked && (
-                        <div className="mt-2 border-t border-border/50 pt-2">
-                          <ReplyEditForm
-replyId={nested.id}
-  initialBody={nested.body}
-  contentVersion={nested.content_version}
-  locked={Boolean(t.is_locked)}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <ForumReplyThread
+          replies={replies}
+          threadId={t.id}
+          isLocked={Boolean(t.is_locked)}
+          currentUserId={user?.id}
+          isAdmin={isAdmin}
+          votes={replyVotes}
+        />
 
         {/* Reply box */}
         <div className="mt-8 border-t border-border pt-8">

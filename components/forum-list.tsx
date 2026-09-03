@@ -23,14 +23,12 @@ import {
   FORUM_DESKS,
   SORT_OPTIONS,
   type SortOption,
-  type VideoEmbed,
   buildExcerpt,
   detectMediaBadges,
-  extractFirstImage,
-  extractFirstVideo,
   normalizeCategoryName,
   normalizeCategorySlug,
 } from "@/lib/forum-utils"
+import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
 
 export interface ThreadListItem {
   id: string
@@ -70,8 +68,13 @@ function CategoryBadge({ category }: { category: string | null }) {
   )
 }
 
-function MediaBadgeRow({ body }: { body: string }) {
-  const badges = detectMediaBadges(body)
+function MediaBadgeRow({ body, media }: { body: string; media: PostMedia | null }) {
+  const detected = detectMediaBadges(body)
+  const badges = {
+    ...detected,
+    hasImages: detected.hasImages || media?.kind === "image",
+    hasVideo: detected.hasVideo || media?.kind === "video" || media?.kind === "embed",
+  }
   if (!badges.hasImages && !badges.hasLinks && !badges.hasSocialLinks && !badges.hasVideo) return null
   return (
     <div className="flex items-center gap-1.5">
@@ -103,84 +106,75 @@ function MediaBadgeRow({ body }: { body: string }) {
   )
 }
 
-function getEmbedSrc(video: VideoEmbed): string | null {
-  switch (video.type) {
-    case "youtube":
-      return `https://www.youtube.com/embed/${video.videoId}?autoplay=1&rel=0`
-    case "rumble":
-      // Rumble share slugs start with "v"; embed endpoint differs from share URL
-      return `https://rumble.com/embed/${video.embedId}/?pub=4`
-    case "odysee":
-      return `https://odysee.com/$/embed/${video.path}`
-    case "direct":
-      return null // rendered as <video> element, not iframe
-  }
-}
-
-function VideoPreview({ video }: { video: VideoEmbed }) {
+function StructuredMediaPreview({ media }: { media: PostMedia }) {
   const [active, setActive] = useState(false)
+  const [failed, setFailed] = useState(false)
 
-  if (!active) {
+  if (media.kind === "image") {
+    if (failed) {
+      return (
+        <a
+          href={media.src}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          onClick={(event) => event.stopPropagation()}
+          className="label-mono flex min-h-28 w-28 flex-shrink-0 items-center justify-center border-r border-border bg-muted/30 px-3 text-center text-[10px] text-primary hover:underline sm:w-44 md:w-52"
+        >
+          Open image
+        </a>
+      )
+    }
     return (
-      <button
-        onClick={(e) => { e.preventDefault(); setActive(true) }}
-        className="group/play relative mt-3 flex w-full items-center justify-center overflow-hidden border border-border bg-black/60 transition-colors hover:border-primary"
-        style={{ aspectRatio: "16/9" }}
-        aria-label="Play video"
-      >
-        {/* Subtle grid overlay */}
-        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px),repeating-linear-gradient(90deg,transparent,transparent_23px,rgba(255,255,255,0.03)_24px)]" />
-        {/* Label */}
-        <span className="label-mono absolute left-3 top-2 text-[10px] text-muted-foreground opacity-70">
-          {video.type === "youtube"
-            ? "YOUTUBE"
-            : video.type === "rumble"
-            ? "RUMBLE"
-            : video.type === "odysee"
-            ? "ODYSEE"
-            : "VIDEO"}
-        </span>
-        {/* Play button */}
-        <span className="relative z-10 flex h-14 w-14 items-center justify-center border border-primary/60 bg-primary/20 transition-all group-hover/play:border-primary group-hover/play:bg-primary/40">
-          <Play className="h-6 w-6 fill-primary text-primary" />
-        </span>
-        <span className="label-mono absolute bottom-2 right-3 text-[10px] text-muted-foreground opacity-70">
-          CLICK TO PLAY
-        </span>
-      </button>
-    )
-  }
-
-  if (video.type === "direct") {
-    return (
-      <div className="mt-3 w-full overflow-hidden border border-primary/40" style={{ aspectRatio: "16/9" }}>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video
-          src={video.url}
-          controls
-          autoPlay
-          className="h-full w-full bg-black"
-          onClick={(e) => e.preventDefault()}
+      <div className="w-28 flex-shrink-0 overflow-hidden sm:w-44 md:w-52">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={media.src}
+          alt={media.alt ?? "Thread preview"}
+          className="h-full min-h-28 w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
+          loading="lazy"
+          onError={() => setFailed(true)}
         />
       </div>
     )
   }
 
-  const src = getEmbedSrc(video)
-  if (!src) return null
+  if (media.kind === "video") {
+    return (
+      <div className="mt-3 w-full overflow-hidden border border-primary/40 aspect-video" onClick={(event) => event.preventDefault()}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video src={media.src} poster={media.poster} controls preload="metadata" className="h-full w-full bg-background" />
+      </div>
+    )
+  }
+
+  if (!active) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => { event.preventDefault(); setActive(true) }}
+        className="group/play relative mt-3 flex aspect-video w-full items-center justify-center overflow-hidden border border-border bg-muted/40 transition-colors hover:border-primary"
+        aria-label={`Play ${media.title ?? "embedded video"}`}
+      >
+        {media.poster && !failed && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={media.poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" onError={() => setFailed(true)} />
+        )}
+        <span className="relative z-10 flex h-14 w-14 items-center justify-center border border-primary/60 bg-background/80">
+          <Play className="h-6 w-6 fill-primary text-primary" />
+        </span>
+        <span className="label-mono absolute bottom-2 right-3 z-10 text-[10px] text-foreground">CLICK TO PLAY</span>
+      </button>
+    )
+  }
 
   return (
-    <div
-      className="mt-3 w-full overflow-hidden border border-primary/40"
-      style={{ aspectRatio: "16/9" }}
-      onClick={(e) => e.preventDefault()}
-    >
+    <div className="mt-3 aspect-video w-full overflow-hidden border border-primary/40" onClick={(event) => event.preventDefault()}>
       <iframe
-        src={src}
+        src={media.src}
         className="h-full w-full"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        title="Embedded video"
+        title={media.title ?? "Embedded video"}
         loading="lazy"
       />
     </div>
@@ -195,8 +189,7 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
   // stripped after the fact. `body` is never truncated, so strip-then-
   // truncate here always produces clean text.
   const excerpt = buildExcerpt(t.body, 160)
-  const thumb = extractFirstImage(t.body)
-  const video = extractFirstVideo(t.body)
+  const media = resolveFirstPostMedia(t.body)
   const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
   const categoryName = normalizeCategoryName(t.category)
   const href = `/forum/${t.slug || t.id}`
@@ -209,17 +202,7 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
       }`}
     >
       {/* Thumbnail strip */}
-      {thumb && (
-        <div className="w-28 flex-shrink-0 overflow-hidden sm:w-44 md:w-52">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={thumb}
-            alt=""
-            className="h-full min-h-[7rem] w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
-            loading="lazy"
-          />
-        </div>
-      )}
+      {media?.kind === "image" && <StructuredMediaPreview media={media} />}
 
       {/* Reply count column */}
       <div className="flex w-14 flex-shrink-0 flex-col items-center justify-center gap-0.5 border-r border-border bg-muted/30 px-2 py-4 text-center">
@@ -254,7 +237,7 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
             </span>
           )}
           <CategoryBadge category={categoryName} />
-          <MediaBadgeRow body={t.body} />
+          <MediaBadgeRow body={t.body} media={media} />
         </div>
 
         {/* Title */}
@@ -271,8 +254,8 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
           </p>
         )}
 
-        {/* Video preview */}
-        {video && <VideoPreview video={video} />}
+        {/* Video and embed preview */}
+        {media && media.kind !== "image" && <StructuredMediaPreview media={media} />}
 
         {/* Tags */}
         {tags.length > 0 && (

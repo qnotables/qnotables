@@ -433,8 +433,37 @@ export async function createReply(formData: FormData) {
     return { error: `Posting too fast. Please wait ${secs}s before replying again.` }
   }
 
-  // Load per-site limits
+  // Load the target thread and validate any parent before accepting content.
   const admin = createAdminClient()
+  const { data: thread } = await admin
+    .from("forum_threads")
+    .select("id, title, slug, is_locked, is_soft_deleted, status")
+    .eq("id", threadId)
+    .maybeSingle()
+
+  if (!thread || thread.is_soft_deleted || thread.status !== "published") {
+    return { error: "This thread is not available for replies." }
+  }
+  if (thread.is_locked) return { error: "This thread is locked." }
+
+  if (parentReplyId) {
+    const { data: parentReply } = await admin
+      .from("forum_replies")
+      .select("id, thread_id, is_hidden, is_pending")
+      .eq("id", parentReplyId)
+      .maybeSingle()
+
+    if (
+      !parentReply ||
+      parentReply.thread_id !== threadId ||
+      parentReply.is_hidden ||
+      parentReply.is_pending
+    ) {
+      return { error: "The comment you are replying to is no longer available." }
+    }
+  }
+
+  // Load per-site limits
   const { data: settings } = await admin
     .from("site_settings")
     .select("forum_max_links, forum_max_embeds, forum_moderation_mode")
@@ -506,12 +535,6 @@ export async function createReply(formData: FormData) {
     })
   }
 
-  const { data: thread } = await admin
-    .from("forum_threads")
-    .select("title, slug")
-    .eq("id", threadId)
-    .maybeSingle()
-
   await notifySlackAboutForumReply({
     authorName: profile?.display_name || "Anonymous",
     body: richContent.plainText,
@@ -537,7 +560,8 @@ export async function createReply(formData: FormData) {
       .eq("id", threadId)
   }
 
-  revalidatePath(`/forum/${threadId}`)
+  revalidatePath(`/forum/${thread.slug || threadId}`)
+  if (thread.slug) revalidatePath(`/forum/${threadId}`)
   if (isPending) {
     return { error: null, pending: true, message: "Your reply is pending review by a moderator." }
   }
