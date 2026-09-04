@@ -523,7 +523,20 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
     const xml = await res.text()
     const parsed = await parser.parseString(xml)
 
-    return (parsed.items ?? []).slice(0, 40).map((raw, i) => {
+    // Drop stories older than 3 days so the wire only surfaces fresh reports.
+    // Items without a parseable date are kept, since we cannot prove they are stale.
+    const MAX_STORY_AGE_MS = 3 * 24 * 60 * 60 * 1000
+    const now = Date.now()
+    const recentItems = (parsed.items ?? []).filter((raw) => {
+      const item = raw as Parser.Item & ParsedItem
+      const published = item.isoDate || item.pubDate
+      if (!published) return true
+      const ms = new Date(published).getTime()
+      if (isNaN(ms)) return true
+      return now - ms <= MAX_STORY_AGE_MS
+    })
+
+    return recentItems.slice(0, 40).map((raw, i) => {
       const item = raw as Parser.Item & ParsedItem
       const headline = (item.title ?? "").trim()
       const summary = stripHtml(item.contentSnippet || item.content || "").slice(0, 220)
