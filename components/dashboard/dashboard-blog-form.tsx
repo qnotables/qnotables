@@ -67,6 +67,14 @@ interface PostFormData {
   seo_description: string
   cover_image: string
   og_image_url: string
+  published_at: string
+}
+
+function toDateTimeLocal(value?: string | null) {
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) return ""
+  const pad = (part: number) => String(part).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 function ImageField({
@@ -166,7 +174,11 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
       const saved = localStorage.getItem(DRAFT_KEY)
       if (saved) {
         try {
-          return JSON.parse(saved)
+          const savedData = JSON.parse(saved) as Partial<PostFormData>
+          return {
+            ...savedData,
+            published_at: savedData.published_at ?? toDateTimeLocal(),
+          } as PostFormData
         } catch {
           // Fall through to default
         }
@@ -194,6 +206,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
       seo_description: post?.seoDescription ?? "",
       cover_image: post?.coverImage ?? "",
       og_image_url: post?.seoImageUrl ?? "",
+      published_at: toDateTimeLocal(post?.publishedAt),
     }
   })
 
@@ -328,6 +341,7 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
     fd.append("cover_image", formData.cover_image)
     // Store only an explicit override; automatic media is resolved at render time.
     fd.append("og_image_url", formData.og_image_url)
+    fd.append("published_at", formData.published_at)
 
     // Call the server action
     await formAction(fd)
@@ -690,8 +704,20 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                 />
               </div>
 
-              <div>
-                <label className="label-mono block text-sm font-semibold text-foreground">Status</label>
+            <div className="sm:col-span-2">
+              <label htmlFor="published-at" className="label-mono block text-sm font-semibold text-foreground">Published Date and Time</label>
+              <input
+                id="published-at"
+                type="datetime-local"
+                value={formData.published_at}
+                onChange={(e) => handleFieldChange("published_at", e.target.value)}
+                className="label-mono mt-2 w-full border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-primary"
+              />
+              <p className="label-mono mt-1 text-xs text-muted-foreground">Set a historical date for imported or backdated posts. Used when the post is published.</p>
+            </div>
+
+            <div>
+              <label className="label-mono block text-sm font-semibold text-foreground">Status</label>
                 <select
                   value={formData.status}
                   onChange={(e) => handleFieldChange("status", e.target.value)}
@@ -735,7 +761,8 @@ export function DashboardBlogForm({ post }: { post?: BlogPost }) {
                   seo_title: "",
                   seo_description: "",
                   cover_image: "",
-                  og_image_url: post?.seoImageUrl ?? "",
+                  og_image_url: "",
+                  published_at: toDateTimeLocal(),
                 })
               }
             }}
