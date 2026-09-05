@@ -11,11 +11,9 @@ import {
   Users,
   Rss,
   Megaphone,
-  ShoppingCart,
   ImageIcon,
   Plus,
   Upload,
-  PlusCircle,
   Music,
 } from "lucide-react"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
@@ -35,7 +33,6 @@ const QUICK_ACTIONS = [
   { label: "New Forum Thread", href: "/dashboard/forum", icon: MessageSquare },
   { label: "Upload Media", href: "/dashboard/media", icon: ImageIcon },
   { label: "Create Ad", href: "/dashboard/ads", icon: Megaphone },
-  { label: "Add Product", href: "/dashboard/shop", icon: PlusCircle },
   { label: "Upload Audio", href: "/dashboard/audio", icon: Music },
 ]
 
@@ -70,7 +67,6 @@ export default async function DashboardPage() {
         <StatCard label="Flagged Items" value={stats.flaggedItems} icon={ShieldAlert} href="/dashboard/moderation" />
         <StatCard label="Users" value={stats.registeredUsers} icon={Users} href="/dashboard/users" />
         <StatCard label="Active Ads" value={stats.activeAds} icon={Megaphone} href="/dashboard/ads" />
-        <StatCard label="Shop Products" value={stats.shopProducts} icon={ShoppingCart} href="/dashboard/shop" />
         <StatCard label="Media Assets" value={stats.mediaAssets} icon={ImageIcon} href="/dashboard/media" />
         <StatCard label="Audio Tracks" value="Manage" icon={Music} href="/dashboard/audio" />
         <StatCard label="RSS Feed" value="Live" icon={Rss} href="/dashboard/rss" />

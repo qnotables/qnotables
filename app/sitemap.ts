@@ -21,8 +21,6 @@ const staticRoutes: Array<[string, SitemapEntry["changeFrequency"], number]> = [
   ["/new-to-q", "monthly", 0.5],
   ["/team", "monthly", 0.4],
   ["/donate", "monthly", 0.3],
-  ["/shop", "daily", 0.6],
-  ["/shop/products", "daily", 0.6],
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
