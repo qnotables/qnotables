@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader, StatCard } from "@/components/dashboard/ui"
 import { RssDiagnostics } from "@/components/dashboard/rss-diagnostics"
+import { RssImportButton } from "@/components/rss-import-button"
 import {
   getFeedItems,
   validateRssItems,
@@ -185,6 +186,7 @@ export default async function RssPage() {
                   <th className="px-4 py-3 font-semibold">Published</th>
                   <th className="px-4 py-3 font-semibold">Image</th>
                   <th className="px-4 py-3 font-semibold">Flags</th>
+                  <th className="px-4 py-3 font-semibold">Town Hall</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,6 +215,20 @@ export default async function RssPage() {
                           <CheckCircle2 className="h-3 w-3" /> ok
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <RssImportButton
+                        title={item.title}
+                        content={item.contentSnippet || item.description}
+                        sourceUrl={item.sourceUrl || item.link}
+                        sourceName={item.sourceName}
+                        author={item.author}
+                        publishedAt={item.pubDateIso}
+                        imageUrl={item.imageUrl}
+                        category={item.category}
+                        tags={item.tags}
+                        isAdmin={true}
+                      />
                     </td>
                   </tr>
                 ))}
