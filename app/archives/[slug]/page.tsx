@@ -14,6 +14,7 @@ import { getSiteUrl } from "@/lib/rss-utils"
 import { resolveFirstPostMedia, resolveSocialImage } from "@/lib/post-media"
 import { PostFeaturedMedia } from "@/components/post-featured-media"
 import { getArchiveVotes, incrementArchiveViews } from "@/app/actions/archive-vote-actions"
+import { getPostViewCount } from "@/app/actions/blog-view-actions"
 import { ArchiveVotes } from "@/components/archive-votes"
 import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
@@ -123,6 +124,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
   const voteData = post
     ? await getArchiveVotes(post.id).catch(() => ({ upVotes: 0, downVotes: 0, userVote: null }))
     : { upVotes: 0, downVotes: 0, userVote: null }
+  const initialViewCount = post ? await getPostViewCount(post.id) : 0
 
   if (post?.id) {
     // Fire-and-forget — does not block page render
@@ -246,7 +248,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                   initialUpVotes={voteData.upVotes}
                   initialDownVotes={voteData.downVotes}
                   userVote={voteData.userVote}
-                  viewCount={(post as any).view_count ?? 0}
+                  viewCount={initialViewCount}
                 />
               )}
             </div>

@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export async function incrementArchiveViews(postId: string): Promise<void> {
   try {
     const admin = createAdminClient()
-    await admin.rpc("increment_archive_view", { post_id: postId })
+    await admin.rpc("increment_post_view", { p_post_id: postId })
   } catch {
     // Silently ignore — view tracking is non-critical
   }
@@ -57,32 +57,36 @@ export async function voteOnArchivePost(
   voteType: "up" | "down",
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to vote." }
 
-  // Check for existing vote
-  const { data: existing } = await supabase
+  // Use the privileged server client only after authenticating the caller.
+  // This keeps vote mutations reliable even when public RLS policies are read-only.
+  const { data: existing, error: existingError } = await admin
     .from("archive_votes")
     .select("id, vote_type")
     .eq("post_id", postId)
-    .eq("user_id", user.id)
+      .eq("user_id", user.id)
     .maybeSingle()
+
+  if (existingError) return { error: "Unable to load your vote. Please try again." }
 
   let error: string | null = null
 
   if (existing) {
     if (existing.vote_type === voteType) {
       // Toggle off — remove the vote
-      const { error: delError } = await supabase
+      const { error: delError } = await admin
         .from("archive_votes")
         .delete()
         .eq("id", existing.id)
       error = delError?.message ?? null
     } else {
       // Change vote
-      const { error: updateError } = await supabase
+      const { error: updateError } = await admin
         .from("archive_votes")
         .update({ vote_type: voteType })
         .eq("id", existing.id)
@@ -90,7 +94,7 @@ export async function voteOnArchivePost(
     }
   } else {
     // New vote
-    const { error: insertError } = await supabase
+    const { error: insertError } = await admin
       .from("archive_votes")
       .insert({ post_id: postId, user_id: user.id, vote_type: voteType })
     error = insertError?.message ?? null

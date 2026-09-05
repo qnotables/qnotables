@@ -25,10 +25,16 @@ export function ArchiveVotes({
   const [downVotes, setDownVotes] = useState(initialDownVotes)
   const [currentVote, setCurrentVote] = useState<"up" | "down" | null>(userVote)
   const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   function handleVote(voteType: "up" | "down") {
+    setError(null)
     startTransition(async () => {
       const res = await voteOnArchivePost(postId, slug, voteType)
+      if (res?.error) {
+        setError(res.error)
+        return
+      }
       if (!res?.error) {
         if (currentVote === voteType) {
           // Retract vote
@@ -58,7 +64,9 @@ export function ArchiveVotes({
   const netVotes = upVotes - downVotes
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
+      {error && <span className="label-mono text-[10px] text-destructive">{error}</span>}
+
       {/* Views */}
       <div className="flex items-center gap-1.5 text-muted-foreground">
         <Eye className="h-4 w-4" />
