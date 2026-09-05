@@ -214,7 +214,7 @@ export default async function Page() {
         <div className="mt-6">
           <DeskNav />
         </div>
-        <WireFeed desks={desks} isAdmin={isLoggedIn} />
+        <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
       </main>
 
       <BottomAd />
