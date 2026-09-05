@@ -147,6 +147,8 @@ export default async function Page() {
                   source={story.source}
                   url={story.url}
                   type="feed"
+                  isLoggedIn={isLoggedIn}
+                  importContent={story.summary}
                 />
               ))}
             </div>
