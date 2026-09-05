@@ -273,6 +273,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
               datePublished: t.created_at,
               dateModified: t.updated_at ?? t.created_at,
               author: { "@type": "Person", name: t.profiles?.display_name ?? "operator" },
+              image: firstImageFromBody(t.body) ? [socialImageUrl(firstImageFromBody(t.body))] : undefined,
               articleSection: getDeskLabel(t.desk),
               commentCount: t.reply_count ?? replies.length,
               interactionStatistic: {
