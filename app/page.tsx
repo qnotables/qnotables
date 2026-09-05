@@ -30,6 +30,8 @@ export const metadata = pageMetadata({
   path: "/",
 })
 
+export const dynamic = "force-dynamic"
+
 export default async function Page() {
   const [
     { featured, topStories, feed, trending, live },
