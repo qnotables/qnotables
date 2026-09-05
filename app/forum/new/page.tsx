@@ -8,7 +8,44 @@ import { createClient } from "@/lib/supabase/server"
 
 export const metadata = { title: "New Thread — Hot and Fresh" }
 
-export default async function NewThreadPage() {
+type ImportedDraft = {
+  title?: string
+  content?: string
+  sourceUrl?: string
+  category?: string
+  tags?: string
+  desk?: string
+  author?: string
+  publishedAt?: string
+  imageUrl?: string
+  sourceName?: string
+}
+
+export default async function NewThreadPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const value = (key: string) => {
+    const value = params[key]
+    return Array.isArray(value) ? value[0] : value
+  }
+  const importedDraft: ImportedDraft | undefined = value("imported") === "1"
+    ? {
+        title: value("title"),
+        content: value("content"),
+        sourceUrl: value("source_url"),
+        category: value("category"),
+        tags: value("tags"),
+        desk: value("desk"),
+        author: value("author"),
+        publishedAt: value("published_at"),
+        imageUrl: value("image_url"),
+        sourceName: value("source_name"),
+      }
+    : undefined
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -33,7 +70,7 @@ export default async function NewThreadPage() {
         </div>
 
         <div className="corner-frame border border-border bg-card p-6 md:p-8">
-          <NewThreadForm />
+          <NewThreadForm initialDraft={importedDraft} />
         </div>
       </main>
 

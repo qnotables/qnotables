@@ -8,12 +8,51 @@ import { FORUM_CATEGORIES, FORUM_DESKS } from "@/lib/forum-utils"
 
 const TITLE_MAX = 140
 
-export function NewThreadForm() {
+export interface NewThreadDraft {
+  title?: string
+  content?: string
+  sourceUrl?: string
+  category?: string
+  tags?: string
+  desk?: string
+  author?: string
+  publishedAt?: string
+  imageUrl?: string
+  sourceName?: string
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] ?? character)
+}
+
+function draftBody(draft?: NewThreadDraft) {
+  if (!draft?.content) return ""
+  const content = escapeHtml(draft.content).replace(/\n/g, "<br>")
+  const image = draft.imageUrl && /^https?:\/\//i.test(draft.imageUrl)
+    ? `<img src="${escapeHtml(draft.imageUrl)}" alt="${escapeHtml(draft.title ?? "Imported story")}"><p></p>`
+    : ""
+  const source = draft.sourceUrl && /^https?:\/\//i.test(draft.sourceUrl)
+    ? `<p><strong>Source:</strong> <a href="${escapeHtml(draft.sourceUrl)}">${escapeHtml(draft.sourceName || draft.sourceUrl)}</a></p>`
+    : ""
+  const metadata = [
+    draft.author ? `<p><strong>Author:</strong> ${escapeHtml(draft.author)}</p>` : "",
+    draft.publishedAt ? `<p><strong>Published:</strong> ${escapeHtml(draft.publishedAt)}</p>` : "",
+  ].join("")
+  return `${image}<p>${content}</p>${metadata}${source}`
+}
+
+export function NewThreadForm({ initialDraft }: { initialDraft?: NewThreadDraft }) {
   const [error, setError] = useState<string | null>(null)
   const [pendingMsg, setPendingMsg] = useState<string | null>(null)
   const [draftMsg, setDraftMsg] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  const [title, setTitle] = useState("")
+  const [title, setTitle] = useState(initialDraft?.title ?? "")
   const [dirty, setDirty] = useState(false)
   const intentRef = useRef<"publish" | "draft">("publish")
 
@@ -89,7 +128,7 @@ export function NewThreadForm() {
             <select
               id="desk"
               name="desk"
-              defaultValue="other"
+              defaultValue={initialDraft?.desk || "other"}
               onChange={() => setDirty(true)}
               className="label-mono w-full appearance-none border border-border bg-background py-3 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
             >
@@ -111,7 +150,7 @@ export function NewThreadForm() {
             <select
               id="category"
               name="category"
-              defaultValue=""
+              defaultValue={initialDraft?.category || ""}
               onChange={() => setDirty(true)}
               className="label-mono w-full appearance-none border border-border bg-background py-3 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
             >
@@ -140,6 +179,7 @@ export function NewThreadForm() {
             id="tags"
             name="tags"
             maxLength={200}
+            defaultValue={initialDraft?.tags || ""}
             placeholder="e.g. trump, economy, Q"
             onChange={() => setDirty(true)}
             className="border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
@@ -156,6 +196,7 @@ export function NewThreadForm() {
             name="source_url"
             type="url"
             maxLength={2048}
+            defaultValue={initialDraft?.sourceUrl || ""}
             placeholder="https://example.com/article"
             onChange={() => setDirty(true)}
             className="border border-border bg-background px-4 py-3 text-foreground outline-none transition-colors focus:border-primary"
@@ -177,6 +218,7 @@ export function NewThreadForm() {
           required
           uploadFolder="forum"
           isSignedIn
+          defaultValue={draftBody(initialDraft)}
           onChange={() => setDirty(true)}
           placeholder="Build your opening post with headings, lists, quotes, links, images, video, and approved embeds."
         />
