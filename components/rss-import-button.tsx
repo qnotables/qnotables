@@ -54,7 +54,7 @@ export function RssImportButton({
       <button
         type="button"
         onClick={handleImport}
-        disabled={pending || imported}
+        disabled={pending}
         className="label-mono inline-flex items-center gap-1.5 border border-primary/50 px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
         title="Open this RSS item in a new Town Hall post"
       >
