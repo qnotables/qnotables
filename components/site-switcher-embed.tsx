@@ -1,5 +1,6 @@
 "use client"
 
+import { RefreshCw } from "lucide-react"
 import { useState } from "react"
 
 interface EmbedSite {
@@ -62,6 +63,7 @@ const SITES: EmbedSite[] = [
 
 export function SiteSwitcherEmbed() {
   const [activeId, setActiveId] = useState(SITES[0].id)
+  const [refreshKey, setRefreshKey] = useState(0)
   const active = SITES.find((s) => s.id === activeId) ?? SITES[0]
 
   return (
@@ -72,7 +74,7 @@ export function SiteSwitcherEmbed() {
         <div className="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none">
           {SITES.map((site) => (
             <button
-              key={site.id}
+            key={`${site.id}-${site.id === activeId ? refreshKey : 0}`}
               onClick={() => setActiveId(site.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 label-mono text-xs font-bold tracking-widest whitespace-nowrap border-r border-border transition-colors ${
                 activeId === site.id
@@ -93,15 +95,27 @@ export function SiteSwitcherEmbed() {
           ))}
         </div>
 
-        {/* Open in new tab link */}
-        <a
-          href={active.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="label-mono text-xs text-primary hover:underline whitespace-nowrap px-4 py-2.5 ml-auto"
-        >
-          OPEN IN NEW TAB →
-        </a>
+        {/* Embedded site controls */}
+        <div className="ml-auto flex items-center">
+          <button
+            type="button"
+            onClick={() => setRefreshKey((key) => key + 1)}
+            className="label-mono inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-xs text-primary transition-colors hover:bg-primary/10 hover:underline"
+            aria-label={`Refresh ${active.label}`}
+            title={`Refresh ${active.label}`}
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            REFRESH
+          </button>
+          <a
+            href={active.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label-mono whitespace-nowrap px-4 py-2.5 text-xs text-primary hover:underline"
+          >
+            OPEN IN NEW TAB →
+          </a>
+        </div>
       </div>
 
       {/* Iframes — all rendered at once to preserve navigation state, only active one is visible */}

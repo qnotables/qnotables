@@ -1,6 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { PRODUCTS } from "@/lib/products"
-
 export interface DashboardStats {
   totalPosts: number
   publishedPosts: number
@@ -11,7 +9,6 @@ export interface DashboardStats {
   flaggedItems: number
   registeredUsers: number
   activeAds: number
-  shopProducts: number
   mediaAssets: number
 }
 
@@ -80,7 +77,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     flaggedItems,
     registeredUsers,
     activeAds,
-    shopProducts: PRODUCTS.length,
     mediaAssets,
   }
 }

@@ -10,7 +10,6 @@ import {
   Rss,
   ImageIcon,
   Megaphone,
-  ShoppingCart,
   ShieldAlert,
   Settings,
   Video,
@@ -38,7 +37,6 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Media Library", href: "/dashboard/media", icon: ImageIcon },
   { label: "Videos", href: "/dashboard/videos", icon: Video },
   { label: "Ads", href: "/dashboard/ads", icon: Megaphone, adminOnly: true },
-  { label: "Shop", href: "/dashboard/shop", icon: ShoppingCart, adminOnly: true },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldAlert },
   { label: "Settings", href: "/dashboard/settings", icon: Settings, adminOnly: true },
 ]
