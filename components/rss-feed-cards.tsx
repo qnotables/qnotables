@@ -1,7 +1,7 @@
 import { type Story } from "@/lib/news-data"
 import { RSS_SOURCES } from "@/lib/rss"
 import { StoryCard } from "@/components/story-card"
-import { getAdminImportAccess } from "@/app/actions/rss-import-actions"
+import { getImportAccess } from "@/app/actions/rss-import-actions"
 
 // Map each RSS source to a Story-compatible shape for display
 const FEED_STORIES: Record<string, Partial<Story>> = {
@@ -58,8 +58,8 @@ const FEED_STORIES: Record<string, Partial<Story>> = {
 }
 
 export async function RssFeedCards() {
-  const [isAdmin, enabledSources] = await Promise.all([
-    getAdminImportAccess(),
+  const [isLoggedIn, enabledSources] = await Promise.all([
+    getImportAccess(),
     Promise.resolve(RSS_SOURCES.filter((source) => source.enabled)),
   ])
 
@@ -96,7 +96,7 @@ export async function RssFeedCards() {
         <StoryCard
           key={story.id}
           story={story}
-          isAdmin={isAdmin}
+          isLoggedIn={isLoggedIn}
           importContent={story.summary}
         />
       ))}

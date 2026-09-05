@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
-import { isAdminEmail } from "@/lib/admin"
 import { generateThreadSlug, normalizeDeskSlug } from "@/lib/forum-utils"
 import { isValidUrl } from "@/lib/rss-utils"
 
@@ -24,8 +23,8 @@ export async function importRssToTownHall(formData: FormData): Promise<RssImport
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || !isAdminEmail(user.email)) {
-    return { success: false, error: "Admin access is required." }
+  if (!user) {
+    return { success: false, error: "You must be signed in to import stories." }
   }
 
   const title = clean(formData.get("title"), 300)
@@ -124,11 +123,11 @@ export async function importRssToTownHall(formData: FormData): Promise<RssImport
   return { success: true, threadId: data.id, slug: data.slug }
 }
 
-export async function getAdminImportAccess(): Promise<boolean> {
+export async function getImportAccess(): Promise<boolean> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  return Boolean(user && isAdminEmail(user.email))
+  return Boolean(user)
 }
 

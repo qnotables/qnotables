@@ -14,7 +14,7 @@ export interface RssImportButtonProps {
   imageUrl?: string | null
   category: string
   tags?: string[]
-  isAdmin: boolean
+  isLoggedIn: boolean
 }
 
 export function RssImportButton({
@@ -27,13 +27,13 @@ export function RssImportButton({
   imageUrl,
   category,
   tags = [],
-  isAdmin,
+  isLoggedIn,
 }: RssImportButtonProps) {
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
   const [imported, setImported] = useState(false)
 
-  if (!isAdmin) return null
+  if (!isLoggedIn) return null
 
   function handleImport() {
     const formData = new FormData()
