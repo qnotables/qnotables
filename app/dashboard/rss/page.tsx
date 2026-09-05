@@ -227,7 +227,7 @@ export default async function RssPage() {
                         imageUrl={item.imageUrl}
                         category={item.category}
                         tags={item.tags}
-                        isAdmin={true}
+                        isLoggedIn={true}
                       />
                     </td>
                   </tr>

@@ -10,12 +10,12 @@ const DEFAULT_STORY_IMAGE = "/images/og-default.png"
 export function StoryCard({
   story,
   variant = "default",
-  isAdmin = false,
+  isLoggedIn = false,
   importContent,
 }: {
   story: Story
   variant?: "default" | "wide"
-  isAdmin?: boolean
+  isLoggedIn?: boolean
   importContent?: string
 }) {
   const s = story
@@ -65,7 +65,7 @@ export function StoryCard({
           </span>
           <div className="ml-auto flex items-center gap-3">
             <ShareButtons headline={s.headline} url={s.url} source={s.source} />
-            {isAdmin && s.url && importContent && (
+            {isLoggedIn && s.url && importContent && (
               <RssImportButton
                 title={s.headline}
                 content={importContent}
@@ -75,7 +75,7 @@ export function StoryCard({
                 category={s.category}
                 imageUrl={s.image}
                 tags={[s.category, s.source]}
-                isAdmin={isAdmin}
+                isLoggedIn={isLoggedIn}
               />
             )}
             <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />

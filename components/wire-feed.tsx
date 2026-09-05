@@ -6,7 +6,7 @@ import type { Category, Story } from "@/lib/news-data"
 
 type Desk = { cat: Category; stories: Story[] }
 
-export function WireFeed({ desks, isAdmin }: { desks: Desk[]; isAdmin: boolean }) {
+export function WireFeed({ desks, isLoggedIn }: { desks: Desk[]; isLoggedIn: boolean }) {
   const { active } = useDeskFilter()
 
   const visible = active === "NOTABLES" ? desks : desks.filter((d) => d.cat === active)
@@ -44,7 +44,7 @@ export function WireFeed({ desks, isAdmin }: { desks: Desk[]; isAdmin: boolean }
                   <StoryCard
                     key={story.id}
                     story={story}
-                    isAdmin={isAdmin}
+                    isLoggedIn={isLoggedIn}
                     importContent={story.summary}
                   />
                 ))}

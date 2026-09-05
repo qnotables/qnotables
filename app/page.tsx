@@ -23,7 +23,7 @@ import { getRecentForumThreads } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 import { JsonLd } from "@/components/json-ld"
 import { pageMetadata, websiteSchema } from "@/lib/seo"
-import { getAdminImportAccess } from "@/app/actions/rss-import-actions"
+import { getImportAccess } from "@/app/actions/rss-import-actions"
 
 export const metadata = pageMetadata({
   title: "QNotables — News, Research, and Public Records",
@@ -35,12 +35,12 @@ export default async function Page() {
     { featured, topStories, feed, trending, live },
     recentThreads,
     recentBlogs,
-    isAdmin,
+    isLoggedIn,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(5),
     getRecentBlogPosts(5),
-    getAdminImportAccess(),
+    getImportAccess(),
   ])
 
   // Map to typed cycle props
@@ -214,7 +214,7 @@ export default async function Page() {
         <div className="mt-6">
           <DeskNav />
         </div>
-        <WireFeed desks={desks} isAdmin={isAdmin} />
+        <WireFeed desks={desks} isAdmin={isLoggedIn} />
       </main>
 
       <BottomAd />
