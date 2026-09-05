@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/time"
 import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { TiptapEditor } from "@/components/tiptap-editor"
 import { ShareButtons } from "@/components/share-buttons"
+import { ThreadVotes } from "@/components/thread-votes"
 import { FORUM_CATEGORIES, normalizeCategoryName } from "@/lib/forum-utils"
 
 interface ThreadArticleProps {
@@ -29,6 +30,10 @@ interface ThreadArticleProps {
   is_soft_deleted: boolean
   /** Canonical URL of the thread. Passed from the server to avoid SSR/window errors. */
   shareUrl?: string
+  viewCount: number
+  initialUpVotes: number
+  initialDownVotes: number
+  userVote?: 1 | -1 | null
 }
 
 function CategoryBadge({ category }: { category: string | null }) {
@@ -88,6 +93,10 @@ export function ThreadArticle({
   is_featured,
   is_soft_deleted,
   shareUrl,
+  viewCount,
+  initialUpVotes,
+  initialDownVotes,
+  userVote,
 }: ThreadArticleProps) {
   const [editing, setEditing] = useState(false)
   const [pending, setPending] = useState(false)
@@ -306,10 +315,18 @@ export function ThreadArticle({
 
       {/* Footer: share + mod controls */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <ShareButtons
-          title={title}
-          url={shareUrl}
-        />
+        <div className="flex flex-wrap items-center gap-4">
+          <ShareButtons title={title} url={shareUrl} />
+          <span className="label-mono inline-flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${viewCount} views`}>
+            <Eye className="h-3.5 w-3.5" /> {viewCount.toLocaleString()}
+          </span>
+          <ThreadVotes
+            threadId={id}
+            initialUpVotes={initialUpVotes}
+            initialDownVotes={initialDownVotes}
+            userVote={userVote}
+          />
+        </div>
 
         {/* Admin / mod controls */}
         {isAdmin && (
