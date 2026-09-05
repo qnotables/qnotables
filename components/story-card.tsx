@@ -3,10 +3,21 @@ import { type Story, formatAgo } from "@/lib/news-data"
 import { PriorityTag } from "@/components/priority-tag"
 import { ShareButtons } from "@/components/share-buttons"
 import { CardImage } from "@/components/card-image"
+import { RssImportButton } from "@/components/rss-import-button"
 
 const DEFAULT_STORY_IMAGE = "/images/og-default.png"
 
-export function StoryCard({ story, variant = "default" }: { story: Story; variant?: "default" | "wide" }) {
+export function StoryCard({
+  story,
+  variant = "default",
+  isAdmin = false,
+  importContent,
+}: {
+  story: Story
+  variant?: "default" | "wide"
+  isAdmin?: boolean
+  importContent?: string
+}) {
   const s = story
   const href = s.url || "#"
   const linkProps = s.url ? { target: "_blank", rel: "noopener noreferrer" } : {}
@@ -54,6 +65,19 @@ export function StoryCard({ story, variant = "default" }: { story: Story; varian
           </span>
           <div className="ml-auto flex items-center gap-3">
             <ShareButtons headline={s.headline} url={s.url} source={s.source} />
+            {isAdmin && s.url && importContent && (
+              <RssImportButton
+                title={s.headline}
+                content={importContent}
+                sourceUrl={s.url}
+                sourceName={s.source}
+                author={s.source}
+                category={s.category}
+                imageUrl={s.image}
+                tags={[s.category, s.source]}
+                isAdmin={isAdmin}
+              />
+            )}
             <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
           </div>
         </div>
