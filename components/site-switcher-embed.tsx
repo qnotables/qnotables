@@ -74,7 +74,7 @@ export function SiteSwitcherEmbed() {
         <div className="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none">
           {SITES.map((site) => (
             <button
-            key={`${site.id}-${site.id === activeId ? refreshKey : 0}`}
+              key={site.id}
               onClick={() => setActiveId(site.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 label-mono text-xs font-bold tracking-widest whitespace-nowrap border-r border-border transition-colors ${
                 activeId === site.id
@@ -105,7 +105,6 @@ export function SiteSwitcherEmbed() {
             title={`Refresh ${active.label}`}
           >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-            REFRESH
           </button>
           <a
             href={active.url}
@@ -122,7 +121,7 @@ export function SiteSwitcherEmbed() {
       <div className="relative w-full" style={{ height: "800px" }}>
         {SITES.map((site) => (
           <iframe
-            key={site.id}
+            key={`${site.id}-${site.id === activeId ? refreshKey : 0}`}
             src={site.url}
             title={site.label}
             className="absolute inset-0 h-full w-full border-0"
