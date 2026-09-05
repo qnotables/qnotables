@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: "article",
       publishedTime: post?.published_at || video?.date,
       modifiedTime: post?.updated_at,
-      authors: post?.source_author ? [post.author_name] : undefined,
+      authors: post?.source_author ? [post.source_author] : undefined,
     },
   }
 }

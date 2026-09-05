@@ -8,7 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export async function incrementArchiveViews(postId: string): Promise<void> {
   try {
     const admin = createAdminClient()
-    await admin.rpc("increment_post_view", { p_post_id: postId })
+    const { error } = await admin.rpc("increment_post_view", { p_post_id: postId })
+    if (error) throw error
   } catch {
     // Silently ignore — view tracking is non-critical
   }
@@ -69,7 +70,7 @@ export async function voteOnArchivePost(
     .from("archive_votes")
     .select("id, vote_type")
     .eq("post_id", postId)
-      .eq("user_id", user.id)
+    .eq("user_id", user.id)
     .maybeSingle()
 
   if (existingError) return { error: "Unable to load your vote. Please try again." }
