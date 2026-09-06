@@ -230,7 +230,7 @@ function stripMarkdown(md: string): string {
 }
 
 
-// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ──────────────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ��─────────────────
 
 interface TiptapNode {
   type?: string
@@ -803,7 +803,7 @@ export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: Sit
       </div>
 
       {/* Active card */}
-      <div className="min-h-[320px]">
+      <div className={iconName === "forum" ? "" : "min-h-[320px]"}>
         {total === 0 ? (
           <EmptyCard label={emptyLabel} icon={Icon} />
         ) : (
