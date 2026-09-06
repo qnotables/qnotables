@@ -256,11 +256,15 @@
   clear: both;
 }
 
-/* Paragraph text flows around floated images */
+/* Paragraph text flows around floated images. Keep the renderer in normal block flow so
+   adjacent paragraphs can continue wrapping beside a left/right-aligned figure. */
 .tiptap-content p {
   text-wrap: pretty;
   line-height: 1.625;
-  /* overflow:hidden creates a new BFC so text stays beside the float */
+}
+
+.tiptap-content > * + * {
+  margin-top: 1.5rem;
 }
 
 /* Floated figure images — max 40% width so text has room to wrap */
