@@ -164,9 +164,22 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   }
 
   // --- Votes (non-fatal: degrade to no votes shown) ---
+  let threadUpVotes = 0
+  let threadDownVotes = 0
+  let threadUserVote: 1 | -1 | null = null
   const voteMap = new Map<string, string[]>()
   const userVoteMap = new Map<string, string>()
   try {
+    const [{ data: threadVotes }, { data: currentThreadVote }] = await Promise.all([
+      supabase.from("thread_votes").select("vote").eq("thread_id", t.id),
+      user
+        ? supabase.from("thread_votes").select("vote").eq("thread_id", t.id).eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null as { vote: number } | null }),
+    ])
+    threadUpVotes = threadVotes?.filter((vote) => vote.vote === 1).length ?? 0
+    threadDownVotes = threadVotes?.filter((vote) => vote.vote === -1).length ?? 0
+    threadUserVote = currentThreadVote?.vote === 1 || currentThreadVote?.vote === -1 ? currentThreadVote.vote : null
+
     const replyIds = replies.map((r) => r.id)
     if (replyIds.length > 0) {
       const [{ data: allVotes }, { data: userVotes }] = await Promise.all([
@@ -260,6 +273,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
               datePublished: t.created_at,
               dateModified: t.updated_at ?? t.created_at,
               author: { "@type": "Person", name: t.profiles?.display_name ?? "operator" },
+              image: firstImageFromBody(t.body) ? [socialImageUrl(firstImageFromBody(t.body))] : undefined,
               articleSection: getDeskLabel(t.desk),
               commentCount: t.reply_count ?? replies.length,
               interactionStatistic: {
@@ -332,6 +346,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           is_featured={Boolean(t.is_featured)}
           is_soft_deleted={Boolean(t.is_soft_deleted)}
           shareUrl={`${getSiteUrl()}/forum/${t.slug || t.id}`}
+          viewCount={t.view_count ?? 0}
+          initialUpVotes={threadUpVotes}
+          initialDownVotes={threadDownVotes}
+          userVote={threadUserVote}
+          isSignedIn={Boolean(user)}
         />
 
         {/* OP report */}

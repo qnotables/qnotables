@@ -24,12 +24,19 @@ function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
 }
 
+function parsePublishedAt(value: string): string | null | undefined {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+}
+
 function parseForm(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim()
   const body = String(formData.get("body") ?? "").trim()
   const status = String(formData.get("status") ?? "draft")
   const customSlug = String(formData.get("slug") ?? "").trim()
   const episodeDate = String(formData.get("episode_date") ?? "").trim() || null
+  const publishedAtInput = String(formData.get("published_at") ?? "").trim()
   const showTitle = formData.get("show_title") === "on"
 
   return {
@@ -52,6 +59,7 @@ function parseForm(formData: FormData) {
     source_url: String(formData.get("source_url") ?? "").trim() || null,
     show_title: showTitle,
     episode_date: episodeDate,
+    published_at: publishedAtInput,
     customSlug,
   }
 }
@@ -66,13 +74,15 @@ export async function createPostDashboard(
   if (f.title.length < 3) return { error: "Title must be at least 3 characters." }
   if (f.body.length < 10) return { error: "Body is too short." }
 
+  const publishedAt = parsePublishedAt(f.published_at)
+  if (publishedAt === undefined) return { error: "Published date and time is invalid." }
+  if (f.status === "published" && !publishedAt) return { error: "A published post needs a published date and time." }
+
   const slug = f.customSlug ? slugify(f.customSlug) : slugify(f.title)
   if (!slug) return { error: "Could not derive a valid slug." }
 
-  // Imported/created items should not publish without a published_at date.
-  const publishedAt = f.status === "published" ? new Date().toISOString() : null
-
   const db = createAdminClient()
+
   const { error } = await db.from("blog_posts").insert({
     slug,
     title: f.title,
@@ -122,12 +132,22 @@ export async function updatePostDashboard(
   if (f.title.length < 3) return { error: "Title must be at least 3 characters." }
   if (f.body.length < 10) return { error: "Body is too short." }
 
+  const publishedAtInput = parsePublishedAt(f.published_at)
+  if (publishedAtInput === undefined) return { error: "Published date and time is invalid." }
+
   const slug = slugify(f.customSlug || f.title)
   if (!slug) return { error: "Could not derive a valid slug." }
 
-  const publishedAt = f.status === "published" ? new Date().toISOString() : null
-
   const db = createAdminClient()
+  const { data: existingPost } = await db
+    .from("blog_posts")
+    .select("published_at")
+    .eq("id", id)
+    .maybeSingle()
+
+  const publishedAt = f.status === "published" ? publishedAtInput ?? existingPost?.published_at ?? null : null
+  if (f.status === "published" && !publishedAt) return { error: "A published post needs a published date and time." }
+
   const { error } = await db
     .from("blog_posts")
     .update({

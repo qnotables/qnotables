@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Clock, Archive } from "lucide-react"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
+import { RssImportButton } from "@/components/rss-import-button"
 
 interface FlashStoryProps {
   title: string
@@ -14,6 +15,8 @@ interface FlashStoryProps {
   source?: string
   url?: string
   type: "archive" | "feed"
+  isLoggedIn?: boolean
+  importContent?: string
 }
 
 export function FlashStory({ 
@@ -26,7 +29,9 @@ export function FlashStory({
   slug,
   source,
   url,
-  type
+  type,
+  isLoggedIn = false,
+  importContent,
 }: FlashStoryProps) {
   const href = type === "archive" && slug ? `/archives/${slug}` : url || "#"
   const linkProps = href !== "#" && href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {}
@@ -100,13 +105,27 @@ export function FlashStory({
           >
             READ MORE → 
           </Link>
-          <ShareButtons
-            title={title}
-            url={href !== "#" ? href : undefined}
-            excerpt={excerpt}
-            source={source}
-            className="shrink-0"
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <ShareButtons
+              title={title}
+              url={href !== "#" ? href : undefined}
+              excerpt={excerpt}
+              source={source}
+              className="shrink-0"
+            />
+            {isLoggedIn && href !== "#" && importContent && (
+              <RssImportButton
+                title={title}
+                content={importContent}
+                sourceUrl={href}
+                sourceName={source ?? "RSS source"}
+                author={source ?? "RSS source"}
+                category={category ?? "OTHER"}
+                imageUrl={image}
+                isLoggedIn={isLoggedIn}
+              />
+            )}
+          </div>
         </div>
       </div>
     </article>

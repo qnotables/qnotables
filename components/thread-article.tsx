@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Clock, Pencil, Trash2, X, Loader2, Pin, Lock, Star, Eye, EyeOff, ImageOff } from "lucide-react"
-import { updateThread, deleteThread, removeThreadMedia } from "@/app/forum/actions"
+import { Clock, Pencil, Trash2, X, Loader2, Pin, Lock, Star, Eye, EyeOff, ImageOff, Copy, Flag, VolumeX, Reply } from "lucide-react"
+import { updateThread, deleteThread, removeThreadMedia, reportContent } from "@/app/forum/actions"
 import { moderateThread } from "@/app/dashboard/actions"
 import { timeAgo } from "@/lib/time"
 import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { TiptapEditor } from "@/components/tiptap-editor"
 import { ShareButtons } from "@/components/share-buttons"
+import { ThreadVotes } from "@/components/thread-votes"
 import { FORUM_CATEGORIES, normalizeCategoryName } from "@/lib/forum-utils"
 
 interface ThreadArticleProps {
@@ -29,6 +30,11 @@ interface ThreadArticleProps {
   is_soft_deleted: boolean
   /** Canonical URL of the thread. Passed from the server to avoid SSR/window errors. */
   shareUrl?: string
+  viewCount: number
+  initialUpVotes: number
+  initialDownVotes: number
+  userVote?: 1 | -1 | null
+  isSignedIn?: boolean
 }
 
 function CategoryBadge({ category }: { category: string | null }) {
@@ -88,6 +94,11 @@ export function ThreadArticle({
   is_featured,
   is_soft_deleted,
   shareUrl,
+  viewCount,
+  initialUpVotes,
+  initialDownVotes,
+  userVote,
+  isSignedIn = false,
 }: ThreadArticleProps) {
   const [editing, setEditing] = useState(false)
   const [pending, setPending] = useState(false)
@@ -101,6 +112,7 @@ export function ThreadArticle({
   const [localBody, setLocalBody] = useState(body)
   const [modBusy, setModBusy] = useState(false)
   const [mediaStripped, setMediaStripped] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const tagList = tags ? tags.split(/[,\s]+/).filter(Boolean).slice(0, 8) : []
   const categoryName = normalizeCategoryName(category)
@@ -133,6 +145,23 @@ export function ThreadArticle({
     const res = await moderateThread(id, field, !current)
     if (res.success) setter(!current)
     setModBusy(false)
+  }
+
+  async function handleReport() {
+    if (!isSignedIn) {
+      setNotice("Sign in to report a post.")
+      return
+    }
+    const reason = window.prompt("What should moderators know about this post?")
+    if (!reason) return
+    const result = await reportContent("forum_thread", id, reason)
+    setNotice(result.error ? result.error : "Report sent to moderators.")
+  }
+
+  async function handleCopyLink() {
+    if (!shareUrl) return
+    await navigator.clipboard.writeText(shareUrl)
+    setNotice("Thread link copied.")
   }
 
   async function handleStripMedia() {
@@ -304,12 +333,29 @@ export function ThreadArticle({
         <TiptapRenderer content={localBody} />
       </div>
 
-      {/* Footer: share + mod controls */}
+      {/* Footer: share + community controls */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <ShareButtons
-          title={title}
-          url={shareUrl}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={handleCopyLink} className="label-mono inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"><Copy className="size-3" /> Copy link</button>
+          <button type="button" onClick={handleReport} className="label-mono inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"><Flag className="size-3" /> Report</button>
+          <button type="button" onClick={() => setNotice(`Muted ${authorName} for this session.`)} className="label-mono inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"><VolumeX className="size-3" /> Mute author</button>
+          {categoryName && <button type="button" onClick={() => setNotice(`Muted ${categoryName} for this session.`)} className="label-mono inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"><VolumeX className="size-3" /> Mute topic</button>}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <ShareButtons title={title} url={shareUrl} />
+          <Link href={`${shareUrl ?? "#"}#reply`} className="label-mono inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><Reply className="size-3.5" /> Reply</Link>
+          <span className="label-mono inline-flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${viewCount} views`}>
+            <Eye className="h-3.5 w-3.5" /> {viewCount.toLocaleString()}
+          </span>
+          <ThreadVotes
+            threadId={id}
+            initialUpVotes={initialUpVotes}
+            initialDownVotes={initialDownVotes}
+            userVote={userVote}
+          />
+        </div>
+        {notice && <p className="basis-full label-mono text-[10px] text-primary" role="status">{notice}</p>}
 
         {/* Admin / mod controls */}
         {isAdmin && (

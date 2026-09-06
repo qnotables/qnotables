@@ -5,6 +5,7 @@ import { Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ForumList, type ThreadListItem } from "@/components/forum-list"
+import { ForumCommunityHub } from "@/components/forum-community-hub"
 import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
@@ -141,7 +142,21 @@ export default async function ForumPage({
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+        <ForumCommunityHub
+          threads={rows}
+          categoryCounts={categoryCounts}
+          isSignedIn={Boolean(user)}
+        />
+
+        <div className="mt-10 flex items-end justify-between gap-4">
+          <div>
+            <div className="label-mono text-xs text-primary">ALL DISCUSSIONS</div>
+            <h2 className="stencil mt-1 text-2xl text-foreground">Browse the full record</h2>
+          </div>
+          <Link href="/forum/guidelines" className="label-mono text-xs text-primary hover:underline">Posting guidelines</Link>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
           <ForumList threads={rows} isSignedIn={Boolean(user)} />
           <ForumSidebar
             stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
