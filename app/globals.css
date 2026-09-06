@@ -175,12 +175,10 @@
 }
 
 @layer utilities {
-  /* faint tactical grid overlay */
+  /* Keep the page surface quiet so stories and controls carry the visual focus. */
   .tactical-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--border) 60%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--border) 60%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+    background-color: var(--background);
+    background-image: none;
   }
 
   .stencil {
