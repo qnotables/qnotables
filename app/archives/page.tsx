@@ -67,11 +67,11 @@ export default async function ArchivesPage() {
             <p className="label-mono text-muted-foreground">No records available yet. Check back soon.</p>
             {isAdmin && (
               <Link
-                href="/forum/new"
+                href="/dashboard/blog/new"
                 className="label-mono mt-6 inline-flex items-center gap-2 bg-primary px-4 py-2 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 <Plus className="h-4 w-4" />
-                New Thread
+                New Blog Post
               </Link>
             )}
           </div>
@@ -128,11 +128,11 @@ export default async function ArchivesPage() {
           />
           {isAdmin && (
             <Link
-              href="/forum/new"
+              href="/dashboard/blog/new"
               className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2.5 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               <Plus className="h-4 w-4" />
-              New Thread
+              New Blog Post
             </Link>
           )}
         </div>
