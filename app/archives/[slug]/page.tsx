@@ -18,6 +18,8 @@ import { getPostViewCount } from "@/app/actions/blog-view-actions"
 import { ArchiveVotes } from "@/components/archive-votes"
 import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
+import { ArticleDiscussionPrompt, ArticleReadingTools } from "@/components/article-reading-tools"
+import { ArticleSupport } from "@/components/article-support"
 
 export const dynamic = "force-dynamic"
 
@@ -251,6 +253,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
                   viewCount={initialViewCount}
                 />
               )}
+              <ArticleReadingTools title={title} url={`${getSiteUrl()}${articlePath}`} />
             </div>
           </div>
         </div>
@@ -277,9 +280,10 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
         )}
 
         {/* Main content */}
-        <article className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
+        <article className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
+          <div className="mx-auto max-w-3xl">
           {post && (
-            <div className="max-w-none">
+            <div className="article-prose max-w-none">
               {isTiptapJson(post.body) ? (
                 <TiptapRenderer content={post.body} omitFirstMedia={Boolean(featuredMedia)} />
               ) : (
@@ -344,6 +348,15 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
               excerpt={post?.excerpt || post?.subtitle || (video?.description ?? undefined)}
               hashtags={post?.tags}
             />
+          </div>
+
+          <ArticleSupport
+            excerpt={description}
+            author={post?.source_author}
+            source={post?.source_name}
+            relatedPosts={relatedPosts}
+          />
+          <ArticleDiscussionPrompt />
           </div>
         </article>
 
