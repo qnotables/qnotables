@@ -262,7 +262,9 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             key={link.href}
             href={link.href}
             onClick={() => setMenuOpen(false)}
-            className="label-mono border-l-2 border-transparent px-3 py-2 text-left text-muted-foreground transition-colors hover:text-foreground md:border-l-0 md:border-b-2"
+            className={`label-mono border-l-2 border-transparent px-3 py-2 text-left text-muted-foreground transition-colors hover:text-foreground md:border-l-0 md:border-b-2 ${
+              link.label === "TOWN HALL" ? "font-bold text-foreground" : ""
+            }`}
           >
             {link.label}
           </Link>
