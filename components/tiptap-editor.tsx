@@ -55,6 +55,7 @@ import {
   MediaPreviewGrid,
 } from "@/components/editor/MediaUploadButton"
 import { EmbedMediaModal } from "@/components/editor/EmbedMediaModal"
+import { XPostEmbed } from "@/components/x-post-embed"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -122,18 +123,7 @@ function EmbedBlockView({
         </div>
 
         {isX ? (
-          <div className="flex flex-col items-center gap-3 px-6 py-6">
-            <p className="label-mono text-sm text-muted-foreground">X / Twitter post</p>
-            <a
-              href={originalUrl}
-              target="_blank"
-              rel="noopener noreferrer nofollow"
-              className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2 text-sm text-foreground hover:border-primary transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              View on X
-            </a>
-          </div>
+          <XPostEmbed url={originalUrl} compact />
         ) : (
           <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
             <iframe

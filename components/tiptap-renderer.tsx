@@ -11,6 +11,7 @@
 import type { ReactNode } from "react"
 import { ForumImage } from "@/components/forum-image"
 import { Markdown } from "@/components/markdown"
+import { XPostEmbed } from "@/components/x-post-embed"
 import { omitPostMedia, resolveFirstPostMedia } from "@/lib/post-media"
 import { preprocessBody } from "@/lib/forum-utils"
 import { isApprovedIframeSrc } from "@/lib/media-utils"
@@ -260,19 +261,7 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
           </div>
 
           {isX ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-6">
-              <p className="label-mono text-sm text-muted-foreground">X / Twitter post</p>
-              {isSafeUrl(originalUrl) && (
-                <a
-                  href={originalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2 text-sm text-foreground hover:border-primary transition-colors"
-                >
-                  View on X
-                </a>
-              )}
-            </div>
+            isSafeUrl(originalUrl) && <XPostEmbed url={originalUrl} />
           ) : (
             isSafeUrl(embedUrl) && isApprovedIframeSrc(embedUrl) && (
               <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
