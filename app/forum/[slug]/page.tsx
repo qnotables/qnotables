@@ -350,6 +350,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           initialUpVotes={threadUpVotes}
           initialDownVotes={threadDownVotes}
           userVote={threadUserVote}
+          isSignedIn={Boolean(user)}
         />
 
         {/* OP report */}
