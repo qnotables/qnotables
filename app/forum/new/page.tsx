@@ -12,6 +12,7 @@ type ImportedDraft = {
   title?: string
   content?: string
   sourceUrl?: string
+  imageUrl?: string
   category?: string
   desk?: string
 }
@@ -68,6 +69,7 @@ export default async function NewThreadPage({
         title: sanitizeImportedText(value("title"), IMPORT_TITLE_MAX),
         content: sanitizeImportedBody(value("body") || value("content"), value("postedAt") || value("published_at")),
         sourceUrl: validateImportedUrl(value("sourceUrl") || value("source_url")),
+        imageUrl: validateImportedUrl(value("imageUrl") || value("image_url")),
         category: sanitizeImportedText(value("category"), 80),
         desk: sanitizeImportedText(value("desk"), 80),
       }
