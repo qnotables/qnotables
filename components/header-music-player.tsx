@@ -4,7 +4,7 @@ import { Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-rea
 import { useMusicPlayer } from "@/lib/music-player-context"
 
 export function HeaderMusicPlayer() {
-  const { tracks, playing, muted, progress, togglePlay, prev, next, seek } = useMusicPlayer()
+  const { tracks, playing, muted, volume, progress, togglePlay, prev, next, seek, setVolume } = useMusicPlayer()
 
   if (tracks.length === 0) return null
 
@@ -55,14 +55,31 @@ export function HeaderMusicPlayer() {
         />
       </button>
 
-      {/* Mute */}
-      <button
-        onClick={() => setMuted((m) => !m)}
-        aria-label={muted ? "Unmute" : "Mute"}
-        className="p-0.5 text-muted-foreground transition-colors hover:text-primary"
-      >
-        {muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-      </button>
+      {/* Volume */}
+      <label className="flex items-center gap-1" title={`Volume ${Math.round(volume * 100)}%`}>
+        <button
+          type="button"
+          onClick={() => setMuted((m) => !m)}
+          aria-label={muted ? "Unmute" : "Mute"}
+          className="p-0.5 text-muted-foreground transition-colors hover:text-primary"
+        >
+          {muted || volume === 0 ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={muted ? 0 : volume}
+          onChange={(event) => {
+            const nextVolume = Number(event.target.value)
+            setVolume(nextVolume)
+            if (nextVolume > 0 && muted) setMuted(false)
+          }}
+          aria-label="Volume"
+          className="h-1 w-16 cursor-pointer accent-primary"
+        />
+      </label>
     </div>
   )
 }
