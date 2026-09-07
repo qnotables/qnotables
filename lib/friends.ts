@@ -100,6 +100,13 @@ export async function getMyFriends() {
   return (data ?? []) as Friend[]
 }
 
+export async function getAdminFriend(id: string) {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.from('friends').select('*, friend_categories(name, slug)').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data as Friend | null
+}
+
 export async function getAdminFriends(status?: string) {
   const supabase = createAdminClient()
   let query = supabase.from('friends').select('*, friend_categories(name, slug)').order('updated_at', { ascending: false })
