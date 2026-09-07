@@ -93,6 +93,7 @@ export async function SignalToolsCard() {
       </div>
 
       <div className="flex justify-center gap-3 mb-4">
+        <BakerToolsButton />
         {visibleSignalTools.map((tool) => {
           const Icon = tool.icon
           const isExternal = tool.href.startsWith("http") || tool.href.startsWith("mailto:")
@@ -112,7 +113,6 @@ export async function SignalToolsCard() {
 
       <div>
         <div className="flex justify-center gap-3">
-          <BakerToolsButton />
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
             const isExternal = (tool.href || "").startsWith("http") || (tool.href || "").startsWith("mailto:")
