@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, NotebookPen } from "lucide-react"
 import { getAdminUser } from "@/lib/admin"
+import { BakerToolsButton } from "@/components/baker-tools-button"
 
 const SIGNAL_TOOLS = [
   {
@@ -111,6 +112,7 @@ export async function SignalToolsCard() {
 
       <div>
         <div className="flex justify-center gap-3">
+          <BakerToolsButton />
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
             const isExternal = (tool.href || "").startsWith("http") || (tool.href || "").startsWith("mailto:")
