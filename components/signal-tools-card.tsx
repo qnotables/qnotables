@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, NotebookPen } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, Handshake } from "lucide-react"
 import { getAdminUser } from "@/lib/admin"
 import { BakerToolsButton } from "@/components/baker-tools-button"
+import { FullchanButton } from "@/components/fullchan-button"
 
 const SIGNAL_TOOLS = [
   {
@@ -34,7 +35,13 @@ const SIGNAL_TOOLS = [
     description: "Track the sequence",
     icon: Clock,
     href: "/archives/timeline",
-  }, 
+  },
+  {
+    label: "Friends",
+    description: "Meet trusted signals",
+    icon: Handshake,
+    href: "/friends",
+  },
   {
     label: "RSS Feed",
     description: "Follow the wire",
@@ -44,12 +51,6 @@ const SIGNAL_TOOLS = [
 ]
 
 const SIGNAL_TOOLS_SECONDARY = [
-  {
-    label: "Fullchan",
-    description: "Open the board",
-    icon: NotebookPen,
-    href: "https://fullchan.net",
-  },
   {
     label: "bookmarks",
     description: "Share a resource",
@@ -113,6 +114,7 @@ export async function SignalToolsCard() {
 
       <div>
         <div className="flex justify-center gap-3">
+          <FullchanButton />
           {SIGNAL_TOOLS_SECONDARY.map((tool) => {
             const Icon = tool.icon
             const isExternal = (tool.href || "").startsWith("http") || (tool.href || "").startsWith("mailto:")
