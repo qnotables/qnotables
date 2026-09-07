@@ -18,12 +18,17 @@ export function ThreadVotes({
   const [upVotes, setUpVotes] = useState(initialUpVotes)
   const [downVotes, setDownVotes] = useState(initialDownVotes)
   const [currentVote, setCurrentVote] = useState<1 | -1 | null>(userVote ?? null)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function handleVote(vote: 1 | -1) {
     startTransition(async () => {
+      setError(null)
       const result = await voteOnThread(threadId, vote)
-      if (result?.error) return
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
 
       if (currentVote === vote) {
         setCurrentVote(null)
@@ -49,7 +54,7 @@ export function ThreadVotes({
   const netVotes = upVotes - downVotes
 
   return (
-    <div className="flex items-center gap-2" aria-label="Thread votes">
+    <div className="flex flex-wrap items-center gap-2" aria-label="Thread votes">
       <button
         type="button"
         onClick={() => handleVote(1)}
@@ -88,6 +93,7 @@ export function ThreadVotes({
         <ThumbsDown className="h-3.5 w-3.5" />
         <span className="label-mono text-xs">{downVotes}</span>
       </button>
+      {error && <span className="text-xs text-destructive" role="alert">{error}</span>}
     </div>
   )
 }

@@ -1038,27 +1038,33 @@ export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to vote." }
 
+  // Vote mutations run server-side after authentication; use the service client
+  // so stale or incomplete vote-table RLS policies cannot silently block them.
+  const db = createAdminClient()
+
   // Check for existing vote
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await db
     .from("thread_votes")
     .select("id, vote")
     .eq("thread_id", threadId)
     .eq("user_id", user.id)
     .maybeSingle()
 
+  if (existingError) return { error: existingError.message }
+
   let error = null
 
   if (existing) {
     if (existing.vote === voteValue) {
       // Remove vote (toggle off)
-      const { error: delError } = await supabase
+      const { error: delError } = await db
         .from("thread_votes")
         .delete()
         .eq("id", existing.id)
       error = delError?.message ?? null
     } else {
       // Change vote
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("thread_votes")
         .update({ vote: voteValue })
         .eq("id", existing.id)
@@ -1066,7 +1072,7 @@ export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
     }
   } else {
     // New vote
-    const { error: insertError } = await supabase
+    const { error: insertError } = await db
       .from("thread_votes")
       .insert({ thread_id: threadId, user_id: user.id, vote: voteValue })
     error = insertError?.message ?? null
@@ -1082,7 +1088,7 @@ export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
     .maybeSingle()
 
   if (thread?.author_id) {
-    const { data: votes } = await supabase
+    const { data: votes } = await db
       .from("thread_votes")
       .select("vote")
       .eq("thread_id", threadId)
@@ -1114,13 +1120,17 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to vote." }
 
+  const db = createAdminClient()
+
   // Check if user already voted
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await db
     .from("reply_votes")
     .select("id, vote_type")
     .eq("reply_id", replyId)
     .eq("user_id", user.id)
     .maybeSingle()
+
+  if (existingError) return { error: existingError.message }
 
   let error = null
 
@@ -1128,14 +1138,14 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
     // Toggle or change vote
     if (existing.vote_type === voteType) {
       // Remove vote
-      const { error: delError } = await supabase
+      const { error: delError } = await db
         .from("reply_votes")
         .delete()
         .eq("id", existing.id)
       error = delError?.message || null
     } else {
       // Change vote type
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("reply_votes")
         .update({ vote_type: voteType })
         .eq("id", existing.id)
@@ -1143,7 +1153,7 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
     }
   } else {
     // Add new vote
-    const { error: insertError } = await supabase
+    const { error: insertError } = await db
       .from("reply_votes")
       .insert({ reply_id: replyId, user_id: user.id, vote_type: voteType })
     error = insertError?.message || null
@@ -1170,7 +1180,7 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
 
   if (reply?.author_id) {
     // Calculate total karma for this user across all their replies
-    const { data: allVotes } = await supabase
+    const { data: allVotes } = await db
       .from("reply_votes")
       .select("vote_type, forum_replies(author_id)")
       .eq("forum_replies.author_id", reply.author_id)
