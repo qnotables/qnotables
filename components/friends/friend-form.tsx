@@ -7,7 +7,7 @@ import type { Friend, FriendCategory } from "@/lib/friends"
 
 const initialState: FriendFormState = {}
 
-export function FriendForm({ categories, friend, adminMode = false }: { categories: FriendCategory[]; friend?: Friend | null; adminMode?: boolean }) {
+export function FriendForm({ categories, friend, adminMode = false, returnHref }: { categories: FriendCategory[]; friend?: Friend | null; adminMode?: boolean; returnHref?: string }) {
   const [state, action, pending] = useActionState(adminMode ? saveAdminFriend : saveFriend, initialState)
   const [logoUrl, setLogoUrl] = useState(friend?.logo_url ?? '')
   const [uploading, setUploading] = useState(false)
@@ -53,7 +53,7 @@ export function FriendForm({ categories, friend, adminMode = false }: { categori
         <label className="mt-5 flex items-start gap-3 text-sm text-muted-foreground"><input type="checkbox" name="permission_confirmed" defaultChecked={friend?.permission_confirmed} className="mt-1 accent-primary" /><span>{adminMode ? 'Confirm the listing information is accurate before saving.' : 'I confirm I have permission to submit this link and image.'}</span></label>
       </div>
       {(state.error || state.success) && <div role="status" className={`border px-4 py-3 text-sm ${state.error ? 'border-destructive text-destructive' : 'border-primary text-primary'}`}>{state.error ?? state.success}</div>}
-      <div className="flex flex-wrap items-center gap-3">{adminMode ? <button type="submit" disabled={pending || uploading} className="bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">{pending ? 'Saving…' : 'Save changes'}</button> : <><button type="submit" name="intent" value="draft" disabled={pending || uploading} className="border border-border px-4 py-2 text-sm text-foreground hover:border-primary disabled:opacity-50">{pending ? 'Saving…' : 'Save draft'}</button><button type="submit" name="intent" value="submit" disabled={pending || uploading} className="bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">Submit for review</button></>}<Link href={adminMode ? '/admin/friends' : '/dashboard/friends'} className="px-2 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</Link></div>
+      <div className="flex flex-wrap items-center gap-3">{adminMode ? <button type="submit" disabled={pending || uploading} className="bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">{pending ? 'Saving…' : 'Save changes'}</button> : <><button type="submit" name="intent" value="draft" disabled={pending || uploading} className="border border-border px-4 py-2 text-sm text-foreground hover:border-primary disabled:opacity-50">{pending ? 'Saving…' : 'Save draft'}</button><button type="submit" name="intent" value="submit" disabled={pending || uploading} className="bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">Submit for review</button></>}<Link href={adminMode ? '/admin/friends' : (returnHref ?? '/dashboard/friends')} className="px-2 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</Link></div>
     </form>
   )
 }

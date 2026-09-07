@@ -17,6 +17,7 @@ const columns = [
     links: [
       { label: "Field Notes & Archives", href: "/archives" },
       { label: "The Town Hall (Forum)", href: "/forum" },
+      { label: "Submit a Friend", href: "/friends/submit" },
       { label: "Sign In", href: "/auth/login" },
       { label: "Create Account", href: "/auth/sign-up" },
     ],
