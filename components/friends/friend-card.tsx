@@ -1,0 +1,7 @@
+import Link from 'next/link'
+import { ExternalLink, Star } from 'lucide-react'
+import type { Friend } from '@/lib/friends'
+
+export function FriendCard({ friend }: { friend: Friend }) {
+  return <article className="group flex flex-col border border-border bg-card"><Link href={`/friends/${friend.slug}`} className="block focus:outline-none focus:ring-2 focus:ring-primary"><div className="relative aspect-[16/9] overflow-hidden bg-muted">{friend.logo_url ? <img src={friend.logo_url} alt={friend.logo_alt ?? `${friend.name} logo`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" /> : <div className="flex h-full items-center justify-center text-xs text-muted-foreground">NO IMAGE</div>}{friend.featured && <span className="absolute left-3 top-3 flex items-center gap-1 bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Star className="h-3 w-3" /> Featured</span>}</div></Link><div className="flex flex-1 flex-col gap-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="label-mono text-[10px] text-primary">{friend.friend_categories?.name ?? 'Friend'}</p><h2 className="stencil mt-1 text-lg">{friend.name}</h2></div></div><p className="text-sm leading-6 text-muted-foreground">{friend.short_description}</p><a href={friend.url} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">Visit {friend.domain}<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /></a></div></article>
+}

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, Handshake } from "lucide-react"
 import { getAdminUser } from "@/lib/admin"
 import { BakerToolsButton } from "@/components/baker-tools-button"
 import { FullchanButton } from "@/components/fullchan-button"
@@ -35,7 +35,13 @@ const SIGNAL_TOOLS = [
     description: "Track the sequence",
     icon: Clock,
     href: "/archives/timeline",
-  }, 
+  },
+  {
+    label: "Friends",
+    description: "Meet trusted signals",
+    icon: Handshake,
+    href: "/friends",
+  },
   {
     label: "RSS Feed",
     description: "Follow the wire",
