@@ -27,6 +27,10 @@ import {
   SPAM_LIMITS,
 } from "@/lib/forum-spam-guard"
 
+const THREAD_TITLE_MAX = 140
+const THREAD_BODY_MAX = 20_000
+const THREAD_SOURCE_URL_MAX = 2_048
+
 const ALLOWED_TIPTAP_NODES = new Set([
   "doc", "paragraph", "text", "heading", "bulletList", "orderedList", "listItem",
   "blockquote", "codeBlock", "hardBreak", "horizontalRule", "image", "videoBlock", "embedBlock",
@@ -139,6 +143,19 @@ export async function createThread(formData: FormData) {
   const status = intent === "draft" ? "draft" : "published"
   const contentFormat = String(formData.get("content_format") ?? "markdown")
   const tags = rawTags ? serializeTags(parseTags(rawTags)) : null
+
+  if (title.length > THREAD_TITLE_MAX || rawBody.length > THREAD_BODY_MAX || rawTags.length > 200) {
+    return { error: "One or more fields exceed the allowed length." }
+  }
+  if (source_url) {
+    if (source_url.length > THREAD_SOURCE_URL_MAX) return { error: "Source URL is too long." }
+    try {
+      const parsedSource = new URL(source_url)
+      if (!/^https?:$/i.test(parsedSource.protocol)) return { error: "Source URL must use http or https." }
+    } catch {
+      return { error: "Enter a valid source URL." }
+    }
+  }
   let richContent: ReturnType<typeof parseRichContent>
   try {
     richContent = parseRichContent(rawBody, contentFormat)
