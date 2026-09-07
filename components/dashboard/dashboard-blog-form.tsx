@@ -29,6 +29,7 @@ const CATEGORY_OPTIONS = [
   "Opinion",
   "Media",
   "Culture",
+  "Decodes",
   "Law & Justice",
   "Defense & Security",
 ] as const
