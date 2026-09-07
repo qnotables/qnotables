@@ -18,11 +18,17 @@ export function ReplyVotes({
   const [upVotes, setUpVotes] = useState(initialUpVotes)
   const [downVotes, setDownVotes] = useState(initialDownVotes)
   const [currentVote, setCurrentVote] = useState<"up" | "down" | null>(userVote ?? null)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function handleVote(voteType: "up" | "down") {
     startTransition(async () => {
+      setError(null)
       const res = await voteOnReply(replyId, voteType)
+      if (res?.error) {
+        setError(res.error)
+        return
+      }
       if (!res?.error) {
         // Optimistic update
         if (currentVote === voteType) {
@@ -91,6 +97,7 @@ export function ReplyVotes({
         <ThumbsDown className="h-3.5 w-3.5" />
         <span className="label-mono text-xs">{downVotes}</span>
       </button>
+      {error && <span className="text-xs text-destructive" role="alert">{error}</span>}
     </div>
   )
 }

@@ -12,13 +12,43 @@ type ImportedDraft = {
   title?: string
   content?: string
   sourceUrl?: string
-  category?: string
-  tags?: string
-  desk?: string
-  author?: string
   publishedAt?: string
-  imageUrl?: string
-  sourceName?: string
+}
+
+const IMPORT_TITLE_MAX = 140
+const IMPORT_BODY_MAX = 20_000
+const IMPORT_SOURCE_MAX = 2_048
+
+function sanitizeImportedText(value: string | undefined, maxLength: number) {
+  if (!value) return undefined
+  return value
+    .replace(/[<>]/g, "")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength) || undefined
+}
+
+function sanitizeImportedBody(value: string | undefined, publishedAt: string | undefined) {
+  const body = value
+    ?.replace(/[<>]/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .trim()
+    .slice(0, IMPORT_BODY_MAX)
+  const postedAt = sanitizeImportedText(publishedAt, 80)
+  if (!body && !postedAt) return undefined
+  return [body, postedAt ? `Originally posted: ${postedAt}` : ""].filter(Boolean).join("\n\n")
+}
+
+function validateImportedUrl(value: string | undefined) {
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    if (!/^https?:$/i.test(url.protocol)) return undefined
+    return url.toString().slice(0, IMPORT_SOURCE_MAX)
+  } catch {
+    return undefined
+  }
 }
 
 export default async function NewThreadPage({
@@ -31,18 +61,12 @@ export default async function NewThreadPage({
     const value = params[key]
     return Array.isArray(value) ? value[0] : value
   }
-  const importedDraft: ImportedDraft | undefined = value("imported") === "1"
+  const isImported = value("import") === "1"
+  const importedDraft: ImportedDraft | undefined = isImported
     ? {
-        title: value("title"),
-        content: value("content"),
-        sourceUrl: value("source_url"),
-        category: value("category"),
-        tags: value("tags"),
-        desk: value("desk"),
-        author: value("author"),
-        publishedAt: value("published_at"),
-        imageUrl: value("image_url"),
-        sourceName: value("source_name"),
+        title: sanitizeImportedText(value("title"), IMPORT_TITLE_MAX),
+        content: sanitizeImportedBody(value("body"), value("postedAt")),
+        sourceUrl: validateImportedUrl(value("sourceUrl")),
       }
     : undefined
 
@@ -70,7 +94,7 @@ export default async function NewThreadPage({
         </div>
 
         <div className="corner-frame border border-border bg-card p-6 md:p-8">
-          <NewThreadForm initialDraft={importedDraft} />
+          <NewThreadForm initialDraft={importedDraft} imported={isImported} />
         </div>
       </main>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
+import { X } from "lucide-react"
 import { ChevronDown } from "lucide-react"
 import { createThread } from "@/app/forum/actions"
 import { TiptapEditor } from "@/components/tiptap-editor"
@@ -47,7 +48,8 @@ function draftBody(draft?: NewThreadDraft) {
   return `${image}<p>${content}</p>${metadata}${source}`
 }
 
-export function NewThreadForm({ initialDraft }: { initialDraft?: NewThreadDraft }) {
+export function NewThreadForm({ initialDraft, imported = false }: { initialDraft?: NewThreadDraft; imported?: boolean }) {
+  const [showImportNotice, setShowImportNotice] = useState(imported)
   const [error, setError] = useState<string | null>(null)
   const [pendingMsg, setPendingMsg] = useState<string | null>(null)
   const [draftMsg, setDraftMsg] = useState<string | null>(null)
@@ -55,6 +57,13 @@ export function NewThreadForm({ initialDraft }: { initialDraft?: NewThreadDraft 
   const [title, setTitle] = useState(initialDraft?.title ?? "")
   const [dirty, setDirty] = useState(false)
   const intentRef = useRef<"publish" | "draft">("publish")
+
+  useEffect(() => {
+    if (!imported) return
+    const url = new URL(window.location.href)
+    ;["import", "title", "sourceUrl", "body", "postedAt"].forEach((key) => url.searchParams.delete(key))
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+  }, [imported])
 
   // Warn on tab close / navigation if the form has unsaved input
   useEffect(() => {
@@ -89,6 +98,14 @@ export function NewThreadForm({ initialDraft }: { initialDraft?: NewThreadDraft 
 
   return (
     <form action={action} className="flex flex-col gap-5">
+      {showImportNotice ? (
+        <div className="flex items-start justify-between gap-4 border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-foreground" role="status">
+          <span>Imported from an external post. Review and edit before publishing.</span>
+          <button type="button" onClick={() => setShowImportNotice(false)} aria-label="Dismiss import notice" className="shrink-0 text-muted-foreground transition-colors hover:text-foreground">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {/* Title */}
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
