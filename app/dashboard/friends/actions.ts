@@ -62,6 +62,42 @@ export async function saveFriend(previous: FriendFormState, formData: FormData):
   return { success: draft ? 'Draft saved.' : 'Submitted for review.', friendId: result.data.id }
 }
 
+export async function saveAdminFriend(previous: FriendFormState, formData: FormData): Promise<FriendFormState> {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Admin access required.' }
+  const friendId = cleanText(formValue(formData, 'friend_id'), 80)
+  if (!friendId) return { error: 'Friend listing not found.' }
+  const name = cleanText(formValue(formData, 'name'), 120)
+  const description = cleanText(formValue(formData, 'short_description'), 280)
+  const contactEmail = cleanText(formValue(formData, 'contact_email'), 160)
+  const logoUrl = cleanText(formValue(formData, 'logo_url'), 500)
+  const logoAlt = cleanText(formValue(formData, 'logo_alt') || `${name} logo`, 160)
+  const categoryId = cleanText(formValue(formData, 'category_id'), 80) || null
+  if (name.length < 2) return { error: 'Enter a name between 2 and 120 characters.' }
+  if (description.length < 10) return { error: 'Add a short description of at least 10 characters.' }
+  let normalized
+  try { normalized = normalizeUrl(formValue(formData, 'url')) } catch { return { error: 'Enter a valid http or https URL.' } }
+  const socialLinks = ['instagram', 'youtube', 'x', 'discord'].reduce<Record<string, string>>((result, key) => {
+    const value = cleanText(formValue(formData, `social_${key}`), 240)
+    if (!value) return result
+    try {
+      const parsed = new URL(value)
+      if (['http:', 'https:'].includes(parsed.protocol)) result[key] = parsed.toString()
+    } catch {
+      // Ignore malformed optional social links.
+    }
+    return result
+  }, {})
+  const client = createAdminClient()
+  const { data: existing } = await client.from('friends').select('status, owner_id, name').eq('id', friendId).maybeSingle()
+  if (!existing) return { error: 'Friend listing not found.' }
+  const { error } = await client.from('friends').update({ name, url: normalized.url, normalized_url: normalized.normalizedUrl, domain: normalized.domain, short_description: description, category_id: categoryId, logo_url: logoUrl || null, logo_alt: logoAlt || null, social_links: socialLinks, contact_email: contactEmail || null, permission_confirmed: formData.get('permission_confirmed') === 'on', updated_at: new Date().toISOString() }).eq('id', friendId)
+  if (error) return { error: error.message.includes('unique') ? 'A Friend with this URL is already listed.' : 'Unable to update this Friend right now.' }
+  await client.from('friend_audit_logs').insert({ friend_id: friendId, actor_id: admin.id, action: 'admin_edited', from_status: existing.status, to_status: existing.status })
+  revalidatePath('/admin/friends'); revalidatePath(`/admin/friends/${friendId}/edit`); revalidatePath('/friends'); revalidatePath('/dashboard/friends')
+  return { success: `${name} updated.`, friendId }
+}
+
 export async function archiveFriend(friendId: string) {
   const { supabase, user } = await currentUser()
   if (!user) return { error: 'Please sign in.' }
