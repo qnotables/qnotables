@@ -94,6 +94,40 @@ export async function moderateFriend(friendId: string, status: Exclude<FriendSta
   return { success: `Friend ${status.replace('_', ' ')}.` }
 }
 
+export async function updateFriendSettings(formData: FormData) {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Admin access required.' }
+  const client = createAdminClient()
+  const max = Math.max(1, Math.min(100, Number(formData.get('max_submissions_per_user')) || 5))
+  const requireAllowedDomain = formData.get('require_allowed_domain') === 'on'
+  const { error } = await client.from('friend_settings').upsert({ id: 1, max_submissions_per_user: max, require_allowed_domain: requireAllowedDomain, updated_by: admin.id, updated_at: new Date().toISOString() })
+  if (error) return { error: 'Unable to save Friends settings.' }
+  revalidatePath('/admin/friends/settings')
+  return { success: 'Settings saved.' }
+}
+
+export async function addAllowedFriendDomain(formData: FormData) {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Admin access required.' }
+  const domain = cleanText(formData.get('domain'), 160).toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]
+  if (!domain || !domain.includes('.')) return { error: 'Enter a valid domain.' }
+  const client = createAdminClient()
+  const { error } = await client.from('friend_allowed_domains').upsert({ domain, created_by: admin.id, is_active: true }, { onConflict: 'domain' })
+  if (error) return { error: 'Unable to add that domain.' }
+  revalidatePath('/admin/friends/settings')
+  return { success: 'Allowed domain added.' }
+}
+
+export async function removeAllowedFriendDomain(domain: string) {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Admin access required.' }
+  const client = createAdminClient()
+  const { error } = await client.from('friend_allowed_domains').delete().eq('domain', domain)
+  if (error) return { error: 'Unable to remove that domain.' }
+  revalidatePath('/admin/friends/settings')
+  return { success: 'Allowed domain removed.' }
+}
+
 export async function setFriendFlag(friendId: string, flagged: boolean) {
   const admin = await getAdminUser()
   if (!admin) return { error: 'Admin access required.' }
