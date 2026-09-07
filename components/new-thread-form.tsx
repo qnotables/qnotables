@@ -61,7 +61,7 @@ export function NewThreadForm({ initialDraft, imported = false }: { initialDraft
   useEffect(() => {
     if (!imported) return
     const url = new URL(window.location.href)
-    ;["import", "title", "sourceUrl", "body", "postedAt"].forEach((key) => url.searchParams.delete(key))
+    ;["import", "imported", "title", "sourceUrl", "source_url", "body", "content", "postedAt", "published_at", "category", "desk", "author", "sourceName", "source_name", "imageUrl", "image_url", "tags"].forEach((key) => url.searchParams.delete(key))
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
   }, [imported])
 

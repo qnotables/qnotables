@@ -12,7 +12,8 @@ type ImportedDraft = {
   title?: string
   content?: string
   sourceUrl?: string
-  publishedAt?: string
+  category?: string
+  desk?: string
 }
 
 const IMPORT_TITLE_MAX = 140
@@ -61,12 +62,14 @@ export default async function NewThreadPage({
     const value = params[key]
     return Array.isArray(value) ? value[0] : value
   }
-  const isImported = value("import") === "1"
+  const isImported = value("import") === "1" || value("imported") === "1"
   const importedDraft: ImportedDraft | undefined = isImported
     ? {
         title: sanitizeImportedText(value("title"), IMPORT_TITLE_MAX),
-        content: sanitizeImportedBody(value("body"), value("postedAt")),
-        sourceUrl: validateImportedUrl(value("sourceUrl")),
+        content: sanitizeImportedBody(value("body") || value("content"), value("postedAt") || value("published_at")),
+        sourceUrl: validateImportedUrl(value("sourceUrl") || value("source_url")),
+        category: sanitizeImportedText(value("category"), 80),
+        desk: sanitizeImportedText(value("desk"), 80),
       }
     : undefined
 
