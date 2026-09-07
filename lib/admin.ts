@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { validateDashboardAccess } from "@/lib/dashboard-auth"
 
 /** Parse the ADMIN_EMAILS allowlist (comma-separated) into a lowercased set. */
 function adminEmailSet(): Set<string> {
@@ -24,8 +25,11 @@ export async function getAdminUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email)) return null
-  return user
+  if (!user) return null
+  // Dashboard secret-key holders are full admins even when their email is not
+  // listed in ADMIN_EMAILS. This matches the dashboard layout's admin role.
+  if (isAdminEmail(user.email) || (await validateDashboardAccess())) return user
+  return null
 }
 
 /**
@@ -38,5 +42,5 @@ export async function checkAdminAccess(): Promise<boolean> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return false
-  return isAdminEmail(user.email)
+  return isAdminEmail(user.email) || (await validateDashboardAccess())
 }
