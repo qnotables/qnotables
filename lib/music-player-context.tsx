@@ -12,8 +12,10 @@ interface MusicPlayerContextType {
   trackIdx: number
   playing: boolean
   muted: boolean
+  volume: number
   progress: number
   setPlaying: (playing: boolean) => void
+  setVolume: (volume: number) => void
   setTrackIdx: (idx: number | ((i: number) => number)) => void
   setMuted: (muted: boolean) => void
   prev: () => void
@@ -30,6 +32,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [trackIdx, setTrackIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(1)
   const [progress, setProgress] = useState(0)
 
   // Fetch tracks from API on mount
@@ -64,6 +67,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = new Audio(track.src)
     audio.preload = "metadata"
+    audio.volume = volume
     audio.muted = muted
 
     audio.addEventListener("timeupdate", () => {
@@ -93,6 +97,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (audioRef.current) audioRef.current.muted = muted
   }, [muted])
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume
+  }, [volume])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -134,8 +142,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         trackIdx,
         playing,
         muted,
+        volume,
         progress,
         setPlaying,
+        setVolume,
         setTrackIdx,
         setMuted,
         prev,
