@@ -2,7 +2,7 @@
 
 import { Cake } from "lucide-react"
 
-const BAKER_TOOLS_URL = "https://fullchan.net/?a5d3fa0962b05373#CXza26cZurUor7kGnETiyewaF6ckmEe45zJwov9Bj8DY"
+const BAKER_TOOLS_URL = "https://fullchan.net/?3126508b53f2ad6a#7DnG5tP1m18QJ4BPnLiqBakGRhoRozBgXxtexUDTFnSv"
 
 export function BakerToolsButton() {
   function openBakerTools() {
