@@ -26,6 +26,7 @@ export const FORUM_CATEGORIES: ForumCategory[] = [
   { name: "Crime", slug: "crime", description: "Criminal activity, justice, and law enforcement." },
   { name: "Faith", slug: "faith", description: "Religion, spirituality, and culture of belief." },
   { name: "Culture", slug: "culture", description: "Arts, media, society, and cultural commentary." },
+  { name: "Decodes", slug: "decodes", description: "Deep reads, explainers, and decoded stories." },
   { name: "Other", slug: "other", description: "Anything that doesn't fit another category." },
 ]
 
