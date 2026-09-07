@@ -35,15 +35,15 @@ export function RssImportButton({
   function handleImport() {
     setPending(true)
     const params = new URLSearchParams({
-      imported: "1",
+      import: "1",
       title,
-      content,
-      source_url: sourceUrl,
-      source_name: sourceName,
-      author,
-      published_at: publishedAt ?? "",
-      image_url: imageUrl ?? "",
+      body: content,
+      sourceUrl,
+      postedAt: publishedAt ?? "",
       category,
+      author,
+      sourceName,
+      imageUrl: imageUrl ?? "",
       tags: tags.join(", "),
     })
     window.location.assign(`/forum/new?${params.toString()}`)
