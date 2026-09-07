@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export type FriendStatus = "draft" | "pending" | "approved" | "rejected" | "needs_changes" | "archived"
 
@@ -100,7 +101,7 @@ export async function getMyFriends() {
 }
 
 export async function getAdminFriends(status?: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   let query = supabase.from('friends').select('*, friend_categories(name, slug)').order('updated_at', { ascending: false })
   if (status && status !== 'all') query = query.eq(status === 'flagged' ? 'flagged' : 'status', status === 'flagged' ? true : status)
   const { data, error } = await query
