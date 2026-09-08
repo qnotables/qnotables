@@ -26,6 +26,16 @@ import { PostFeaturedMedia } from "@/components/post-featured-media"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+function RelativeTime({ iso }: { iso: string }) {
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
+
+  return <>{hydrated ? timeAgo(iso) : "—"}</>
+}
+
 export interface SituationForumItem {
   type: "forum"
   id: string
@@ -230,7 +240,7 @@ function stripMarkdown(md: string): string {
 }
 
 
-// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ��─────────────────
+// ─── Tiptap JSON node type (used by extractFirstBlogMedia) ──────────────────
 
 interface TiptapNode {
   type?: string
@@ -397,7 +407,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
       {reply && (
         <div className="mx-4 border-l-2 border-primary/40 pl-3">
           <p className="label-mono text-[10px] text-primary mb-1">
-            {reply.authorName.toUpperCase()} · {timeAgo(reply.createdAt)}
+            {reply.authorName.toUpperCase()} · <RelativeTime iso={reply.createdAt} />
           </p>
           {previewText ? (
             <p className="text-sm text-muted-foreground line-clamp-2">{previewText}</p>
@@ -418,7 +428,7 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         <span>{item.authorName}</span>
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          <span>{timeAgo(activityAt)}</span>
+          <span><RelativeTime iso={activityAt} /></span>
         </div>
         <div className="flex items-center gap-1">
           <MessageCircle className="h-3 w-3" />
