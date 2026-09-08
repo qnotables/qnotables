@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react"
+import { usePathname } from "next/navigation"
 
 interface Track {
   title: string
@@ -38,6 +39,7 @@ interface MusicPlayerContextType {
 const MusicPlayerContext = createContext<MusicPlayerContextType | null>(null)
 
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const savedStateRef = useRef<PersistedPlayerState | null>(null)
   const restoredPositionRef = useRef(false)
@@ -183,6 +185,17 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       audio.pause()
     }
   }, [playing])
+
+  // The provider stays mounted across App Router navigation. Re-assert playback
+  // after a page switch without recreating the audio element or losing position.
+  useEffect(() => {
+    if (!playing) return
+    const audio = audioRef.current
+    if (!audio || !audio.paused) return
+    audio.play().catch(() => {
+      // Browsers may block autoplay after a hard reload; keep the intent persisted.
+    })
+  }, [pathname, playing])
 
   function togglePlay() {
     setPlaying((p) => !p)

@@ -15,13 +15,13 @@ const SITES: EmbedSite[] = [
     id: "qresearch",
     label: "QResearch",
     tag: "",
-    url: "https://8kun.top/qresearch/res/24671999.html#bottom",
+    url: "https://9ch.net/qresearch/res/24671999.html#bottom",
   },
   {
     id: "qresearch-catalog",
     label: "/QResearch/",
     tag: "",
-    url: "https://8kun.top/qresearch/catalog.html",
+    url: "https://9ch.net/qresearch/catalog.html",
   },
   {
     id: "qalerts",
@@ -33,7 +33,7 @@ const SITES: EmbedSite[] = [
     id: "projectDComms",
     label: "ProjectDComms",
     tag: "",
-    url: "https://8kun.top/projectdcomms/catalog.html",
+    url: "https://9ch.net/projectdcomms/catalog.html",
   },
  {
     id: "You Are The News",
