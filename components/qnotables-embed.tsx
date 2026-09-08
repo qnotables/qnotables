@@ -63,7 +63,7 @@ function checkIsXEmbed(url: string): boolean {
   return url.includes("x.com") || url.includes("twitter.com")
 }
 
-const QNOTABLES_URL = "https://9ch.net/qresearch/res/24671999.html#bottom"
+const QNOTABLES_URL = "https://8kun.top/qresearch/res/24671999.html#bottom"
 
 /**
  * Single-URL embed for the /qnotables page — preserved for backwards compatibility.
