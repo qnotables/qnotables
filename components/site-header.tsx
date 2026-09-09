@@ -31,8 +31,8 @@ const MOBILE_REVEAL_DISTANCE = 20
 const SCROLL_JITTER = 3
 
 const secondaryLinks = [
-  { label: "ABOUT", href: "/about" },
   { label: "ARCHIVES", href: "/archives" },
+  { label: "ABOUT", href: "/about" },
   { label: "TOWN HALL", href: "/forum" },
   { label: "NEW TO Q?", href: "/new-to-q" },
 ]
