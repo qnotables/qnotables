@@ -75,6 +75,33 @@ export default async function ForumPage({
     // degrade gracefully — renders with empty list rather than crashing
   }
 
+  const threadUpVoteMap = new Map<string, number>()
+  const threadUserVoteMap = new Map<string, 1 | -1>()
+  try {
+    if (threads.length > 0) {
+      const threadIds = threads.map((thread) => thread.id)
+      const [{ data: threadVotes }, { data: userVotes }] = await Promise.all([
+        supabase.from("thread_votes").select("thread_id, vote").in("thread_id", threadIds),
+        user
+          ? supabase
+              .from("thread_votes")
+              .select("thread_id, vote")
+              .eq("user_id", user.id)
+              .in("thread_id", threadIds)
+          : Promise.resolve({ data: [] as { thread_id: string; vote: number }[] }),
+      ])
+
+      for (const vote of threadVotes ?? []) {
+        if (vote.vote === 1) threadUpVoteMap.set(vote.thread_id, (threadUpVoteMap.get(vote.thread_id) ?? 0) + 1)
+      }
+      for (const vote of userVotes ?? []) {
+        if (vote.vote === 1 || vote.vote === -1) threadUserVoteMap.set(vote.thread_id, vote.vote)
+      }
+    }
+  } catch (err) {
+    console.error("[forum/page] vote fetch error:", err)
+  }
+
   const rows: ThreadListItem[] = threads.map((t: any) => {
     const replyCount = t.reply_count ?? 0
     return {
@@ -96,6 +123,8 @@ export default async function ForumPage({
       is_locked: Boolean(t.is_locked),
       is_featured: Boolean(t.is_featured),
       is_soft_deleted: Boolean(t.is_soft_deleted),
+      upVoteCount: threadUpVoteMap.get(t.id) ?? 0,
+      userVote: threadUserVoteMap.get(t.id) ?? null,
     }
   })
 

@@ -17,6 +17,8 @@ import {
   Activity,
   Play,
 } from "lucide-react"
+import { ShareButtons } from "@/components/share-buttons"
+import { ForumThreadUpvote } from "@/components/forum-thread-upvote"
 import { timeAgo } from "@/lib/time"
 import {
   FORUM_CATEGORIES,
@@ -49,6 +51,8 @@ export interface ThreadListItem {
   is_locked: boolean
   is_featured: boolean
   is_soft_deleted: boolean
+  upVoteCount: number
+  userVote: 1 | -1 | null
 }
 
 interface ForumListProps {
@@ -181,7 +185,7 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
   )
 }
 
-function ThreadCard({ t }: { t: ThreadListItem }) {
+function ThreadCard({ t, isSignedIn }: { t: ThreadListItem; isSignedIn: boolean }) {
   // Always derive the excerpt fresh from the full body rather than trusting
   // the stored `excerpt` column: some legacy rows were truncated *before*
   // markdown/JSON was stripped, leaving broken syntax (e.g. a markdown image
@@ -270,6 +274,17 @@ function ThreadCard({ t }: { t: ThreadListItem }) {
             ))}
           </div>
         )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          <ShareButtons title={t.title} url={href} excerpt={excerpt} />
+          {isSignedIn && (
+            <ForumThreadUpvote
+              threadId={t.id}
+              initialUpVotes={t.upVoteCount}
+              userVote={t.userVote}
+            />
+          )}
+        </div>
 
         {/* Meta row */}
         <div className="label-mono mt-2.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -519,8 +534,8 @@ export function ForumList({ threads, isSignedIn }: ForumListProps) {
       {/* Thread list */}
       {filtered.length > 0 && (
         <div className="flex flex-col gap-2">
-          {visible.map((t) => (
-            <ThreadCard key={t.id} t={t} />
+              {visible.map((t) => (
+            <ThreadCard key={t.id} t={t} isSignedIn={isSignedIn} />
           ))}
         </div>
       )}
