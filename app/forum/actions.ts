@@ -1127,6 +1127,7 @@ export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
   }
 
   revalidatePath(`/forum/${threadId}`)
+  revalidatePath("/forum")
   return { error: null }
 }
 
