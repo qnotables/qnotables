@@ -186,7 +186,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
     closePanel()
   }
 
-  function renderSections(className: string) {
+  function renderDesks(className: string) {
     return (
       <div className={className}>
         <div className="grid gap-1 sm:grid-cols-2">
@@ -201,21 +201,6 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             >
               {category}
             </a>
-          ))}
-        </div>
-        <div className="my-3 border-t border-border" />
-        <div className="grid gap-1 sm:grid-cols-2">
-          {secondaryLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={closePanel}
-              className={`label-mono border-l-2 border-transparent px-3 py-2.5 text-left text-muted-foreground transition-colors hover:border-primary hover:text-primary ${
-                link.label === "TOWN HALL" ? "font-bold text-foreground" : ""
-              }`}
-            >
-              {link.label}
-            </Link>
           ))}
         </div>
       </div>
@@ -324,18 +309,17 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </div>
           </div>
 
-          <nav className="flex h-11 items-center gap-0 overflow-x-auto border-t border-border px-6" aria-label="News categories">
-            {allCategories.map((category) => (
-              <a
-                key={category}
-                href={category === "NOTABLES" ? "/notables" : `/#desk-${category}`}
-                onClick={() => selectCategory(category)}
-                className={`label-mono shrink-0 border-b-2 px-3 py-3 text-left transition-colors ${
-                  active === category ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          <nav className="flex h-11 items-center gap-0 overflow-x-auto border-t border-border px-6" aria-label="Site navigation">
+            {secondaryLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`label-mono shrink-0 border-b-2 border-transparent px-3 py-3 text-muted-foreground transition-colors hover:border-primary hover:text-foreground ${
+                  link.label === "TOWN HALL" ? "font-bold text-foreground" : ""
                 }`}
               >
-                {category}
-              </a>
+                {link.label}
+              </Link>
             ))}
             <span className="mx-3 h-4 w-px shrink-0 bg-border" aria-hidden="true" />
             <div className="relative shrink-0" data-site-header>
@@ -344,14 +328,14 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                 onClick={(event) => togglePanel("sections", event.currentTarget)}
                 className="label-mono flex items-center gap-1 border-b-2 border-transparent px-3 py-3 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 aria-expanded={activePanel === "sections"}
-                aria-controls="desktop-sections-panel"
+                aria-controls="desktop-desks-panel"
               >
-                Sections
+                Desks
                 <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "sections" ? "rotate-180" : ""}`} />
               </button>
               {activePanel === "sections" && (
-                <div id="desktop-sections-panel" className="absolute right-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
-                  {renderSections("")}
+                <div id="desktop-desks-panel" className="absolute right-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                  {renderDesks("")}
                 </div>
               )}
             </div>
@@ -382,14 +366,14 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                 onClick={(event) => togglePanel("sections", event.currentTarget)}
                 className="flex min-h-9 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 aria-expanded={activePanel === "sections"}
-                aria-controls="compact-sections-panel"
+                aria-controls="compact-desks-panel"
               >
                 <Menu className="h-4 w-4" />
-                <span className="label-mono">Sections</span>
+                <span className="label-mono">Desks</span>
               </button>
               {activePanel === "sections" && (
-                <div id="compact-sections-panel" className="absolute right-0 top-full z-50 mt-2 w-[min(34rem,calc(100vw-2rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
-                  {renderSections("")}
+                <div id="compact-desks-panel" className="absolute right-0 top-full z-50 mt-2 w-[min(34rem,calc(100vw-2rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                  {renderDesks("")}
                 </div>
               )}
             </div>
@@ -417,7 +401,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
-            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open sections" aria-expanded={activePanel === "sections"}>
+            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open desks" aria-expanded={activePanel === "sections"}>
               {activePanel === "sections" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
             <button type="button" onClick={openSearch} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Search dispatches">
@@ -429,7 +413,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           </div>
         </div>
 
-        {activePanel === "sections" && <div className="border-t border-border p-4 md:hidden">{renderSections("")}</div>}
+        {activePanel === "sections" && <div className="border-t border-border p-4 md:hidden">{renderDesks("")}</div>}
         {activePanel === "more" && <div className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl md:hidden">{renderMoreMenu()}</div>}
       </div>
 
@@ -449,7 +433,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             <span className="stencil truncate text-xl leading-none text-foreground">Hot and Fresh</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
-            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open sections" aria-expanded={activePanel === "sections"} aria-controls="mobile-sections-panel">
+            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open desks" aria-expanded={activePanel === "sections"} aria-controls="mobile-desks-panel">
               {activePanel === "sections" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
             <button type="button" onClick={openSearch} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Search dispatches">
@@ -460,7 +444,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </button>
           </div>
         </div>
-        {activePanel === "sections" && <div id="mobile-sections-panel" role="region" aria-label="Site sections" className="border-t border-border bg-background p-4">{renderSections("")}</div>}
+        {activePanel === "sections" && <div id="mobile-desks-panel" role="region" aria-label="Site desks" className="border-t border-border bg-background p-4">{renderDesks("")}</div>}
         {activePanel === "more" && <div id="mobile-more-panel" role="region" aria-label="Account and more" className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl">{renderMoreMenu()}</div>}
       </div>
     </>
