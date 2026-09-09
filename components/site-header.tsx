@@ -365,13 +365,13 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                 type="button"
                 onClick={(event) => togglePanel("sections", event.currentTarget)}
                 className="label-mono flex items-center gap-1 border-b-2 border-transparent px-3 py-3 text-foreground/75 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-expanded={activePanel === "sections" && !desktopCompactVisible}
+                aria-expanded={activePanel === "sections"}
                 aria-controls="desktop-desks-panel"
               >
                 Desks
                 <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "sections" ? "rotate-180" : ""}`} />
               </button>
-              {activePanel === "sections" && !desktopCompactVisible && (
+              {activePanel === "sections" && (
                 <div id="desktop-desks-panel" className="absolute right-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
                   {renderDesks("")}
                 </div>
