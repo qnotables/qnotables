@@ -78,7 +78,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           accumulatedScrollRef.current += Math.abs(delta)
 
           if (currentY <= MOBILE_HIDE_DISTANCE) {
-            setMobileCompactVisible(false)
+            setMobileCompactVisible(true)
             accumulatedScrollRef.current = 0
           } else if (direction === "down" && accumulatedScrollRef.current >= MOBILE_HIDE_DISTANCE) {
             setMobileCompactVisible(false)
@@ -437,6 +437,8 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         data-site-header
         onFocusCapture={() => setMobileFocusVisible(true)}
         onBlurCapture={handleHeaderBlur}
+        aria-hidden={!mobileVisible}
+        inert={!mobileVisible}
         className={`fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
           mobileVisible ? "translate-y-0" : "-translate-y-full"
         }`}
@@ -458,8 +460,8 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </button>
           </div>
         </div>
-        {activePanel === "sections" && <div id="mobile-sections-panel" className="border-t border-border bg-background p-4">{renderSections("")}</div>}
-        {activePanel === "more" && <div id="mobile-more-panel" className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl">{renderMoreMenu()}</div>}
+        {activePanel === "sections" && <div id="mobile-sections-panel" role="region" aria-label="Site sections" className="border-t border-border bg-background p-4">{renderSections("")}</div>}
+        {activePanel === "more" && <div id="mobile-more-panel" role="region" aria-label="Account and more" className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl">{renderMoreMenu()}</div>}
       </div>
     </>
   )
