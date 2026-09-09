@@ -171,6 +171,17 @@
   }
   html {
     @apply font-mono;
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+[id^="desk-"] {
+  scroll-margin-top: 4.5rem;
+}
+
+@media (min-width: 768px) {
+  [id^="desk-"] {
+    scroll-margin-top: 8rem;
   }
 }
 
