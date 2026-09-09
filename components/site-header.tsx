@@ -218,6 +218,18 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           <ShoppingBag className="h-4 w-4" />
           <span className="label-mono font-semibold">Shop</span>
         </Link>
+        <div className="grid grid-cols-2 gap-2 border-t border-border pt-2">
+          {secondaryLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={closePanel}
+              className="label-mono border border-border px-3 py-2 text-center text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
           <HeaderAuth />
           <ThemeToggle />
