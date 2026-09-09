@@ -1097,35 +1097,7 @@ export async function voteOnThread(threadId: string, voteValue: 1 | -1) {
 
   if (error) return { error }
 
-  // Update author karma
-  const { data: thread } = await supabase
-    .from("forum_threads")
-    .select("author_id")
-    .eq("id", threadId)
-    .maybeSingle()
-
-  if (thread?.author_id) {
-    const { data: votes } = await db
-      .from("thread_votes")
-      .select("vote")
-      .eq("thread_id", threadId)
-
-    const netThreadKarma = (votes ?? []).reduce((sum, v) => sum + (v.vote as number), 0)
-
-    // Get existing karma and add the net for this thread
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("karma")
-      .eq("id", thread.author_id)
-      .maybeSingle()
-
-    const currentKarma = (profile as any)?.karma ?? 0
-    await supabase
-      .from("profiles")
-      .update({ karma: currentKarma + netThreadKarma })
-      .eq("id", thread.author_id)
-  }
-
+  // Karma is recalculated by the database trigger on thread_votes.
   revalidatePath(`/forum/${threadId}`)
   revalidatePath("/forum")
   return { error: null }
@@ -1179,37 +1151,7 @@ export async function voteOnReply(replyId: string, voteType: "up" | "down") {
 
   if (error) return { error }
 
-  // Update author karma based on total votes on their reply
-  const { data: votes } = await supabase
-    .from("reply_votes")
-    .select("vote_type")
-    .eq("reply_id", replyId)
-
-  const upVotes = votes?.filter((v) => v.vote_type === "up").length ?? 0
-  const downVotes = votes?.filter((v) => v.vote_type === "down").length ?? 0
-  const karma = upVotes - downVotes
-
-  // Get reply author
-  const { data: reply } = await supabase
-    .from("forum_replies")
-    .select("author_id")
-    .eq("id", replyId)
-    .maybeSingle()
-
-  if (reply?.author_id) {
-    // Calculate total karma for this user across all their replies
-    const { data: allVotes } = await db
-      .from("reply_votes")
-      .select("vote_type, forum_replies(author_id)")
-      .eq("forum_replies.author_id", reply.author_id)
-
-    const totalKarma =
-      allVotes?.filter((v) => v.vote_type === "up").length ?? 0 -
-      (allVotes?.filter((v) => v.vote_type === "down").length ?? 0)
-
-    await supabase.from("profiles").update({ karma: totalKarma }).eq("id", reply.author_id)
-  }
-
+  // Karma is recalculated by the database trigger on reply_votes.
   revalidatePath(`/forum/[slug]`)
   return { error: null }
 }
