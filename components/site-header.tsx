@@ -1,9 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { FocusEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, Search, ShoppingBag } from "lucide-react"
+import {
+  ChevronDown,
+  Menu,
+  MoreHorizontal,
+  Radio,
+  Search,
+  ShoppingBag,
+  X,
+} from "lucide-react"
 import { HeaderMusicPlayer } from "@/components/header-music-player"
 import { NewsTicker } from "@/components/news-ticker"
 import { categories } from "@/lib/news-data"
@@ -13,101 +22,100 @@ import { useDeskFilter } from "@/components/desk-filter-context"
 import { SearchOverlay } from "@/components/search-overlay"
 
 type WireStory = { id: string; headline: string; summary: string; source: string; url?: string }
+type Panel = "sections" | "more" | "live" | null
 
-// Scroll must move at least this many pixels before we react, so accidental
-// or tiny scroll jitter doesn't flicker the header.
-const SCROLL_DELTA_THRESHOLD = 10
-// The header is never hidden until the page has scrolled past this point.
-const HIDE_AFTER_SCROLL_Y = 80
+const DESKTOP_COMPACT_AFTER = 160
+const DESKTOP_EXPANDED_UNTIL = 72
+const MOBILE_HIDE_DISTANCE = 56
+const MOBILE_REVEAL_DISTANCE = 20
+const SCROLL_JITTER = 3
+
+const secondaryLinks = [
+  { label: "ABOUT", href: "/about" },
+  { label: "ARCHIVES", href: "/archives" },
+  { label: "TOWN HALL", href: "/forum" },
+  { label: "NEW TO Q?", href: "/new-to-q" },
+]
+
+const allCategories = Array.from(new Set(["NOTABLES", ...categories]))
 
 export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: WireStory[] }) {
-  const [now, setNow] = useState<string>("")
+  const [now, setNow] = useState("")
   const [wireStories, setWireStories] = useState<WireStory[]>(initialWireStories || [])
   const { active, setActive } = useDeskFilter()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [activePanel, setActivePanel] = useState<Panel>(null)
   const [searchOpen, setSearchOpen] = useState(false)
-
-  const headerRef = useRef<HTMLElement>(null)
-  const [headerHeight, setHeaderHeight] = useState(0)
-  const [hiddenByScroll, setHiddenByScroll] = useState(false)
+  const [desktopCompactVisible, setDesktopCompactVisible] = useState(false)
+  const [mobileCompactVisible, setMobileCompactVisible] = useState(true)
+  const [mobileFocusVisible, setMobileFocusVisible] = useState(false)
   const lastScrollYRef = useRef(0)
+  const scrollDirectionRef = useRef<"up" | "down" | null>(null)
+  const accumulatedScrollRef = useRef(0)
   const tickingRef = useRef(false)
+  const lastTriggerRef = useRef<HTMLElement | null>(null)
 
-  // Measure the real header height (ticker + status bar + masthead + nav can
-  // all vary by breakpoint/content) so we can reserve the same space below it
-  // and avoid layout shift.
-  useLayoutEffect(() => {
-    const el = headerRef.current
-    if (!el) return
-
-    const updateHeight = () => setHeaderHeight(el.offsetHeight)
-    updateHeight()
-
-    const resizeObserver = new ResizeObserver(updateHeight)
-    resizeObserver.observe(el)
-    return () => resizeObserver.disconnect()
-  }, [])
-
-  // Scroll-direction show/hide with a threshold and a "don't hide near the
-  // top" guard. Uses a passive listener + requestAnimationFrame so it never
-  // blocks scrolling.
   useEffect(() => {
-    lastScrollYRef.current = window.scrollY
-
     const handleScroll = () => {
       if (tickingRef.current) return
       tickingRef.current = true
 
-      requestAnimationFrame(() => {
-        const currentY = window.scrollY
+      window.requestAnimationFrame(() => {
+        const currentY = Math.max(0, window.scrollY)
         const delta = currentY - lastScrollYRef.current
 
-        if (currentY <= HIDE_AFTER_SCROLL_Y) {
-          setHiddenByScroll(false)
-          lastScrollYRef.current = currentY
-          tickingRef.current = false
-          return
+        if (currentY <= DESKTOP_EXPANDED_UNTIL) {
+          setDesktopCompactVisible(false)
+        } else if (currentY >= DESKTOP_COMPACT_AFTER) {
+          setDesktopCompactVisible(true)
         }
 
-        if (Math.abs(delta) < SCROLL_DELTA_THRESHOLD) {
-          tickingRef.current = false
-          return
+        if (Math.abs(delta) >= SCROLL_JITTER) {
+          const direction = delta > 0 ? "down" : "up"
+          if (scrollDirectionRef.current !== direction) {
+            scrollDirectionRef.current = direction
+            accumulatedScrollRef.current = 0
+          }
+          accumulatedScrollRef.current += Math.abs(delta)
+
+          if (currentY <= MOBILE_HIDE_DISTANCE) {
+            setMobileCompactVisible(false)
+            accumulatedScrollRef.current = 0
+          } else if (direction === "down" && accumulatedScrollRef.current >= MOBILE_HIDE_DISTANCE) {
+            setMobileCompactVisible(false)
+            accumulatedScrollRef.current = 0
+          } else if (direction === "up" && accumulatedScrollRef.current >= MOBILE_REVEAL_DISTANCE) {
+            setMobileCompactVisible(true)
+            accumulatedScrollRef.current = 0
+          }
         }
 
-        setHiddenByScroll(delta > 0)
         lastScrollYRef.current = currentY
         tickingRef.current = false
       })
     }
 
+    lastScrollYRef.current = Math.max(0, window.scrollY)
+    setMobileCompactVisible(lastScrollYRef.current <= MOBILE_HIDE_DISTANCE)
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Anything happening inside the header (focus, mobile menu, search) always
-  // wins over the scroll-driven hide state.
-  const showHeader = !hiddenByScroll || menuOpen || searchOpen
-
-  const revealHeader = useCallback(() => setHiddenByScroll(false), [])
-
   useEffect(() => {
     const tick = () => {
-      const d = new Date()
-      const est = new Intl.DateTimeFormat("en-US", {
+      const time = new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-      }).format(d)
-      setNow(`${est} EST`)
+      }).format(new Date())
+      setNow(`${time} EST`)
     }
     tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
   }, [])
 
-  // Fetch wire stories on mount if not provided as prop
   useEffect(() => {
     if (initialWireStories && initialWireStories.length > 0) {
       setWireStories(initialWireStories)
@@ -129,152 +137,330 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
     fetchWireStories()
   }, [initialWireStories])
 
-  // Prepare ticker items from wire stories
-  const tickerItems = wireStories.map((s) => ({ headline: s.headline, url: s.url }))
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      if (searchOpen) {
+        setSearchOpen(false)
+        return
+      }
+      if (activePanel) {
+        setActivePanel(null)
+        window.requestAnimationFrame(() => lastTriggerRef.current?.focus())
+      }
+    }
 
-  return (
-    <>
-      <SearchOverlay
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        wireStories={wireStories}
-      />
-      <header
-        ref={headerRef}
-        onFocusCapture={revealHeader}
-        className="fixed inset-x-0 top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none"
-        style={{ transform: showHeader ? "translateY(0)" : "translateY(-100%)" }}
-      >
-        {/* ticker */}
-        <NewsTicker items={tickerItems} />
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null
+      if (target?.closest("[data-site-header]")) return
+      setActivePanel(null)
+    }
 
-        {/* status bar */}
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-1.5 italic text-muted-foreground md:px-6">
-        <button
-          type="button"
-          onClick={() => {
-            window.open(
-              "https://rumble.com/c/Qnotables",
-              "rumble_popout",
-              "width=1000,height=700,resizable=yes,scrollbars=yes"
-            )
-          }}
-          className="flex items-center gap-2 transition-colors hover:text-primary"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
-          <span className="label-mono text-foreground hover:text-primary">LIVE FEED</span>
-          <span className="label-mono hidden sm:inline">// 17 SOURCES MONITORED</span>
-        </button>
-        <div className="flex items-center gap-3">
-          <HeaderMusicPlayer />
-          <span className="label-mono tabular-nums">{now || "--:--:-- EST"}</span>
+    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      document.removeEventListener("pointerdown", handlePointerDown)
+    }
+  }, [activePanel, searchOpen])
+
+  const tickerItems = wireStories.map((story) => ({ headline: story.headline, url: story.url }))
+  const mobileVisible = mobileCompactVisible || mobileFocusVisible || activePanel !== null || searchOpen
+
+  function togglePanel(panel: Exclude<Panel, null>, trigger: HTMLElement) {
+    lastTriggerRef.current = trigger
+    setActivePanel((current) => (current === panel ? null : panel))
+  }
+
+  function closePanel() {
+    setActivePanel(null)
+  }
+
+  function openSearch() {
+    setActivePanel(null)
+    setSearchOpen(true)
+  }
+
+  function selectCategory(category: string) {
+    setActive(category)
+    closePanel()
+  }
+
+  function renderSections(className: string) {
+    return (
+      <div className={className}>
+        <div className="grid gap-1 sm:grid-cols-2">
+          {allCategories.map((category) => (
+            <a
+              key={category}
+              href={category === "NOTABLES" ? "/notables" : `/#desk-${category}`}
+              onClick={() => selectCategory(category)}
+              className={`label-mono border-l-2 px-3 py-2.5 text-left transition-colors hover:border-primary hover:text-primary ${
+                active === category ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+              }`}
+            >
+              {category}
+            </a>
+          ))}
+        </div>
+        <div className="my-3 border-t border-border" />
+        <div className="grid gap-1 sm:grid-cols-2">
+          {secondaryLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={closePanel}
+              className={`label-mono border-l-2 border-transparent px-3 py-2.5 text-left text-muted-foreground transition-colors hover:border-primary hover:text-primary ${
+                link.label === "TOWN HALL" ? "font-bold text-foreground" : ""
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
       </div>
+    )
+  }
 
-      {/* masthead */}
-      <div className="flex items-center justify-between px-4 py-4 md:px-6">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center border border-border text-foreground transition-colors hover:border-primary hover:text-primary md:hidden"
-            aria-label="Toggle navigation menu"
-            aria-expanded={menuOpen}
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <a href="/" className="flex items-baseline gap-2">
-            <Image
-              src="/us-flag.png"
-              alt="American flag"
-              width={32}
-              height={20}
-              className="h-5 w-8"
-              priority
-            />
-            <span className="stencil text-2xl leading-none text-foreground md:text-3xl">
-              Hot and Fresh
-            </span>
-            <span className="label-mono hidden text-primary sm:inline">/ NEWS DESK</span>
-          </a>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="hidden items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex"
-            aria-label="Search dispatches"
-          >
-            <Search className="h-4 w-4" />
-            <span className="label-mono hidden md:inline">Search</span>
-          </button>
-          <Link
-            href="https://shop.qnotables.ai"
-            className="flex items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
-            aria-label="Visit the shop"
-          >
-            <ShoppingBag className="h-4 w-4" />
-            <span className="label-mono hidden font-semibold md:inline">Shop</span>
-          </Link>
+  function renderMoreMenu() {
+    return (
+      <div className="grid gap-2 p-3">
+        <Link
+          href="https://shop.qnotables.ai"
+          onClick={closePanel}
+          className="flex items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          <ShoppingBag className="h-4 w-4" />
+          <span className="label-mono font-semibold">Shop</span>
+        </Link>
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
           <HeaderAuth />
           <ThemeToggle />
         </div>
       </div>
+    )
+  }
 
-      {/* category nav */}
-      <nav
-        className={`${
-          menuOpen ? "flex" : "hidden"
-        } flex-col gap-1 border-t border-border px-4 pb-3 md:flex md:flex-row md:items-center md:gap-0 md:border-t md:px-6 md:py-0`}
-        aria-label="News categories"
+  function handleHeaderBlur(event: FocusEvent<HTMLElement>) {
+    const next = event.relatedTarget as Node | null
+    if (!next || !event.currentTarget.contains(next)) setMobileFocusVisible(false)
+  }
+
+  return (
+    <>
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} wireStories={wireStories} />
+
+      <header
+        data-site-header
+        onBlurCapture={handleHeaderBlur}
+        className="relative z-40 w-full border-b border-border bg-background"
       >
-        {Array.from(new Set(["NOTABLES", ...categories])).map((cat) => (
-          <a
-            key={cat}
-            href={cat === "NOTABLES" ? "/notables" : `/#desk-${cat}`}
-            onClick={() => {
-              setActive(cat)
-              setMenuOpen(false)
-            }}
-            className={`label-mono border-l-2 px-3 py-2 text-left transition-colors md:border-l-0 md:border-b-2 ${
-              active === cat
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {cat}
-          </a>
-        ))}
+        <div className="hidden md:block">
+          <div className="h-8 overflow-hidden border-b border-border/60">
+            <NewsTicker items={tickerItems} />
+          </div>
 
-        {/* section links to other parts of the site */}
-        <span className="my-1 hidden h-4 w-px bg-border md:mx-2 md:inline-block" aria-hidden="true" />
-        {[
-          { label: "ABOUT", href: "/about" },
-          { label: "ARCHIVES", href: "/archives" },
-          { label: "TOWN HALL", href: "/forum" },
-          { label: "NEW TO Q?", href: "/new-to-q" },
-        ].map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={() => setMenuOpen(false)}
-            className={`label-mono border-l-2 border-transparent px-3 py-2 text-left text-muted-foreground transition-colors hover:text-foreground md:border-l-0 md:border-b-2 ${
-              link.label === "TOWN HALL" ? "font-bold text-foreground" : ""
-            }`}
-          >
-            {link.label}
+          <div className="relative flex h-14 items-center justify-between gap-4 px-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <Link href="/" className="flex shrink-0 items-baseline gap-2" aria-label="Hot and Fresh home">
+                <Image src="/us-flag.png" alt="American flag" width={32} height={20} className="h-5 w-8" priority />
+                <span className="stencil text-2xl leading-none text-foreground lg:text-3xl">Hot and Fresh</span>
+                <span className="label-mono hidden text-primary xl:inline">/ NEWS DESK</span>
+              </Link>
+
+              <div className="relative" data-site-header>
+                <button
+                  type="button"
+                  onClick={(event) => togglePanel("live", event.currentTarget)}
+                  className="flex min-h-9 items-center gap-2 border border-border px-2.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  aria-expanded={activePanel === "live"}
+                  aria-controls="header-live-panel"
+                >
+                  <span className="relative flex h-2 w-2" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                  </span>
+                  <span className="label-mono text-foreground">Live</span>
+                  <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "live" ? "rotate-180" : ""}`} />
+                </button>
+                {activePanel === "live" && (
+                  <div id="header-live-panel" className="absolute left-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                    <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
+                      <div>
+                        <p className="label-mono text-primary">Live desk</p>
+                        <p className="text-xs text-muted-foreground">{now || "--:--:-- EST"} · 17 sources monitored</p>
+                      </div>
+                      <Radio className="h-4 w-4 text-primary" aria-hidden="true" />
+                    </div>
+                    <HeaderMusicPlayer />
+                    <button
+                      type="button"
+                      onClick={() => window.open("https://rumble.com/c/Qnotables", "rumble_popout", "width=1000,height=700,resizable=yes,scrollbars=yes")}
+                      className="mt-3 w-full border border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    >
+                      Open live feed in a new window
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={openSearch}
+                className="flex min-h-9 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                aria-label="Search dispatches"
+              >
+                <Search className="h-4 w-4" />
+                <span className="label-mono hidden lg:inline">Search</span>
+              </button>
+              <Link href="https://shop.qnotables.ai" className="flex min-h-9 items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90" aria-label="Visit the shop">
+                <ShoppingBag className="h-4 w-4" />
+                <span className="label-mono hidden font-semibold lg:inline">Shop</span>
+              </Link>
+              <HeaderAuth />
+              <ThemeToggle />
+            </div>
+          </div>
+
+          <nav className="flex h-11 items-center gap-0 overflow-x-auto border-t border-border px-6" aria-label="News categories">
+            {allCategories.map((category) => (
+              <a
+                key={category}
+                href={category === "NOTABLES" ? "/notables" : `/#desk-${category}`}
+                onClick={() => selectCategory(category)}
+                className={`label-mono shrink-0 border-b-2 px-3 py-3 text-left transition-colors ${
+                  active === category ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {category}
+              </a>
+            ))}
+            <span className="mx-3 h-4 w-px shrink-0 bg-border" aria-hidden="true" />
+            <div className="relative shrink-0" data-site-header>
+              <button
+                type="button"
+                onClick={(event) => togglePanel("sections", event.currentTarget)}
+                className="label-mono flex items-center gap-1 border-b-2 border-transparent px-3 py-3 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                aria-expanded={activePanel === "sections"}
+                aria-controls="desktop-sections-panel"
+              >
+                Sections
+                <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "sections" ? "rotate-180" : ""}`} />
+              </button>
+              {activePanel === "sections" && (
+                <div id="desktop-sections-panel" className="absolute right-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                  {renderSections("")}
+                </div>
+              )}
+            </div>
+          </nav>
+        </div>
+
+        <div className="h-14 md:hidden" aria-hidden="true" />
+      </header>
+
+      <div
+        data-site-header
+        onFocusCapture={() => setMobileFocusVisible(true)}
+        onBlurCapture={handleHeaderBlur}
+        className={`fixed inset-x-0 top-0 z-50 hidden border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:block ${
+          desktopCompactVisible || activePanel !== null || searchOpen ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between gap-3 px-4 md:px-6">
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="Hot and Fresh home">
+            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-7 shrink-0" />
+            <span className="stencil truncate text-xl leading-none text-foreground md:text-2xl">Hot and Fresh</span>
           </Link>
-        ))}
-      </nav>
-    </header>
 
-    {/* Reserves space for the now-fixed header so page content doesn't jump
-        underneath it. Kept in sync with the header's real, measured height. */}
-    <div aria-hidden="true" style={{ height: headerHeight }} />
+          <div className="hidden items-center gap-2 md:flex">
+            <div className="relative" data-site-header>
+              <button
+                type="button"
+                onClick={(event) => togglePanel("sections", event.currentTarget)}
+                className="flex min-h-9 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                aria-expanded={activePanel === "sections"}
+                aria-controls="compact-sections-panel"
+              >
+                <Menu className="h-4 w-4" />
+                <span className="label-mono">Sections</span>
+              </button>
+              {activePanel === "sections" && (
+                <div id="compact-sections-panel" className="absolute right-0 top-full z-50 mt-2 w-[min(34rem,calc(100vw-2rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                  {renderSections("")}
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={openSearch} className="flex min-h-9 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Search dispatches">
+              <Search className="h-4 w-4" />
+              <span className="label-mono">Search</span>
+            </button>
+            <div className="relative" data-site-header>
+              <button
+                type="button"
+                onClick={(event) => togglePanel("more", event.currentTarget)}
+                className="flex min-h-9 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                aria-expanded={activePanel === "more"}
+                aria-controls="compact-more-panel"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="label-mono">More</span>
+              </button>
+              {activePanel === "more" && (
+                <div id="compact-more-panel" className="absolute right-0 top-full z-50 mt-2 w-72 border border-border bg-popover text-popover-foreground shadow-xl">
+                  {renderMoreMenu()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:hidden">
+            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open sections" aria-expanded={activePanel === "sections"}>
+              {activePanel === "sections" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+            <button type="button" onClick={openSearch} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Search dispatches">
+              <Search className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open account and more menu" aria-expanded={activePanel === "more"}>
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {activePanel === "sections" && <div className="border-t border-border p-4 md:hidden">{renderSections("")}</div>}
+        {activePanel === "more" && <div className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl md:hidden">{renderMoreMenu()}</div>}
+      </div>
+
+      <div
+        data-site-header
+        onFocusCapture={() => setMobileFocusVisible(true)}
+        onBlurCapture={handleHeaderBlur}
+        className={`fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
+          mobileVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <div className="flex h-14 items-center justify-between gap-2 px-3">
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="Hot and Fresh home">
+            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-7 shrink-0" />
+            <span className="stencil truncate text-xl leading-none text-foreground">Hot and Fresh</span>
+          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open sections" aria-expanded={activePanel === "sections"} aria-controls="mobile-sections-panel">
+              {activePanel === "sections" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+            <button type="button" onClick={openSearch} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Search dispatches">
+              <Search className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label="Open account and more menu" aria-expanded={activePanel === "more"} aria-controls="mobile-more-panel">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {activePanel === "sections" && <div id="mobile-sections-panel" className="border-t border-border bg-background p-4">{renderSections("")}</div>}
+        {activePanel === "more" && <div id="mobile-more-panel" className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl">{renderMoreMenu()}</div>}
+      </div>
     </>
   )
 }
