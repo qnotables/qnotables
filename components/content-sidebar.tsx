@@ -11,13 +11,10 @@ interface ContentSidebarProps {
 
 export function ContentSidebar({ children, sticky = true }: ContentSidebarProps) {
   return (
-    <aside
-      className={`flex min-w-0 flex-col gap-6 ${sticky ? "lg:sticky lg:top-6 lg:self-start" : ""}`}
-      aria-label="Content sidebar"
-    >
+    <aside className="flex min-w-0 flex-col gap-6" aria-label="Content sidebar">
       <IconLinksCard />
-      <DailyVerseWidget />
-      <div className="flex flex-col gap-6">
+      <div className={`flex flex-col gap-6 ${sticky ? "lg:sticky lg:top-6 lg:self-start" : ""}`}>
+        <DailyVerseWidget />
         <SidebarAd sticky={false} />
         <BriefSignup />
       </div>
