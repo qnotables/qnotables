@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { LogIn, LogOut, UserRound, LayoutDashboard } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
-export function HeaderAuth({ isAdmin = false }: { isAdmin?: boolean }) {
+export function HeaderAuth({ isAdmin = false, menu = false }: { isAdmin?: boolean; menu?: boolean }) {
   const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -58,37 +58,37 @@ export function HeaderAuth({ isAdmin = false }: { isAdmin?: boolean }) {
 
   if (email) {
     return (
-      <div className="flex items-center gap-2">
+      <div className={menu ? "grid w-full min-w-0 gap-2" : "flex items-center gap-2"}>
         {adminState ? (
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className={`flex min-w-0 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary ${menu ? "w-full justify-start" : ""}`}
             aria-label="Dashboard"
             title="Admin Dashboard"
           >
             <LayoutDashboard className="h-4 w-4" />
-            <span className="label-mono hidden md:inline">Dashboard</span>
+            <span className={`label-mono ${menu ? "inline" : "hidden md:inline"}`}>Dashboard</span>
           </Link>
         ) : null}
         {userId ? (
           <Link
             href={`/u/${userId}`}
-            className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className={`flex min-w-0 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary ${menu ? "w-full justify-start" : ""}`}
             aria-label="View your profile"
             title={email}
           >
             <UserRound className="h-4 w-4" />
-            <span className="label-mono hidden md:inline">Profile</span>
+            <span className={`label-mono ${menu ? "inline" : "hidden md:inline"}`}>Profile</span>
           </Link>
         ) : null}
         <button
           type="button"
           onClick={signOut}
-          className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          className={`flex min-w-0 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary ${menu ? "w-full justify-start" : ""}`}
           aria-label="Sign out"
         >
           <LogOut className="h-4 w-4" />
-          <span className="label-mono hidden md:inline">Sign Out</span>
+          <span className={`label-mono ${menu ? "inline" : "hidden md:inline"}`}>Sign Out</span>
         </button>
       </div>
     )
@@ -97,11 +97,11 @@ export function HeaderAuth({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <Link
       href="/auth/login"
-      className="flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+      className={`flex min-w-0 items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary ${menu ? "w-full justify-start" : ""}`}
       aria-label="Sign in"
     >
       <LogIn className="h-4 w-4" />
-      <span className="label-mono hidden md:inline">Sign In</span>
+      <span className={`label-mono ${menu ? "inline" : "hidden md:inline"}`}>Sign In</span>
     </Link>
   )
 }
