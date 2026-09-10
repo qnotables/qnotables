@@ -372,7 +372,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                 <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "sections" ? "rotate-180" : ""}`} />
               </button>
               {activePanel === "sections" && (
-                <div id="desktop-desks-panel" className="absolute right-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
+                <div id="desktop-desks-panel" className="absolute left-0 top-full z-50 mt-1 w-[min(34rem,calc(100vw-3rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
                   {renderDesks("")}
                 </div>
               )}
