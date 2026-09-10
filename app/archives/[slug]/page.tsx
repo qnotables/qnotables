@@ -374,30 +374,33 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="grid grid-cols-2 gap-4">
               {relatedPosts.map((relatedPost) => {
+                const cardMedia = resolveFirstPostMedia(relatedPost.body)
                 const cardImage = relatedPost.og_image_url || relatedPost.cover_image_url || null
+                const media = cardMedia?.kind === "video" || cardMedia?.kind === "embed"
+                  ? cardMedia
+                  : cardImage
+                    ? { kind: "image" as const, src: cardImage, alt: relatedPost.title, identity: "card-image" }
+                    : null
+
                 return (
-                  <Link
+                  <article
                     key={relatedPost.slug}
-                    href={`/archives/${relatedPost.slug}`}
                     className="group flex flex-col border border-border bg-card transition-colors hover:border-primary"
                   >
-                    {cardImage ? (
-                      <div className="relative aspect-video w-full overflow-hidden">
-                        <img
-                          src={cardImage}
-                          alt={relatedPost.title}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
+                    {media ? (
+                      <PostFeaturedMedia media={media} title={relatedPost.title} compact />
                     ) : (
                       <div className="aspect-video w-full bg-muted/30" />
                     )}
-                    <div className="p-4">
+                    <Link
+                      href={`/archives/${relatedPost.slug}`}
+                      className="p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                    >
                       <h3 className="stencil line-clamp-2 text-base leading-snug text-foreground transition-colors group-hover:text-primary">
                         {relatedPost.title}
                       </h3>
-                    </div>
-                  </Link>
+                    </Link>
+                  </article>
                 )
               })}
             </div>
