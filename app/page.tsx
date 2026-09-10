@@ -106,6 +106,11 @@ export default async function Page() {
         {/* Site Switcher Embed */}
         <SiteSwitcherEmbed />
 
+        {/* Media Library */}
+        <div className="mb-8">
+          <GallerySection />
+        </div>
+
         {/* section label */}
         <div className="mb-5 flex items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
@@ -186,11 +191,6 @@ export default async function Page() {
             </div>
             <BriefSignup />
           </aside>
-        </div>
-
-        {/* Gallery Section */}
-        <div className="mt-12">
-          <GallerySection />
         </div>
 
         {/* RSS source directory */}
