@@ -45,7 +45,7 @@ export async function TopAd() {
   )
 }
 
-export async function SidebarAd() {
+export async function SidebarAd({ sticky = true }: { sticky?: boolean }) {
   const ads = await getAdsByPlacement("sidebar")
 
   if (ads.length === 0) return null
@@ -58,7 +58,7 @@ export async function SidebarAd() {
         buttonText: ad.button_text,
         buttonLink: ad.button_link,
       }))}
-      className="sticky top-6 w-full max-w-xs"
+      className={`${sticky ? "sticky top-6 " : ""}w-full max-w-xs`}
       interval={30000}
     />
   )
