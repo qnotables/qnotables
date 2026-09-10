@@ -7,6 +7,7 @@ import type { ForumThread } from "@/lib/forum"
 import { formatDate } from "@/lib/blog-posts"
 import { getSiteUrl } from "@/lib/rss-utils"
 import { timeAgo } from "@/lib/time"
+import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
 
 const DEFAULT_DISPATCH_IMAGE = "/images/og-default.png"
 
@@ -47,6 +48,99 @@ function getDispatchAction(post: BlogPost): { label: string; icon: typeof Play |
   return { label: "Read report", icon: ArrowUpRight }
 }
 
+function getPostPreviewMedia(post: BlogPost): PostMedia {
+  const contentMedia = resolveFirstPostMedia(post.content)
+  if (contentMedia?.kind === "video" || contentMedia?.kind === "embed") return contentMedia
+  if (post.coverImage || post.seoImageUrl) {
+    return {
+      kind: "image",
+      src: post.coverImage || post.seoImageUrl || DEFAULT_DISPATCH_IMAGE,
+      alt: cleanText(post.title),
+      identity: "cover",
+    }
+  }
+  if (contentMedia) return contentMedia
+  return { kind: "image", src: DEFAULT_DISPATCH_IMAGE, alt: cleanText(post.title), identity: "fallback" }
+}
+
+function getThreadPreviewMedia(thread: ForumThread): PostMedia | null {
+  const bodyMedia = resolveFirstPostMedia(thread.body)
+  if (bodyMedia) return bodyMedia
+  const replyMedia = resolveFirstPostMedia(thread.latestReply?.body)
+  if (replyMedia) return replyMedia
+  if (thread.latestImageUrl) {
+    return { kind: "image", src: thread.latestImageUrl, alt: cleanText(thread.title), identity: "attachment" }
+  }
+  return null
+}
+
+function MediaPreview({ media, href, title }: { media: PostMedia; href: string; title: string }) {
+  const label = media.kind === "image" ? `Open ${title} image` : `Open ${title} video`
+
+  if (media.kind === "video") {
+    return (
+      <div className="relative overflow-hidden border-b border-border bg-foreground">
+        <video
+          src={media.src}
+          poster={media.poster}
+          controls
+          playsInline
+          preload="metadata"
+          aria-label={`${title} video preview`}
+          className="aspect-video w-full object-cover"
+        />
+        <Link
+          href={href}
+          className="label-mono absolute left-3 top-3 inline-flex items-center gap-1 border border-primary bg-background/90 px-2 py-1 text-[10px] font-semibold text-primary backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={label}
+        >
+          <Play className="h-3 w-3 fill-current" aria-hidden="true" />
+          VIDEO PREVIEW
+        </Link>
+      </div>
+    )
+  }
+
+  if (media.kind === "embed") {
+    return media.poster ? (
+      <Link href={href} className="group/media relative block overflow-hidden border-b border-border" aria-label={label}>
+        <CardImage src={media.poster} alt={`${title} video preview`} aspectRatio="video" objectPosition="top" />
+        <span className="absolute inset-0 flex items-center justify-center bg-background/15 transition-colors group-hover/media:bg-background/30">
+          <span className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+            <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+          </span>
+        </span>
+      </Link>
+    ) : (
+      <div className="relative overflow-hidden border-b border-border bg-foreground">
+        <iframe
+          src={media.src}
+          title={`${title} video preview`}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+          allowFullScreen
+          className="aspect-video w-full border-0"
+        />
+        <Link href={href} className="sr-only" aria-label={label}>{title}</Link>
+      </div>
+    )
+  }
+
+  return (
+    <Link href={href} className="block overflow-hidden border-b border-border" aria-label={label}>
+      <CardImage
+        src={media.src}
+        alt={media.alt || `${title} thumbnail`}
+        aspectRatio="video"
+        objectPosition="top"
+        className="transition-transform duration-300 group-hover:scale-[1.02]"
+      />
+    </Link>
+  )
+}
+
 function SectionHeading({
   eyebrow,
   title,
@@ -83,22 +177,14 @@ function SectionHeading({
 function DispatchCard({ post }: { post: BlogPost }) {
   const title = cleanText(post.title)
   const excerpt = cleanText(post.excerpt || post.subtitle) || "Open the full dispatch for the complete record."
-  const image = post.coverImage || post.seoImageUrl || DEFAULT_DISPATCH_IMAGE
   const href = `/archives/${post.slug}`
+  const media = getPostPreviewMedia(post)
   const action = getDispatchAction(post)
   const ActionIcon = action.icon
 
   return (
     <article className="group flex min-w-0 flex-col border border-border bg-card transition-colors hover:border-primary/70">
-      <Link href={href} className="block overflow-hidden border-b border-border" aria-label={`Open dispatch: ${title}`}>
-        <CardImage
-          src={image}
-          alt={`${title} thumbnail`}
-          aspectRatio="video"
-          objectPosition="top"
-          className="transition-transform duration-300 group-hover:scale-[1.02]"
-        />
-      </Link>
+      <MediaPreview media={media} href={href} title={title} />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="label-mono flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
           <span className="font-semibold uppercase text-primary">{cleanText(post.category || post.tag) || "Dispatch"}</span>
@@ -143,17 +229,14 @@ function CommunityCard({ thread }: { thread: ForumThread }) {
   const excerpt = cleanText(thread.body)
   const href = `/forum/${thread.slug || thread.id}`
   const activityAt = thread.lastActivityAt || thread.createdAt
+  const media = getThreadPreviewMedia(thread)
   const hasReplyActivity = Boolean(
     thread.latestReply && new Date(thread.latestReply.createdAt).getTime() > new Date(thread.createdAt).getTime(),
   )
 
   return (
     <article className="group flex min-w-0 flex-col border border-border bg-card p-4 transition-colors hover:border-primary/70">
-      {thread.latestImageUrl && (
-        <Link href={href} className="mb-3 block overflow-hidden border-b border-border pb-3" aria-label={`Open discussion: ${title}`}>
-          <CardImage src={thread.latestImageUrl} alt={`${title} attachment`} aspectRatio="video" objectPosition="top" />
-        </Link>
-      )}
+      {media && <div className="-mx-4 -mt-4 mb-3"><MediaPreview media={media} href={href} title={title} /></div>}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="label-mono flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
           <span className="font-semibold uppercase text-primary">{cleanText(thread.category) || "Community"}</span>
