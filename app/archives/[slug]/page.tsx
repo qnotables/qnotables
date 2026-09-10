@@ -20,6 +20,7 @@ import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 import { ArticleDiscussionPrompt, ArticleReadingTools } from "@/components/article-reading-tools"
 import { ArticleSupport } from "@/components/article-support"
+import { ContentSidebar } from "@/components/content-sidebar"
 
 export const dynamic = "force-dynamic"
 
@@ -156,6 +157,8 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
       <SiteHeader />
 
       <main className="flex-1">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <div className="min-w-0">
         {/* Hero section */}
         <div className="border-b border-border bg-card">
           <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
@@ -406,6 +409,9 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
         </section>
+          </div>
+          <ContentSidebar />
+        </div>
       </main>
 
       <SiteFooter />

@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { ForumList, type ThreadListItem } from "@/components/forum-list"
 import { ForumCommunityHub } from "@/components/forum-community-hub"
 import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { createClient } from "@/lib/supabase/server"
 import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
@@ -187,12 +188,14 @@ export default async function ForumPage({
 
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
           <ForumList threads={rows} isSignedIn={Boolean(user)} />
-          <ForumSidebar
-            stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
-            pinned={pinned}
-            categoryCounts={categoryCounts}
-            trending={newsBundle?.trending ?? []}
-          />
+          <ContentSidebar>
+            <ForumSidebar
+              stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
+              pinned={pinned}
+              categoryCounts={categoryCounts}
+              trending={newsBundle?.trending ?? []}
+            />
+          </ContentSidebar>
         </div>
       </main>
 

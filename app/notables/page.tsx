@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { NotablesFeed } from "@/components/notables/notables-feed"
 import { getNotables, getNotablesBoards } from "@/app/actions/notables-actions"
 import { Rss } from "lucide-react"
@@ -26,7 +27,8 @@ export default async function NotablesPage() {
       <SiteHeader />
       <TopAd />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-10 md:px-6 lg:py-14">
+      <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 py-10 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:py-14">
+        <div className="min-w-0">
         {/* Page header */}
         <header className="mb-8 border-b border-border pb-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -77,6 +79,8 @@ export default async function NotablesPage() {
 
         {/* Feed with search + filters */}
         <NotablesFeed initialItems={items} initialTotal={total} boards={boards} />
+        </div>
+        <ContentSidebar />
       </main>
 
       <BottomAd />

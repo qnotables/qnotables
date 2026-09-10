@@ -7,6 +7,7 @@ import { ArchiveSearchBar } from "@/components/archive-search-bar"
 import { FeaturedRecords } from "@/components/featured-records"
 import { LatestDispatches } from "@/components/latest-dispatches"
 import { ArchiveSidebar } from "@/components/archive-sidebar"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { getAllPosts } from "@/lib/blog-posts"
 import { getPublishedVideos } from "@/app/actions/video-actions"
@@ -159,14 +160,16 @@ export default async function ArchivesPage() {
           <LatestDispatches records={allRecords || []} />
 
           {/* Sidebar */}
-          <ArchiveSidebar
-            categories={categories}
-            tags={tags}
-            sources={sources}
-            months={months}
-            years={years}
-            stats={stats}
-          />
+          <ContentSidebar>
+            <ArchiveSidebar
+              categories={categories}
+              tags={tags}
+              sources={sources}
+              months={months}
+              years={years}
+              stats={stats}
+            />
+          </ContentSidebar>
         </div>
       </main>
 

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight, Clock, CornerDownRight, Lock, Play } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { ReplyForm } from "@/components/reply-form"
 import { ThreadArticle } from "@/components/thread-article"
 import { ForumReplyThread } from "@/components/forum-reply-thread"
@@ -390,7 +391,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         />
       )}
 
-      <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <div className="min-w-0 max-w-3xl">
         {/* Breadcrumb */}
         <nav className="mb-6 flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
           <Link
@@ -519,6 +522,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
             {olderThread && <ThreadNavigationCard thread={olderThread} label="OLDER THREAD" direction="older" />}
           </nav>
         )}
+          </div>
+          <ContentSidebar />
+        </div>
       </main>
 
       <SiteFooter />
