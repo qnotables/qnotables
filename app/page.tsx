@@ -9,8 +9,7 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd, InFeedAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
 import { LiveStreamButton } from "@/components/live-stream-button"
-import { SituationFeedCycle } from "@/components/situation-report-cycle"
-import type { SituationForumItem, SituationBlogItem } from "@/components/situation-report-cycle"
+import { HomeContentSections } from "@/components/home-content-sections"
 
 import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
@@ -39,47 +38,10 @@ export default async function Page() {
     isLoggedIn,
   ] = await Promise.all([
     getNews(),
-    getRecentForumThreads(5),
-    getRecentBlogPosts(5),
+    getRecentForumThreads(8),
+    getRecentBlogPosts(4),
     getImportAccess(),
   ])
-
-  // Map to typed cycle props
-  const forumItems: SituationForumItem[] = recentThreads.map((t) => ({
-    type: "forum",
-    id: t.id,
-    slug: t.slug,
-    title: t.title,
-    body: t.body,
-    authorName: t.authorName,
-    createdAt: t.createdAt,
-    lastActivityAt: t.lastActivityAt,
-    latestImageUrl: t.latestImageUrl,
-    replyCount: t.replyCount,
-    category: t.category,
-    isFeatured: t.isFeatured,
-    latestReply: t.latestReply ?? null,
-  }))
-
-  const blogItems: SituationBlogItem[] = recentBlogs.map((p) => ({
-    type: "blog",
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    excerpt: p.excerpt,
-    category: p.category,
-    tag: p.tag,
-    tags: p.tags,
-    coverImage: p.coverImage,
-    seoImageUrl: p.seoImageUrl,
-    date: p.date,
-    readMinutes: p.readMinutes,
-    featured: p.featured,
-    priority: p.priority,
-    postType: p.postType,
-    sourceName: p.sourceName,
-    content: p.content,
-  }))
 
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
@@ -121,21 +83,8 @@ export default async function Page() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* primary column */}
           <div className="lg:col-span-2">
-            {/* Situation Report cyclers: recent blog posts (top) + recent forum posts (bottom) */}
-            <div className="flex flex-col gap-6">
-              <SituationFeedCycle
-                items={blogItems}
-                heading="LATEST DISPATCHES"
-                iconName="blog"
-                emptyLabel="BLOG DISPATCHES"
-              />
-              <SituationFeedCycle
-                items={forumItems}
-                heading="LATEST FORUM ACTIVITY"
-                iconName="forum"
-                emptyLabel="FORUM ACTIVITY"
-              />
-            </div>
+            {/* Stable editorial and community cards; no automatic rotation. */}
+            <HomeContentSections posts={recentBlogs} threads={recentThreads} />
 
             {/* Flash Story Cards */}
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -159,7 +108,7 @@ export default async function Page() {
 
             {/* In-feed ad */}
             <div className="mt-6">
-              <InFeedAd />
+              <InFeedAd index={4} />
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
