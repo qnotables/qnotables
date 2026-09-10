@@ -347,7 +347,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </div>
           </div>
 
-          <nav className="flex h-11 items-center gap-0 overflow-x-auto border-t border-border px-6" aria-label="Site navigation">
+          <nav className="flex h-11 items-center gap-0 overflow-visible border-t border-border px-6" aria-label="Site navigation">
             {secondaryLinks.map((link) => (
               <Link
                 key={link.href}
