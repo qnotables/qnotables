@@ -155,31 +155,31 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
   try {
     const supabase = await createClient()
 
-    const { data: threads, error } = await supabase
+    const { data: threadRows, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, slug, title, body, created_at, updated_at, last_activity_at, reply_count, category, is_pinned, is_featured, profiles(display_name)"
+        "id, slug, title, body, created_at, updated_at, reply_count, category, is_pinned, is_featured, profiles(display_name)"
       )
       .eq("is_soft_deleted", false)
       .eq("is_pending", false)
       .eq("status", "published")
-      .order("last_activity_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(limit)
+      .limit(Math.max(limit * 6, 50))
 
     if (error) {
       console.error("[v0] Failed to fetch recent forum activity:", error)
       return []
     }
-    if (!threads || threads.length === 0) return []
+    if (!threadRows || threadRows.length === 0) return []
 
-    const topIds = threads.map((t: any) => t.id)
+    const threadIds = threadRows.map((t: any) => t.id)
 
-    // Fetch the most recent visible reply for each thread in one query
+    // Replies are the only meaningful activity after thread creation. Fetch them
+    // before limiting the result so an older thread with a new reply can surface.
     const { data: recentReplies } = await supabase
       .from("forum_replies")
       .select("id, thread_id, body, created_at, profiles(display_name)")
-      .in("thread_id", topIds)
+      .in("thread_id", threadIds)
       .eq("is_pending", false)
       .eq("is_hidden", false)
       .order("created_at", { ascending: false })
@@ -197,7 +197,22 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
       }
     }
 
-    const replyIds = [...replyThreadMap.keys()]
+    const rankedThreads = [...threadRows]
+      .map((thread: any) => {
+        const latestReply = latestReplyMap.get(thread.id)
+        const activityAt = latestReply?.createdAt || thread.created_at
+        return { thread, latestReply, activityAt }
+      })
+      .sort((a, b) => {
+        const activityDifference = Date.parse(b.activityAt) - Date.parse(a.activityAt)
+        return activityDifference || Date.parse(b.thread.created_at) - Date.parse(a.thread.created_at)
+      })
+      .slice(0, limit)
+
+    const topIds = rankedThreads.map(({ thread }) => thread.id)
+    const replyIds = rankedThreads.flatMap(({ thread }) =>
+      (recentReplies ?? []).filter((reply: any) => reply.thread_id === thread.id).map((reply: any) => reply.id),
+    )
     const [threadAttachmentsResult, replyAttachmentsResult] = await Promise.all([
       supabase
         .from("forum_attachments")
@@ -237,7 +252,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
       }
     }
 
-    return threads.map((t: any) => ({
+    return rankedThreads.map(({ thread: t, latestReply, activityAt }) => ({
       id: t.id,
       slug: t.slug || undefined,
       title: t.title,
@@ -245,13 +260,13 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
       authorName: t.profiles?.display_name || "Anonymous",
       createdAt: t.created_at,
       updatedAt: t.updated_at || undefined,
-      lastActivityAt: t.last_activity_at || t.created_at,
+      lastActivityAt: activityAt,
       latestImageUrl: latestImageMap.get(t.id),
       replyCount: Number(t.reply_count ?? 0),
       category: t.category || undefined,
       isPinned: t.is_pinned || false,
       isFeatured: t.is_featured || false,
-      latestReply: latestReplyMap.get(t.id) ?? null,
+      latestReply: latestReply ?? null,
     }))
   } catch (error) {
     console.error("[v0] Failed to fetch recent forum threads:", error)
