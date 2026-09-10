@@ -5,7 +5,6 @@ import { BriefSignup } from "@/components/brief-signup"
 import { GallerySection } from "@/components/gallery-section"
 import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
-import { DeskNav } from "@/components/desk-nav"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, SidebarAd, BottomAd, InFeedAd } from "@/components/ad-display"
 import { IconLinksCard } from "@/components/icon-links-card"
@@ -106,6 +105,11 @@ export default async function Page() {
         {/* Site Switcher Embed */}
         <SiteSwitcherEmbed />
 
+        {/* Media Library */}
+        <div className="mb-8">
+          <GallerySection />
+        </div>
+
         {/* section label */}
         <div className="mb-5 flex items-center gap-3">
           <span className="h-2 w-2 bg-primary" />
@@ -188,13 +192,11 @@ export default async function Page() {
           </aside>
         </div>
 
-        {/* Gallery Section */}
-        <div className="mt-12">
-          <GallerySection />
-        </div>
+        {/* wire feed, grouped by desk (client-filtered via nav) */}
+        <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
 
         {/* RSS source directory */}
-        <details className="group mt-12 border-y border-border">
+        <details className="group mt-6 border-y border-border">
           <summary className="flex cursor-pointer list-none items-center gap-3 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background [&::-webkit-details-marker]:hidden">
             <span className="h-2 w-2 bg-primary" />
             <h2 className="stencil text-xl text-foreground">RSS Sources</h2>
@@ -212,12 +214,6 @@ export default async function Page() {
             <RssFeedCards />
           </div>
         </details>
-
-        {/* wire feed, grouped by desk (client-filtered via nav) */}
-        <div className="mt-6">
-          <DeskNav />
-        </div>
-        <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
       </main>
 
       <BottomAd />
