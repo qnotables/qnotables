@@ -5,6 +5,7 @@ import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TopAd, SidebarAd, BottomAd } from "@/components/ad-display"
+import { BriefSignup } from "@/components/brief-signup"
 import { Markdown } from "@/components/markdown"
 import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { isTiptapJson } from "@/lib/tiptap-utils"
@@ -201,9 +202,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             )}
           </div>
 
-          {/* Sidebar ad column — hidden on mobile, sticky on desktop */}
+          {/* Sidebar focus group — hidden on mobile, sticky on desktop */}
           <aside className="hidden lg:block lg:w-64 xl:w-72 shrink-0">
-            <SidebarAd />
+            <div className="sticky top-6 flex flex-col gap-6">
+              <SidebarAd sticky={false} />
+              <BriefSignup />
+            </div>
           </aside>
 
         </div>
