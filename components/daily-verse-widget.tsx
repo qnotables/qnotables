@@ -7,23 +7,12 @@ import { useEffect } from "react"
  *  (e.g. client-side navigation) reuse the already-loaded script. */
 export function DailyVerseWidget() {
   useEffect(() => {
-    // Only inject the script once — guard against re-renders / route changes.
-    const SCRIPT_ID = "daily-verses-script"
-    if (document.getElementById(SCRIPT_ID)) return
-
-    const script = document.createElement("script")
-    script.id = SCRIPT_ID
-    script.src = "https://dailyverses.net/get/verse.js?language=esv"
-    script.async = true
-    script.defer = true
-    document.body.appendChild(script)
-
-    // After the script populates the wrapper, style any injected links.
-    const wrapper = document.getElementById("dailyVersesWrapper")
-    if (!wrapper) return
+    const wrapperElement = document.getElementById("dailyVersesWrapper")
+    if (!wrapperElement) return
+    const wrapper = wrapperElement
 
     function styliseLinks() {
-      const links = document.getElementById("dailyVersesWrapper")?.getElementsByTagName("a") ?? []
+      const links = wrapper.getElementsByTagName("a")
       for (const link of Array.from(links)) {
         // Use the theme's primary token (not a hardcoded hex) so link color
         // stays legible and on-brand in both light and dark mode.
@@ -32,17 +21,23 @@ export function DailyVerseWidget() {
       }
     }
 
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.addedNodes.length) {
-          styliseLinks()
-        }
-      }
-    })
-
+    const observer = new MutationObserver(() => styliseLinks())
     observer.observe(wrapper, { childList: true, subtree: true })
 
-    return () => observer.disconnect()
+    // The provider script writes into the wrapper by its fixed ID. Inject it
+    // after the wrapper exists on every mount so client-side route changes
+    // receive a fresh verse instead of reusing a stale script element.
+    const script = document.createElement("script")
+    script.src = "https://dailyverses.net/get/verse.js?language=esv"
+    script.async = true
+    script.defer = true
+    document.body.appendChild(script)
+
+    return () => {
+      observer.disconnect()
+      script.remove()
+      wrapper.replaceChildren()
+    }
   }, [])
 
   return (
