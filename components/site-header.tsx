@@ -233,29 +233,29 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
 
   function renderMoreMenu() {
     return (
-      <div className="grid gap-2 p-3">
+      <div className="grid min-w-0 gap-2 p-3">
         <Link
           href="https://shop.qnotables.ai"
           onClick={closePanel}
-          className="flex items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
+          className="flex min-w-0 w-full items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
         >
           <ShoppingBag className="h-4 w-4" />
           <span className="label-mono font-semibold">Shop</span>
         </Link>
-        <div className="grid grid-cols-2 gap-2 border-t border-border pt-2">
+        <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border pt-2">
           {secondaryLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={closePanel}
-              className="label-mono flex min-h-11 items-center justify-center border border-border px-3 py-2 text-center text-foreground/75 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="label-mono flex min-h-11 min-w-0 w-full items-center justify-center border border-border px-3 py-2 text-center text-foreground/75 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {link.label}
             </Link>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
-          <HeaderAuth />
+        <div className="flex min-w-0 flex-col items-stretch gap-2 border-t border-border pt-2">
+          <HeaderAuth menu />
           <ThemeToggle />
         </div>
       </div>
