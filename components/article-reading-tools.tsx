@@ -62,14 +62,14 @@ export function ArticleReadingTools({ title, url }: { title: string; url: string
 export function ArticleDiscussionPrompt() {
   return (
     <section id="discussion" className="mt-14 border border-primary/30 bg-primary/5 p-6 md:p-8">
-      <div className="flex items-start gap-4">
+      <a href="#comments" className="group flex items-start gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background">
         <Share2 className="mt-1 size-5 shrink-0 text-primary" />
-        <div>
-          <p className="label-mono text-xs font-semibold text-primary">JOIN THE RECORD</p>
-          <h2 className="stencil mt-2 text-2xl text-foreground">Have context to add?</h2>
-          <p className="mt-2 max-w-2xl leading-relaxed text-muted-foreground">Read closely, compare sources, and bring the next useful detail to the discussion below.</p>
-        </div>
-      </div>
+        <span>
+          <span className="label-mono block text-xs font-semibold text-primary">JOIN THE RECORD</span>
+          <span className="stencil mt-2 block text-2xl text-foreground transition-colors group-hover:text-primary">Have context to add?</span>
+          <span className="mt-2 block max-w-2xl leading-relaxed text-muted-foreground">Read closely, compare sources, and bring the next useful detail to the discussion below.</span>
+        </span>
+      </a>
     </section>
   )
 }
