@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic"
 
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, ArrowRight, Clock, CornerDownRight, Lock } from "lucide-react"
+import { ArrowLeft, ArrowRight, Clock, CornerDownRight, Lock, Play } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ReplyForm } from "@/components/reply-form"
@@ -15,11 +15,111 @@ import { timeAgo } from "@/lib/time"
 import { normalizeCategoryName, getDeskLabel } from "@/lib/forum-utils"
 import { checkAdminAccess } from "@/lib/admin"
 import { firstImageFromBody, getSiteUrl } from "@/lib/rss-utils"
+import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
 import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 
 // A UUID looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. Anything else is a slug.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type NavigationThread = {
+  id: string
+  slug: string | null
+  title: string
+  body: string
+  media: PostMedia | null
+}
+
+function ThreadNavigationCard({
+  thread,
+  label,
+  direction,
+}: {
+  thread: NavigationThread
+  label: string
+  direction: "newer" | "older"
+}) {
+  const isNewer = direction === "newer"
+  const href = `/forum/${thread.slug || thread.id}`
+  const media = thread.media
+
+  return (
+    <Link
+      href={href}
+      className={`group flex min-w-0 gap-3 border border-border bg-card p-3 transition-colors hover:border-primary ${isNewer ? "items-start" : "items-start justify-end text-right"}`}
+    >
+      {!isNewer && (
+        <span className="order-2 flex min-w-0 flex-1 flex-col items-end gap-2">
+          <span className="label-mono block text-[10px] text-muted-foreground">{label}</span>
+          <span className="line-clamp-2 text-sm text-foreground transition-colors group-hover:text-primary">{thread.title}</span>
+          {media && <ThreadNavigationMedia media={media} title={thread.title} align="right" />}
+        </span>
+      )}
+      {isNewer && (
+        <span className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="label-mono block text-[10px] text-muted-foreground">{label}</span>
+          <span className="line-clamp-2 text-sm text-foreground transition-colors group-hover:text-primary">{thread.title}</span>
+          {media && <ThreadNavigationMedia media={media} title={thread.title} />}
+        </span>
+      )}
+      {isNewer ? (
+        <ArrowLeft className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+      ) : (
+        <ArrowRight className="order-3 mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+      )}
+    </Link>
+  )
+}
+
+function ThreadNavigationMedia({
+  media,
+  title,
+  align = "left",
+}: {
+  media: PostMedia
+  title: string
+  align?: "left" | "right"
+}) {
+  const mediaClass = `relative w-full max-w-[190px] overflow-hidden border border-border bg-foreground/10 ${align === "right" ? "self-end" : "self-start"}`
+
+  if (media.kind === "video") {
+    return (
+      <span className={mediaClass}>
+        <video
+          src={media.src}
+          poster={media.poster}
+          muted
+          playsInline
+          preload="metadata"
+          aria-label={`${title} video preview`}
+          className="aspect-video w-full object-cover"
+        />
+        <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 bg-background/90 px-1.5 py-1 label-mono text-[9px] text-primary">
+          VIDEO
+        </span>
+      </span>
+    )
+  }
+
+  if (media.kind === "embed") {
+    return (
+      <span className={mediaClass}>
+        {media.poster ? (
+          <img src={media.poster} alt={`${title} video preview`} className="aspect-video w-full object-cover" />
+        ) : (
+          <span className="flex aspect-video items-center justify-center label-mono text-[10px] text-muted-foreground">VIDEO EMBED</span>
+        )}
+        <span className="absolute inset-0 flex items-center justify-center bg-background/10">
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Play className="ml-0.5 h-3 w-3 fill-current" aria-hidden="true" />
+          </span>
+        </span>
+      </span>
+    )
+  }
+
+  return <img src={media.src} alt={media.alt || `${title} preview`} className={`${mediaClass} aspect-video object-cover`} />
+}
 
 interface Thread {
   id: string
@@ -219,14 +319,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
   const categoryName = normalizeCategoryName(t.category)
 
   // --- Prev/next threads (non-fatal: nav simply won't render) ---
-  let newerThread: { id: string; slug: string | null; title: string } | null = null
-  let olderThread: { id: string; slug: string | null; title: string } | null = null
+  let newerThread: { id: string; slug: string | null; title: string; body: string; media: PostMedia | null } | null = null
+  let olderThread: { id: string; slug: string | null; title: string; body: string; media: PostMedia | null } | null = null
   if (!isDraft) {
     try {
       const [newerResult, olderResult] = await Promise.all([
         supabase
           .from("forum_threads")
-          .select("id, slug, title")
+          .select("id, slug, title, body")
           .eq("is_soft_deleted", false)
           .eq("is_pending", false)
           .eq("status", "published")
@@ -236,7 +336,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           .maybeSingle(),
         supabase
           .from("forum_threads")
-          .select("id, slug, title")
+          .select("id, slug, title, body")
           .eq("is_soft_deleted", false)
           .eq("is_pending", false)
           .eq("status", "published")
@@ -246,7 +346,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           .maybeSingle(),
       ])
       newerThread = newerResult.data
+        ? { ...newerResult.data, media: resolveFirstPostMedia(newerResult.data.body) }
+        : null
       olderThread = olderResult.data
+        ? { ...olderResult.data, media: resolveFirstPostMedia(olderResult.data.body) }
+        : null
     } catch (err) {
       console.error("[forum/[slug]] prev/next fetch error:", err)
     }
@@ -408,39 +512,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         {/* Prev / next thread navigation */}
         {(newerThread || olderThread) && (
           <nav
-            className="mt-10 grid grid-cols-1 gap-2 border-t border-border pt-6 sm:grid-cols-2"
+            className="mt-10 grid grid-cols-1 gap-3 border-t border-border pt-6 sm:grid-cols-2"
             aria-label="Thread navigation"
           >
-            {newerThread ? (
-              <Link
-                href={`/forum/${newerThread.slug || newerThread.id}`}
-                className="group flex items-center gap-3 border border-border bg-card p-4 transition-colors hover:border-primary"
-              >
-                <ArrowLeft className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-                <span className="min-w-0">
-                  <span className="label-mono block text-[10px] text-muted-foreground">NEWER THREAD</span>
-                  <span className="line-clamp-1 text-sm text-foreground transition-colors group-hover:text-primary">
-                    {newerThread.title}
-                  </span>
-                </span>
-              </Link>
-            ) : (
-              <span className="hidden sm:block" />
-            )}
-            {olderThread && (
-              <Link
-                href={`/forum/${olderThread.slug || olderThread.id}`}
-                className="group flex items-center justify-end gap-3 border border-border bg-card p-4 text-right transition-colors hover:border-primary"
-              >
-                <span className="min-w-0">
-                  <span className="label-mono block text-[10px] text-muted-foreground">OLDER THREAD</span>
-                  <span className="line-clamp-1 text-sm text-foreground transition-colors group-hover:text-primary">
-                    {olderThread.title}
-                  </span>
-                </span>
-                <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-              </Link>
-            )}
+            {newerThread ? <ThreadNavigationCard thread={newerThread} label="NEWER THREAD" direction="newer" /> : <span className="hidden sm:block" />}
+            {olderThread && <ThreadNavigationCard thread={olderThread} label="OLDER THREAD" direction="older" />}
           </nav>
         )}
       </main>
