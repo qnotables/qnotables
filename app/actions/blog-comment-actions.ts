@@ -1,7 +1,11 @@
 "use server"
 
 import { createClient as createServiceClient } from "@supabase/supabase-js"
+import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+
+const COMMENT_SELECT = "id, post_id, parent_comment_id, author_id, author_name, body, created_at, updated_at, is_deleted"
+const MAX_COMMENT_LENGTH = 1000
 
 // Service-role client for reads (bypasses RLS — safe for SELECTs only)
 function getServiceClient() {
@@ -33,11 +37,15 @@ export async function createBlogComment(
   parentCommentId?: string | null,
 ): Promise<{ success: boolean; comment?: BlogComment; error?: string }> {
   try {
-    if (!postId || !body?.trim()) {
+    const trimmedBody = body?.trim() ?? ""
+    if (!postId || !trimmedBody) {
       return { success: false, error: "Missing required fields" }
     }
-    if (body.trim().length < 2) {
+    if (trimmedBody.length < 2) {
       return { success: false, error: "Comment must be at least 2 characters" }
+    }
+    if (trimmedBody.length > MAX_COMMENT_LENGTH) {
+      return { success: false, error: `Comment must be ${MAX_COMMENT_LENGTH} characters or fewer` }
     }
 
     // Get session user
@@ -60,6 +68,30 @@ export async function createBlogComment(
       user.email?.split("@")[0] ||
       "Anonymous"
 
+    const service = getServiceClient()
+    const { data: post, error: postError } = await service
+      .from("blog_posts")
+      .select("id")
+      .eq("id", postId)
+      .eq("status", "published")
+      .maybeSingle()
+
+    if (postError || !post) {
+      return { success: false, error: "This record is no longer available for comments" }
+    }
+
+    if (parentCommentId) {
+      const { data: parent, error: parentError } = await service
+        .from("blog_comments")
+        .select("id, post_id, is_deleted")
+        .eq("id", parentCommentId)
+        .maybeSingle()
+
+      if (parentError || !parent || parent.is_deleted || parent.post_id !== postId) {
+        return { success: false, error: "That comment is not available for replies" }
+      }
+    }
+
     const { data, error } = await supabase
       .from("blog_comments")
       .insert([{
@@ -67,10 +99,10 @@ export async function createBlogComment(
         parent_comment_id: parentCommentId || null,
         author_id: user.id,
         author_name: authorName,
-        body: body.trim(),
+        body: trimmedBody,
         is_deleted: false,
       }])
-      .select()
+      .select(COMMENT_SELECT)
       .single()
 
     if (error) {
@@ -78,6 +110,7 @@ export async function createBlogComment(
       return { success: false, error: "Failed to post comment" }
     }
 
+    revalidatePath("/archives", "layout")
     return { success: true, comment: data as BlogComment }
   } catch (err) {
     console.error("[v0] Blog comment action error:", err)
@@ -92,7 +125,7 @@ export async function getBlogComments(postId: string): Promise<BlogComment[]> {
   try {
     const { data, error } = await getServiceClient()
       .from("blog_comments")
-      .select("*")
+      .select(COMMENT_SELECT)
       .eq("post_id", postId)
       .eq("is_deleted", false)
       .order("created_at", { ascending: true })
@@ -118,30 +151,32 @@ export async function updateBlogComment(
   authorId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Verify ownership (server-side check)
-    const { data: comment, error: fetchError } = await getSupabaseClient()
-      .from("blog_comments")
-      .select("author_id")
-      .eq("id", commentId)
-      .single()
+    const trimmedBody = newBody?.trim() ?? ""
+    if (!trimmedBody || trimmedBody.length < 2 || trimmedBody.length > MAX_COMMENT_LENGTH) {
+      return { success: false, error: "Comment must be between 2 and 1000 characters" }
+    }
 
-    if (fetchError || !comment || comment.author_id !== authorId) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user || user.id !== authorId) {
       return { success: false, error: "You can only edit your own comments" }
     }
 
-    const { error } = await getSupabaseClient()
+    const { error } = await supabase
       .from("blog_comments")
       .update({
-        body: newBody.trim(),
+        body: trimmedBody,
         updated_at: new Date().toISOString(),
       })
       .eq("id", commentId)
+      .eq("author_id", user.id)
 
     if (error) {
       console.error("[v0] Blog comment update error:", error)
       return { success: false, error: "Failed to update comment" }
     }
 
+    revalidatePath("/archives", "layout")
     return { success: true }
   } catch (err) {
     console.error("[v0] Blog comment update action error:", err)
@@ -174,6 +209,7 @@ export async function deleteBlogComment(
       return { success: false, error: "Failed to delete comment" }
     }
 
+    revalidatePath("/archives", "layout")
     return { success: true }
   } catch (err) {
     console.error("[v0] Blog comment delete action error:", err)

@@ -20,6 +20,9 @@ import { JsonLd } from "@/components/json-ld"
 import { articleSchema, breadcrumbSchema, pageMetadata, socialImageUrl } from "@/lib/seo"
 import { ArticleDiscussionPrompt, ArticleReadingTools } from "@/components/article-reading-tools"
 import { ArticleSupport } from "@/components/article-support"
+import { BlogComments } from "@/components/blog-comments"
+import { getBlogComments } from "@/app/actions/blog-comment-actions"
+import { createClient } from "@/lib/supabase/server"
 import { ContentSidebar } from "@/components/content-sidebar"
 
 export const dynamic = "force-dynamic"
@@ -128,6 +131,15 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
     ? await getArchiveVotes(post.id).catch(() => ({ upVotes: 0, downVotes: 0, userVote: null }))
     : { upVotes: 0, downVotes: 0, userVote: null }
   const initialViewCount = post ? await getPostViewCount(post.id) : 0
+  let comments: Awaited<ReturnType<typeof getBlogComments>> = []
+  let currentUserId: string | null = null
+
+  if (post) {
+    comments = await getBlogComments(post.id)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    currentUserId = user?.id ?? null
+  }
 
   if (post?.id) {
     // Fire-and-forget — does not block page render
@@ -359,7 +371,12 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
             source={post?.source_name}
             relatedPosts={relatedPosts}
           />
-          <ArticleDiscussionPrompt />
+          {post && <ArticleDiscussionPrompt />}
+          {post && (
+            <div id="comments" className="scroll-mt-8">
+              <BlogComments postId={post.id} initialComments={comments} currentUserId={currentUserId} />
+            </div>
+          )}
           </div>
         </article>
 
