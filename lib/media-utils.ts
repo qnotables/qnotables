@@ -1,3 +1,5 @@
+import { upload as uploadBlob } from "@vercel/blob/client"
+
 /**
  * Shared media utilities for the MarkdownEditor and TiptapEditor.
  *
@@ -15,6 +17,7 @@ export const MAX_IMAGES = 5
 export const MAX_VIDEOS = 3
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
 export const MAX_VIDEO_BYTES = 500 * 1024 * 1024 // 500 MB
+export const MAX_FORUM_VIDEO_BYTES = 50 * 1024 * 1024 // 50 MB
 
 export const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -104,21 +107,113 @@ export interface UploadResult {
 }
 
 /**
- * Upload a single file to /api/upload.
- * Throws on network or server error.
+ * Read an upload response without assuming the platform returned JSON.
+ * Large request failures can be plain text or HTML, especially at an edge proxy.
+ */
+async function readUploadResponse(response: Response): Promise<Record<string, unknown>> {
+  const raw = await response.text()
+  if (!raw.trim()) return {}
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {}
+  } catch {
+    const normalized = raw.toLowerCase()
+    if (
+      response.status === 413 ||
+      normalized.includes("request entity too large") ||
+      normalized.includes("payload too large")
+    ) {
+      return { error: "The upload is too large for the upload service." }
+    }
+    return { error: "The upload service returned an invalid response." }
+  }
+}
+
+function uploadError(error: unknown, file: File, folder: "forum" | "blog"): Error {
+  if (error instanceof Error && error.message.trim()) {
+    const message = error.message.toLowerCase()
+    if (message.includes("too large") || message.includes("file too large")) {
+      return new Error(
+        folder === "forum" && file.type.startsWith("video/")
+          ? "Forum videos must be 50 MB or smaller."
+          : "This file is too large to upload.",
+      )
+    }
+    if (
+      !(message.includes("failed to") && message.includes("client token")) &&
+      !message.includes("upload failed")
+    ) {
+      return error
+    }
+  }
+
+  return new Error(
+    folder === "forum" && file.type.startsWith("video/")
+      ? "Video upload failed. Forum videos must be 50 MB or smaller."
+      : "Upload failed. Please try again.",
+  )
+}
+
+/**
+ * Upload a single file directly to Vercel Blob, then register its metadata
+ * through the small /api/upload JSON request.
  */
 export async function uploadMediaFile(
   file: File,
   folder: "forum" | "blog",
 ): Promise<UploadResult> {
-  const fd = new FormData()
-  fd.append("file", file)
-  fd.append("folder", folder)
-  const res = await fetch("/api/upload", { method: "POST", body: fd })
-  const json = await res.json()
-  if (!res.ok || !json.success)
-    throw new Error(json.error ?? "Upload failed.")
-  return { url: json.url as string, filename: json.filename as string }
+  if (folder === "forum" && file.type.startsWith("video/") && file.size > MAX_FORUM_VIDEO_BYTES) {
+    throw new Error("Forum videos must be 50 MB or smaller.")
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin"
+  const pathname = `${folder}/${crypto.randomUUID()}.${extension}`
+
+  try {
+    const blob = await uploadBlob(pathname, file, {
+      access: "public",
+      contentType: file.type,
+      handleUploadUrl: "/api/upload",
+      multipart: file.size >= 10 * 1024 * 1024,
+      clientPayload: JSON.stringify({
+        folder,
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+      }),
+    })
+
+    const registerResponse = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: "register",
+        folder,
+        pathname: blob.pathname,
+        url: blob.url,
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+      }),
+    })
+    const registration = await readUploadResponse(registerResponse)
+    if (!registerResponse.ok || registration.success !== true) {
+      throw new Error(
+        typeof registration.error === "string" ? registration.error : "Upload registration failed.",
+      )
+    }
+
+    return {
+      url: typeof registration.url === "string" ? registration.url : blob.url,
+      filename:
+        typeof registration.filename === "string"
+          ? registration.filename
+          : blob.pathname.split("/").pop() ?? blob.pathname,
+    }
+  } catch (error) {
+    throw uploadError(error, file, folder)
+  }
 }
 
 // ─── Iframe sanitizer ─────────────────────────────────────────────────────────

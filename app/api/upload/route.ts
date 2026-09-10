@@ -1,4 +1,5 @@
-import { del, put } from "@vercel/blob"
+import { del, head, put } from "@vercel/blob"
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit, SPAM_LIMITS } from "@/lib/forum-spam-guard"
@@ -37,6 +38,8 @@ const BLOCKED_EXTS = new Set([
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_VIDEO_BYTES = 500 * 1024 * 1024
 
+type UploadFolder = "forum" | "blog"
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Return only the final extension, guarding against double-extension attacks. */
@@ -70,8 +73,147 @@ function safeFilename(userId: string, folder: string, ext: string): string {
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
+function uploadPolicy(folder: "forum" | "blog", contentType: string) {
+  const isImage = ALLOWED_IMAGE_TYPES.has(contentType)
+  const isVideo = ALLOWED_VIDEO_TYPES.has(contentType)
+  if (!isImage && !isVideo) return null
+
+  return {
+    isVideo,
+    allowedExtensions: isVideo ? ALLOWED_VIDEO_EXTS : ALLOWED_IMAGE_EXTS,
+    maxBytes: isVideo ? (folder === "forum" ? 50 * 1024 * 1024 : MAX_VIDEO_BYTES) : MAX_IMAGE_BYTES,
+    maxLabel: isVideo ? (folder === "forum" ? "50 MB" : "500 MB") : "5 MB",
+  }
+}
+
+function isSafeClientPathname(
+  pathname: string,
+  folder: "forum" | "blog",
+  allowedExtensions: Set<string>,
+) {
+  const parts = pathname.split("/")
+  if (parts.length !== 2 || parts[0] !== folder) return false
+
+  const filename = parts[1] ?? ""
+  const extension = filename.toLowerCase().split(".").pop() ?? ""
+  const stem = filename.slice(0, -(extension.length + 1))
+  return Boolean(stem) && /^[a-zA-Z0-9_-]+$/.test(stem) && allowedExtensions.has(extension)
+}
+
+function uploadRateLimit(userId: string, folder: "forum" | "blog") {
+  const isBlogUpload = folder === "blog"
+  const uploadLimit = isBlogUpload
+    ? SPAM_LIMITS.MAX_BLOG_UPLOADS_PER_WINDOW
+    : SPAM_LIMITS.MAX_UPLOADS_PER_WINDOW
+  const uploadRlKey = isBlogUpload ? "upload:blog" : "upload:forum"
+
+  return checkRateLimit(
+    userId,
+    uploadRlKey,
+    SPAM_LIMITS.UPLOAD_COOLDOWN_MS,
+    uploadLimit,
+  )
+}
+
+function uploadLimitResponse(uploadRl: ReturnType<typeof uploadRateLimit>) {
+  const secs = Math.ceil(uploadRl.retryAfterMs / 1000)
+  return NextResponse.json(
+    { success: false, error: `Upload limit reached. Please wait ${secs}s before uploading again.` },
+    { status: 429, headers: { "Retry-After": String(secs) } },
+  )
+}
+
+function safeClientPayload(raw: string | null) {
+  if (!raw) return null
+  try {
+    const payload: unknown = JSON.parse(raw)
+    if (!payload || typeof payload !== "object") return null
+    const value = payload as Record<string, unknown>
+    const folder: UploadFolder | null =
+      value.folder === "blog" || value.folder === "forum" ? value.folder : null
+    const contentType = typeof value.contentType === "string" ? value.contentType : ""
+    const filename = typeof value.filename === "string" ? value.filename : ""
+    const size = typeof value.size === "number" ? value.size : Number(value.size)
+    if (!folder || !contentType || !filename || !Number.isSafeInteger(size) || size < 0) return null
+    return { folder, contentType, filename, size }
+  } catch {
+    return null
+  }
+}
+
+async function registerBlobUpload(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  const folder = body.folder === "blog" || body.folder === "forum" ? body.folder : null
+  const pathname = typeof body.pathname === "string" ? body.pathname : ""
+  const url = typeof body.url === "string" ? body.url : ""
+  const filename = typeof body.filename === "string" ? body.filename : "uploaded media"
+
+  if (!folder || !pathname || !url) {
+    return NextResponse.json({ success: false, error: "Invalid upload registration." }, { status: 400 })
+  }
+
+  const blobUrl = new URL(url)
+  if (
+    blobUrl.protocol !== "https:" ||
+    !blobUrl.hostname.endsWith(".public.blob.vercel-storage.com")
+  ) {
+    return NextResponse.json({ success: false, error: "Invalid uploaded media URL." }, { status: 400 })
+  }
+
+  const extension = pathname.toLowerCase().split(".").pop() ?? ""
+  const isVideo = ALLOWED_VIDEO_EXTS.has(extension)
+  const allowedExtensions = isVideo ? ALLOWED_VIDEO_EXTS : ALLOWED_IMAGE_EXTS
+  if (!isSafeClientPathname(pathname, folder, allowedExtensions)) {
+    return NextResponse.json({ success: false, error: "Invalid uploaded media path." }, { status: 400 })
+  }
+
+  const blob = await head(url)
+  if (blob.pathname !== pathname) {
+    return NextResponse.json({ success: false, error: "Uploaded media path mismatch." }, { status: 400 })
+  }
+
+  const policy = uploadPolicy(folder, blob.contentType)
+  if (!policy || !policy.allowedExtensions.has(extension) || blob.size > policy.maxBytes) {
+    return NextResponse.json(
+      { success: false, error: policy ? `Media must be ${policy.maxLabel} or smaller.` : "Uploaded media type is not allowed." },
+      { status: 400 },
+    )
+  }
+
+  const { data: attachment, error: attachmentError } = await supabase
+    .from("forum_attachments")
+    .insert({
+      owner_id: userId,
+      storage_key: pathname,
+      url: blob.url,
+      original_name: filename.slice(0, 255),
+      mime_type: blob.contentType,
+      byte_size: blob.size,
+      status: "orphaned",
+    })
+    .select("id")
+    .single()
+
+  if (attachmentError) {
+    await del(blob.url)
+    throw new Error("Could not register uploaded media.")
+  }
+
+  return NextResponse.json({
+    success: true,
+    attachmentId: attachment.id,
+    url: blob.url,
+    filename: pathname.split("/").pop() ?? pathname,
+    storageKey: pathname,
+    size: blob.size,
+    contentType: blob.contentType,
+  })
+}
+
 export async function POST(request: NextRequest) {
-  // Auth check — no anonymous uploads
   const supabase = await createClient()
   const {
     data: { user },
@@ -79,75 +221,101 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json(
-      { success: false, error: "Sign in to upload images." },
+      { success: false, error: "Sign in to upload media." },
       { status: 401 },
     )
   }
 
   try {
+    const contentType = request.headers.get("content-type") ?? ""
+    if (contentType.includes("application/json")) {
+      const body = (await request.json()) as Record<string, unknown>
+
+      if (body.action === "register") {
+        return registerBlobUpload(supabase, user.id, body)
+      }
+
+      if (body.type !== "blob.generate-client-token") {
+        return NextResponse.json({ success: false, error: "Invalid upload request." }, { status: 400 })
+      }
+
+      const blobBody = body as unknown as HandleUploadBody
+      const pathname = typeof body.payload === "object" && body.payload
+        ? (body.payload as Record<string, unknown>).pathname
+        : null
+      const clientPayload = typeof body.payload === "object" && body.payload
+        ? (body.payload as Record<string, unknown>).clientPayload
+        : null
+      const payload = safeClientPayload(typeof clientPayload === "string" ? clientPayload : null)
+      if (typeof pathname !== "string" || !payload || payload.folder !== pathname.split("/")[0]) {
+        return NextResponse.json({ success: false, error: "Invalid upload metadata." }, { status: 400 })
+      }
+
+      const policy = uploadPolicy(payload.folder, payload.contentType)
+      if (
+        !policy ||
+        payload.size > policy.maxBytes ||
+        !isSafeClientPathname(pathname, payload.folder, policy.allowedExtensions)
+      ) {
+        return NextResponse.json(
+          { success: false, error: policy ? `Media must be ${policy.maxLabel} or smaller.` : "This file type is not allowed." },
+          { status: 400 },
+        )
+      }
+
+      const uploadRl = uploadRateLimit(user.id, payload.folder)
+      if (!uploadRl.allowed) return uploadLimitResponse(uploadRl)
+
+      const result = await handleUpload({
+        request,
+        body: blobBody,
+        onBeforeGenerateToken: async (requestedPathname, requestedPayload) => {
+          if (requestedPathname !== pathname || requestedPayload !== clientPayload) {
+            throw new Error("Upload metadata changed.")
+          }
+          return {
+            allowedContentTypes: [payload.contentType],
+            maximumSizeInBytes: policy.maxBytes,
+            addRandomSuffix: false,
+          }
+        },
+      })
+
+      return NextResponse.json(result)
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File | null
-
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided." }, { status: 400 })
     }
 
-    // Sanitize folder param (needed for video permission check and rate-limit bucket)
-    const folderRaw = String(formData.get("folder") ?? "forum")
-    const folder = folderRaw === "blog" ? "blog" : "forum"
-
-    // Blog editors batch-upload many images at once; use a higher per-window limit
-    // so multi-image drops don't immediately hit the forum spam guard.
-    const isBlogUpload = folder === "blog"
-    const uploadLimit = isBlogUpload
-      ? SPAM_LIMITS.MAX_BLOG_UPLOADS_PER_WINDOW
-      : SPAM_LIMITS.MAX_UPLOADS_PER_WINDOW
-    const uploadRlKey = isBlogUpload ? "upload:blog" : "upload:forum"
-
-    const uploadRl = checkRateLimit(
-      user.id,
-      uploadRlKey,
-      SPAM_LIMITS.UPLOAD_COOLDOWN_MS,
-      uploadLimit,
-    )
-    if (!uploadRl.allowed) {
-      const secs = Math.ceil(uploadRl.retryAfterMs / 1000)
-      return NextResponse.json(
-        { success: false, error: `Upload limit reached. Please wait ${secs}s before uploading again.` },
-        { status: 429, headers: { "Retry-After": String(secs) } },
-      )
-    }
-
-    const isImage = ALLOWED_IMAGE_TYPES.has(file.type)
-    const isVideo = ALLOWED_VIDEO_TYPES.has(file.type)
-
-    if (!isImage && !isVideo) {
+    const folder = formData.get("folder") === "blog" ? "blog" : "forum"
+    const policy = uploadPolicy(folder, file.type)
+    if (!policy) {
       return NextResponse.json(
         { success: false, error: "Only images (JPG, PNG, WEBP, GIF) and videos (MP4, WEBM, MOV) are allowed." },
         { status: 400 },
       )
     }
 
-    // Forum videos are intentionally capped lower than editorial blog uploads.
-    const maxBytes = isVideo ? (folder === "forum" ? 50 * 1024 * 1024 : MAX_VIDEO_BYTES) : MAX_IMAGE_BYTES
-    const maxLabel = isVideo ? (folder === "forum" ? "50 MB" : "500 MB") : "5 MB"
-    if (file.size > maxBytes) {
+    const uploadRl = uploadRateLimit(user.id, folder)
+    if (!uploadRl.allowed) return uploadLimitResponse(uploadRl)
+
+    if (file.size > policy.maxBytes) {
       return NextResponse.json(
-        { success: false, error: `${isVideo ? "Video" : "Image"} must be ${maxLabel} or smaller.` },
+        { success: false, error: `${policy.isVideo ? "Video" : "Image"} must be ${policy.maxLabel} or smaller.` },
         { status: 400 },
       )
     }
 
-    // Validate original filename extension as a second check
     const originalExt = file.name.toLowerCase().split(".").pop() ?? ""
-    const allowedExts = isVideo ? ALLOWED_VIDEO_EXTS : ALLOWED_IMAGE_EXTS
-    if (originalExt && !allowedExts.has(originalExt)) {
+    if (originalExt && !policy.allowedExtensions.has(originalExt)) {
       return NextResponse.json(
         { success: false, error: "File extension does not match file type." },
         { status: 400 },
       )
     }
-    // Block any explicitly dangerous extensions as defence-in-depth
     if (originalExt && BLOCKED_EXTS.has(originalExt)) {
       return NextResponse.json(
         { success: false, error: "This file type is not allowed." },
@@ -155,10 +323,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate a safe, unique filename — never trust the original name
     const ext = safeExtension(file.name, file.type)
     const filename = safeFilename(user.id, folder, ext)
-
     const blob = await put(filename, file, { access: "public", addRandomSuffix: false })
 
     const { data: attachment, error: attachmentError } = await supabase
@@ -192,7 +358,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[upload] error:", err)
     return NextResponse.json(
-      { success: false, error: "Image upload failed." },
+      { success: false, error: "Upload failed. Please try again." },
       { status: 500 },
     )
   }
