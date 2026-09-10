@@ -65,9 +65,14 @@ export default async function Page() {
         {/* Site Switcher Embed */}
         <SiteSwitcherEmbed />
 
-        <p className="mb-8 max-w-3xl text-pretty border-l-2 border-primary/60 pl-4 text-sm leading-relaxed text-muted-foreground">
-          We are researchers who deal in open-source information, reasoned argument, and dank memes. We do battle in the sphere of ideas and ideas only. We neither need nor condone the use of force in our work here.
-        </p>
+        <div className="mb-8 mx-auto max-w-3xl text-center">
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+            We are researchers who deal in open-source information, reasoned argument, and dank memes. We do battle in the sphere of ideas and ideas only. We neither need nor condone the use of force in our work here.
+          </p>
+          <p className="mt-3 font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">
+            NOTABLES DO NOT EQUAL ENDORSEMENTS
+          </p>
+        </div>
 
         {/* Media Library */}
         <div className="mb-8">
