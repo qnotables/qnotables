@@ -7,6 +7,7 @@ import type { ForumThread } from "@/lib/forum"
 import { formatDate } from "@/lib/blog-posts"
 import { getSiteUrl } from "@/lib/rss-utils"
 import { timeAgo } from "@/lib/time"
+import { buildExcerpt } from "@/lib/forum-utils"
 import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
 
 const DEFAULT_DISPATCH_IMAGE = "/images/og-default.png"
@@ -226,7 +227,7 @@ function DispatchCard({ post }: { post: BlogPost }) {
 
 function CommunityCard({ thread }: { thread: ForumThread }) {
   const title = cleanText(thread.title)
-  const excerpt = cleanText(thread.body)
+  const excerpt = buildExcerpt(thread.body) || (thread.latestReply ? buildExcerpt(thread.latestReply.body) : "")
   const href = `/forum/${thread.slug || thread.id}`
   const activityAt = thread.lastActivityAt || thread.createdAt
   const media = getThreadPreviewMedia(thread)
