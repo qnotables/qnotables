@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ArrowLeft, FileText } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { getAllPosts } from "@/lib/blog-posts"
 import { transformBlogPostToArchive, getAllArchiveRecords } from "@/lib/archives-utils"
 
@@ -42,7 +43,8 @@ export default async function DocumentsPage() {
   return (
     <div className="min-h-screen tactical-grid flex flex-col">
       <SiteHeader />
-      <main className="flex-1 mx-auto max-w-5xl px-4 py-10 md:px-6">
+      <main className="flex-1 mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <div className="min-w-0 max-w-5xl">
         <div className="mb-8 flex items-center gap-3">
           <Link href="/archives" className="text-primary hover:underline">
             <ArrowLeft className="h-5 w-5" />
@@ -124,6 +126,8 @@ export default async function DocumentsPage() {
             ))}
           </div>
         )}
+        </div>
+        <ContentSidebar />
       </main>
 
       <SiteFooter />

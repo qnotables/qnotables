@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { getPostsByDate } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 
@@ -42,7 +43,8 @@ export default async function MonthlyArchivePage({
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
-      <main className="mx-auto max-w-4xl px-4 py-10 md:px-6">
+      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <div className="min-w-0 max-w-4xl">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Link
             href="/archives"
@@ -91,6 +93,8 @@ export default async function MonthlyArchivePage({
             </article>
           ))}
         </div>
+        </div>
+        <ContentSidebar />
       </main>
 
       <SiteFooter />

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { getPostsByCategory } from "@/lib/archives"
 import { formatDate } from "@/lib/blog-posts"
 import { pageMetadata } from "@/lib/seo"
@@ -29,7 +30,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
     <div id="top" className="min-h-screen tactical-grid">
       <SiteHeader />
 
-      <main className="mx-auto max-w-4xl px-4 py-10 md:px-6">
+      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <div className="min-w-0 max-w-4xl">
         <Link
           href="/archives"
           className="label-mono mb-8 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary"
@@ -68,6 +70,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
             </Link>
           ))}
         </div>
+        </div>
+        <ContentSidebar />
       </main>
 
       <SiteFooter />

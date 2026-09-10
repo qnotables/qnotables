@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import { VideosClient } from "./videos-client"
 import { EmbedSwitcher, type EmbedItem } from "@/components/qnotables-embed"
@@ -57,6 +58,8 @@ export default async function VideosPage() {
       <TopAd />
 
       <main className="flex-1">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <div className="min-w-0">
         {/* Page header */}
         <div className="border-b border-border bg-card">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
@@ -91,6 +94,9 @@ export default async function VideosPage() {
         )}
 
         <VideosClient videos={videos} />
+          </div>
+          <ContentSidebar />
+        </div>
       </main>
 
       <BottomAd />

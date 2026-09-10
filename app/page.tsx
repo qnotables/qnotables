@@ -1,17 +1,15 @@
 import { SiteHeader } from "@/components/site-header"
 import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
-import { BriefSignup } from "@/components/brief-signup"
 import { GallerySection } from "@/components/gallery-section"
 import { SiteFooter } from "@/components/site-footer"
 import { WireFeed } from "@/components/wire-feed"
 import { DeskFilterProvider } from "@/components/desk-filter-context"
-import { TopAd, SidebarAd, BottomAd, InFeedAd } from "@/components/ad-display"
-import { IconLinksCard } from "@/components/icon-links-card"
+import { TopAd, BottomAd, InFeedAd } from "@/components/ad-display"
+import { ContentSidebar } from "@/components/content-sidebar"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { HomeContentSections } from "@/components/home-content-sections"
 
-import { DailyVerseWidget } from "@/components/daily-verse-widget"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { FlashStory } from "@/components/flash-story"
 import { RssFeedCards } from "@/components/rss-feed-cards"
@@ -130,15 +128,9 @@ export default async function Page() {
           </div>
 
           {/* sidebar */}
-          <aside className="flex flex-col gap-6">
-            <IconLinksCard />
-            <DailyVerseWidget />
+          <ContentSidebar>
             <TrendingPanel items={trending} />
-            <div className="sticky top-6 flex flex-col gap-6">
-              <SidebarAd sticky={false} />
-              <BriefSignup />
-            </div>
-          </aside>
+          </ContentSidebar>
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
