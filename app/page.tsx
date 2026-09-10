@@ -134,10 +134,10 @@ export default async function Page() {
             <IconLinksCard />
             <DailyVerseWidget />
             <TrendingPanel items={trending} />
-            <div className="sticky top-6">
-              <SidebarAd />
+            <div className="sticky top-6 flex flex-col gap-6">
+              <SidebarAd sticky={false} />
+              <BriefSignup />
             </div>
-            <BriefSignup />
           </aside>
         </div>
 
