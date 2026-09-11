@@ -169,7 +169,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
       <SiteHeader />
 
       <main className="flex-1">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-8 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-8 md:px-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-stretch">
           <div className="min-w-0">
         {/* Hero section */}
         <div className="border-b border-border bg-card">
