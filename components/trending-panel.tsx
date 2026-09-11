@@ -2,6 +2,30 @@ import { TrendingUp } from "lucide-react"
 
 type TrendingItem = { rank: number; headline: string; reports: number; url?: string }
 
+function cleanHeadline(value: string): string {
+  return value
+    .replace(/&#(x?[0-9a-f]+);?/gi, (_, code: string) => {
+      const parsed = code.toLowerCase().startsWith("x")
+        ? Number.parseInt(code.slice(1), 16)
+        : Number.parseInt(code, 10)
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _
+    })
+    .replace(/&(amp|apos|gt|lt|quot|nbsp|mdash|ndash|hellip);/gi, (_, entity: string) => {
+      const entities: Record<string, string> = {
+        amp: "&",
+        apos: "'",
+        gt: ">",
+        lt: "<",
+        quot: '"',
+        nbsp: " ",
+        mdash: "—",
+        ndash: "–",
+        hellip: "…",
+      }
+      return entities[entity.toLowerCase()] ?? _
+    })
+}
+
 export function TrendingPanel({ items }: { items: TrendingItem[] }) {
   const trending = items
   const max = Math.max(...trending.map((t) => t.reports), 1)
@@ -24,7 +48,7 @@ export function TrendingPanel({ items }: { items: TrendingItem[] }) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-snug text-foreground transition-colors group-hover:text-primary">
-                  {t.headline}
+                  {cleanHeadline(t.headline)}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="h-1 flex-1 bg-muted">
