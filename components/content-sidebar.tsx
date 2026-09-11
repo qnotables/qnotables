@@ -15,7 +15,14 @@ export function ContentSidebar({ children, sticky = true }: ContentSidebarProps)
       <IconLinksCard />
       <DailyVerseWidget />
       {children}
-      <div className={`flex flex-col gap-6 ${sticky ? "lg:sticky lg:top-6 lg:self-start" : ""}`}>
+      <div
+        className={`flex flex-col gap-6 ${
+          sticky
+            ? "lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:pr-1"
+            : ""
+        }`}
+        aria-label="Sidebar promotions"
+      >
         <SidebarAd sticky={false} />
         <BriefSignup />
       </div>
