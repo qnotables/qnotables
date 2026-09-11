@@ -3,13 +3,17 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { NewsletterSignupDialog } from "@/components/newsletter-signup-dialog"
+import { PageViewCounter } from "@/components/page-view-counter"
+import { getNewToQViewCount } from "./actions"
 
 export const metadata: Metadata = {
   title: "New to Q? | HOT AND FRESH",
   description: "Everything you need to know to get started with Qnotables.",
 }
 
-export default function NewToQPage() {
+export default async function NewToQPage() {
+  const initialViewCount = await getNewToQViewCount()
+
   return (
     <>
       <SiteHeader />
@@ -17,7 +21,10 @@ export default function NewToQPage() {
       <main className="mx-auto max-w-3xl px-4 py-16 md:px-6 md:py-24">
       {/* Page header */}
       <div className="mb-12 border-b border-border pb-8">
-        <p className="label-mono mb-3 text-primary">Q - THE PLAN TO SAVE THE WORLD</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="label-mono text-primary">Q - THE PLAN TO SAVE THE WORLD</p>
+          <PageViewCounter initialCount={initialViewCount} />
+        </div>
          {/* Featured video */}
       <div className="mb-12">
         <video
