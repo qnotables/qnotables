@@ -36,8 +36,8 @@ export default async function Page() {
     isLoggedIn,
   ] = await Promise.all([
     getNews(),
-    getRecentForumThreads(8),
-    getRecentBlogPosts(4),
+    getRecentForumThreads(9),
+    getRecentBlogPosts(6),
     getImportAccess(),
   ])
 
