@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink } from "lucide-react"
+import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink, Play } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
@@ -26,6 +26,50 @@ function getMediaIcon(mediaType?: string) {
   }
 }
 
+function VideoPreview({ record }: { record: ArchiveRecord }) {
+  const preview = record.video_preview
+  if (!preview) return null
+
+  const label = preview.title || `Watch the video in ${record.title}`
+
+  return (
+    <Link
+      href={`/archives/${record.slug}`}
+      aria-label={label}
+      className="group/preview block"
+    >
+      <div className="relative aspect-video overflow-hidden bg-muted">
+        {preview.kind === "video" ? (
+          <video
+            src={preview.src}
+            poster={preview.poster}
+            muted
+            playsInline
+            preload="metadata"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="h-full w-full object-cover"
+            title={label}
+          />
+        ) : preview.poster ? (
+          <img
+            src={preview.poster}
+            alt={`Video preview for ${record.title}`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : null}
+
+        <span className="absolute inset-0 flex items-center justify-center bg-background/20 transition-colors group-hover/preview:bg-background/35">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/70 bg-background/85 text-primary shadow-lg transition-transform group-hover/preview:scale-105">
+            <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+          </span>
+        </span>
+      </div>
+    </Link>
+  )
+}
+
 export function FeaturedRecords({ records }: FeaturedRecordsProps) {
   if (records.length === 0) return null
 
@@ -40,9 +84,11 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {records.slice(0, 3).map((record) => (
           <article key={record.id} className="group border border-border rounded overflow-hidden hover:border-primary/50 transition-colors">
-            {/* Cover image */}
-            {record.cover_image && (
-              <div className="aspect-video bg-muted overflow-hidden group-hover:scale-105 transition-transform duration-300">
+            {/* Video preview or cover image */}
+            {record.video_preview ? (
+              <VideoPreview record={record} />
+            ) : record.cover_image ? (
+              <div className="aspect-video overflow-hidden bg-muted transition-transform duration-300 group-hover:scale-105">
                 <CardImage
                   src={record.cover_image}
                   alt={record.title}
@@ -51,7 +97,7 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
                   aspectRatio="video"
                 />
               </div>
-            )}
+            ) : null}
 
             {/* Content */}
             <div className="p-4 space-y-3">

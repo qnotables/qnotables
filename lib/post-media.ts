@@ -5,6 +5,8 @@ export type PostMedia =
   | { kind: "video"; src: string; poster?: string; title?: string; identity: string }
   | { kind: "embed"; src: string; poster?: string; title?: string; identity: string }
 
+export type PostVideoMedia = Extract<PostMedia, { kind: "video" | "embed" }>
+
 type JsonNode = {
   type?: string
   attrs?: Record<string, unknown>
@@ -37,12 +39,12 @@ function mediaFromUrl(url: string, identity: string, title?: string, poster?: st
   return null
 }
 
-function mediaFromNode(node: JsonNode, path: string): PostMedia | null {
+function mediaFromNode(node: JsonNode, path: string, videoOnly = false): PostMedia | null {
   const attrs = node.attrs ?? {}
   const title = typeof attrs.title === "string" ? attrs.title : undefined
   const poster = typeof attrs.poster === "string" ? attrs.poster : typeof attrs.thumbnailUrl === "string" ? attrs.thumbnailUrl : undefined
 
-  if (node.type === "image") {
+  if (!videoOnly && node.type === "image") {
     const src = safeUrl(attrs.src)
     if (src) return { kind: "image", src, alt: typeof attrs.alt === "string" ? attrs.alt : title, identity: `json:${path}` }
   }
@@ -56,26 +58,32 @@ function mediaFromNode(node: JsonNode, path: string): PostMedia | null {
     const url = original ?? embed
     if (url) {
       const resolved = mediaFromUrl(url, `json:${path}`, title, poster)
-      if (resolved) return resolved
+      if (resolved && (!videoOnly || resolved.kind !== "image")) return resolved
       if (embed) return { kind: "embed", src: embed, poster: safeUrl(poster) ?? undefined, title, identity: `json:${path}` }
     }
   }
   if (node.type === "htmlEmbedBlock" && typeof attrs.html === "string") {
     const iframe = attrs.html.match(/<iframe[^>]+src=["']([^"']+)["']/i)?.[1]
     const src = safeUrl(iframe)
-    if (src) return mediaFromUrl(src, `json:${path}`, title, poster) ?? { kind: "embed", src, title, identity: `json:${path}` }
+    if (src) {
+      const resolved = mediaFromUrl(src, `json:${path}`, title, poster)
+      if (resolved && (!videoOnly || resolved.kind !== "image")) return resolved
+      return { kind: "embed", src, title, identity: `json:${path}` }
+    }
   }
 
   for (let index = 0; index < (node.content?.length ?? 0); index += 1) {
-    const media = mediaFromNode(node.content![index], `${path}.${index}`)
+    const media = mediaFromNode(node.content![index], `${path}.${index}`, videoOnly)
     if (media) return media
   }
   return null
 }
 
-function firstLegacyMedia(content: string): PostMedia | null {
+function firstLegacyMedia(content: string, videoOnly = false): PostMedia | null {
   const candidates: Array<{ index: number; media: PostMedia }> = []
-  const add = (index: number, media: PostMedia | null) => media && candidates.push({ index, media })
+  const add = (index: number, media: PostMedia | null) => {
+    if (media && (!videoOnly || media.kind !== "image")) candidates.push({ index, media })
+  }
   let match: RegExpExecArray | null
 
   const comments = /<!--\s*(?:VIDEO|IFRAME)_EMBED:\s*({.*?})\s*-->/gi
@@ -87,20 +95,24 @@ function firstLegacyMedia(content: string): PostMedia | null {
     } catch {}
   }
 
-  const tags = /<(img|video|iframe)\b[^>]*(?:src|data-src)=["']([^"']+)["'][^>]*>/gi
+  const tags = /<(img|video|iframe|source)\b[^>]*(?:src|data-src)=["']([^"']+)["'][^>]*>/gi
   while ((match = tags.exec(content))) {
     const url = safeUrl(match[2])
     if (!url) continue
     const poster = match[0].match(/poster=["']([^"']+)["']/i)?.[1]
-    add(match.index, match[1].toLowerCase() === "img"
-      ? { kind: "image", src: url, identity: `text:${match.index}` }
-      : mediaFromUrl(url, `text:${match.index}`, undefined, poster) ?? { kind: "embed", src: url, identity: `text:${match.index}` })
+    if (match[1].toLowerCase() !== "img" || !videoOnly) {
+      add(match.index, match[1].toLowerCase() === "img"
+        ? { kind: "image", src: url, identity: `text:${match.index}` }
+        : mediaFromUrl(url, `text:${match.index}`, undefined, poster) ?? { kind: "embed", src: url, identity: `text:${match.index}` })
+    }
   }
 
-  const markdown = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)(?:\s+["'][^"']*["'])?\)/gi
-  while ((match = markdown.exec(content))) {
-    const url = safeUrl(match[2])
-    if (url) add(match.index, mediaFromUrl(url, `text:${match.index}`, match[1]))
+  if (!videoOnly) {
+    const markdown = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)(?:\s+["'][^"']*["'])?\)/gi
+    while ((match = markdown.exec(content))) {
+      const url = safeUrl(match[2])
+      if (url) add(match.index, mediaFromUrl(url, `text:${match.index}`, match[1]))
+    }
   }
 
   const urls = /https?:\/\/[^\s<>"')\]]+/gi
@@ -120,6 +132,15 @@ export function resolveFirstPostMedia(content?: string | null): PostMedia | null
     if (parsed?.type === "doc") return mediaFromNode(parsed, "0")
   } catch {}
   return firstLegacyMedia(content)
+}
+
+export function resolveFirstPostVideo(content?: string | null): PostVideoMedia | null {
+  if (!content) return null
+  try {
+    const parsed = JSON.parse(content) as JsonNode
+    if (parsed?.type === "doc") return mediaFromNode(parsed, "0", true) as PostVideoMedia | null
+  } catch {}
+  return firstLegacyMedia(content, true) as PostVideoMedia | null
 }
 
 export function omitPostMedia(content: string, media: PostMedia | null): string {
