@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import type { FocusEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
   ChevronDown,
   Menu,
@@ -19,7 +20,6 @@ import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HeaderAuth } from "@/components/header-auth"
 import { useDeskFilter } from "@/components/desk-filter-context"
-import { SearchOverlay } from "@/components/search-overlay"
 
 type WireStory = { id: string; headline: string; summary: string; source: string; url?: string }
 type Panel = "sections" | "more" | "live" | null
@@ -44,7 +44,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   const [wireStories, setWireStories] = useState<WireStory[]>(initialWireStories || [])
   const { active, setActive } = useDeskFilter()
   const [activePanel, setActivePanel] = useState<Panel>(null)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const router = useRouter()
   const [desktopCompactVisible, setDesktopCompactVisible] = useState(false)
   const [mobileCompactVisible, setMobileCompactVisible] = useState(true)
   const [mobileFocusVisible, setMobileFocusVisible] = useState(false)
@@ -140,10 +140,6 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
-      if (searchOpen) {
-        setSearchOpen(false)
-        return
-      }
       if (activePanel) {
         setActivePanel(null)
         window.requestAnimationFrame(() => lastTriggerRef.current?.focus())
@@ -162,7 +158,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
       document.removeEventListener("keydown", handleKeyDown)
       document.removeEventListener("pointerdown", handlePointerDown)
     }
-  }, [activePanel, searchOpen])
+  }, [activePanel])
 
   useEffect(() => {
     if (!activePanel || !window.matchMedia("(max-width: 767px)").matches) return
@@ -184,7 +180,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   }, [desktopCompactVisible])
 
   const tickerItems = wireStories.map((story) => ({ headline: story.headline, url: story.url }))
-  const mobileVisible = mobileCompactVisible || mobileFocusVisible || activePanel !== null || searchOpen
+  const mobileVisible = mobileCompactVisible || mobileFocusVisible || activePanel !== null
 
   function togglePanel(panel: Exclude<Panel, null>, trigger: HTMLElement) {
     lastTriggerRef.current = trigger
@@ -202,7 +198,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
 
   function openSearch() {
     setActivePanel(null)
-    setSearchOpen(true)
+    router.push("/search")
   }
 
   function selectCategory(category: string) {
@@ -269,8 +265,6 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
 
   return (
     <>
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} wireStories={wireStories} />
-
       <header
         data-site-header
         onBlurCapture={handleHeaderBlur}
