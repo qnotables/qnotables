@@ -80,8 +80,8 @@ const DEFAULT_CONFIG: FooterConfig = {
     { id: "signup", label: "Create Account", href: "/auth/sign-up", description: "Join the QNotables community.", category: "Access", placement: "explore", icon: "UserPlus", enabled: true, openInNewTab: false, sortOrder: 160 },
   ],
   socialProfiles: [
-    { id: "x", platform: "X", label: "Follow on X", href: "https://x.com/qnotables", icon: "Twitter", enabled: true, sortOrder: 10 },
-    { id: "youtube", platform: "YouTube", label: "Watch on YouTube", href: "https://youtube.com/@qnotables", icon: "Youtube", enabled: true, sortOrder: 20 },
+    { id: "x", platform: "X", label: "Follow on X", href: "https://x.com/qnotables", icon: "AtSignIcon", enabled: true, sortOrder: 10 },
+    { id: "youtube", platform: "YouTube", label: "Watch on YouTube", href: "https://youtube.com/@qnotables", icon: "Clapperboard", enabled: true, sortOrder: 20 },
   ],
 }
 
@@ -149,7 +149,7 @@ function normalizeSocial(value: unknown, index: number): FooterSocialProfile | n
     platform: stringValue(source.platform, "Social", MAX_LABEL) || "Social",
     label: stringValue(source.label, `Follow on ${source.platform ?? "social"}`, MAX_LABEL) || "Follow on social",
     href,
-    icon: stringValue(source.icon, "Globe2", 50) || "Globe2",
+    icon: stringValue(source.icon, "Archive", 50) || "Archive",
     enabled: booleanValue(source.enabled, true),
     sortOrder: numberValue(source.sortOrder, (index + 1) * 10),
   }

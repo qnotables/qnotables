@@ -11,6 +11,7 @@ import { publishFooter, saveFooter } from "@/app/dashboard/footer/actions"
 type Tab = "settings" | "links" | "social" | "preview"
 
 const iconOptions = ["Globe2", "Landmark", "Shield", "Archive", "MessagesSquare", "Mail", "Rss", "ShoppingBag", "HeartHandshake", "Info", "ArrowUpRight"]
+const signalToolIconSet = ["Archive", "Rss", "MessageSquare", "Radio", "ShoppingBag", "Clock", "LayoutDashboard", "Shield", "ShieldPlus", "Mail", "AtSignIcon", "Bookmark", "FormInput", "FolderPlusIcon", "Heart", "Clapperboard", "Handshake"]
 
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -87,7 +88,7 @@ export function FooterManager({ initialConfig }: { initialConfig: FooterConfig }
   }
 
   function addSocial() {
-    updateConfig({ socialProfiles: [...config.socialProfiles, { id: newId("social"), platform: "New platform", label: "Follow on new platform", href: "https://", icon: "Globe2", enabled: true, sortOrder: (config.socialProfiles.length + 1) * 10 }] })
+    updateConfig({ socialProfiles: [...config.socialProfiles, { id: newId("social"), platform: "New platform", label: "Follow on new platform", href: "https://", icon: "", enabled: true, sortOrder: (config.socialProfiles.length + 1) * 10 }] })
   }
 
   return (
@@ -145,8 +146,9 @@ export function FooterManager({ initialConfig }: { initialConfig: FooterConfig }
       {tab === "social" ? (
         <section className="flex flex-col gap-5" role="tabpanel">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="label-mono text-primary">Outbound</p><h2 className="stencil mt-2 text-xl">Social profiles</h2></div><Button type="button" variant="outline" onClick={addSocial}><Plus data-icon="inline-start" />Add profile</Button></div>
+          <datalist id="signal-tool-icon-set">{signalToolIconSet.map((icon) => <option key={icon} value={icon} />)}</datalist>
           <div className="grid gap-4 lg:grid-cols-2">
-            {config.socialProfiles.map((profile) => <article key={profile.id} className="flex flex-col gap-4 border border-border bg-card p-4"><div className="flex items-center justify-between gap-3"><div><p className="label-mono text-primary">{profile.platform}</p><h3 className="stencil mt-1 text-lg">{profile.label}</h3></div><Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${profile.platform}`} onClick={() => removeSocial(profile.id)}><Trash2 /></Button></div><Field label="Platform"><Input value={profile.platform} maxLength={80} onChange={(event) => updateSocial(profile.id, { platform: event.target.value })} /></Field><Field label="Label"><Input value={profile.label} maxLength={80} onChange={(event) => updateSocial(profile.id, { label: event.target.value })} /></Field><Field label="Profile URL" hint="Social profiles must use an http(s) URL."><Input value={profile.href} maxLength={2048} onChange={(event) => updateSocial(profile.id, { href: event.target.value })} /></Field><Field label="Icon"><select value={profile.icon} onChange={(event) => updateSocial(profile.id, { icon: event.target.value })} className="h-9 w-full border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary"><option value="Twitter">X / Twitter</option><option value="Youtube">YouTube</option><option value="Globe2">Generic globe</option></select></Field><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={profile.enabled} onChange={(event) => updateSocial(profile.id, { enabled: event.target.checked })} className="size-4 accent-primary" /> Enabled</label></article>)}
+            {config.socialProfiles.map((profile) => <article key={profile.id} className="flex flex-col gap-4 border border-border bg-card p-4"><div className="flex items-center justify-between gap-3"><div><p className="label-mono text-primary">{profile.platform}</p><h3 className="stencil mt-1 text-lg">{profile.label}</h3></div><Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${profile.platform}`} onClick={() => removeSocial(profile.id)}><Trash2 /></Button></div><Field label="Platform"><Input value={profile.platform} maxLength={80} onChange={(event) => updateSocial(profile.id, { platform: event.target.value })} /></Field><Field label="Label"><Input value={profile.label} maxLength={80} onChange={(event) => updateSocial(profile.id, { label: event.target.value })} /></Field><Field label="Profile URL" hint="Social profiles must use an http(s) URL."><Input value={profile.href} maxLength={2048} onChange={(event) => updateSocial(profile.id, { href: event.target.value })} /></Field><Field label="Icon" hint="Use a Lucide icon name from the Signal Tools set. Leave blank to use the default icon."><Input list="signal-tool-icon-set" value={profile.icon} placeholder="e.g. Rss" onChange={(event) => updateSocial(profile.id, { icon: event.target.value })} /></Field><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={profile.enabled} onChange={(event) => updateSocial(profile.id, { enabled: event.target.checked })} className="size-4 accent-primary" /> Enabled</label></article>)}
           </div>
         </section>
       ) : null}
