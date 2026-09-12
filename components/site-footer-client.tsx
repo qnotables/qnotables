@@ -3,40 +3,14 @@
 import { useActionState, useMemo, useState } from "react"
 import Link from "next/link"
 import {
-  Archive,
   ArrowUpRight,
-  AtSignIcon,
-  Bookmark,
-  ChartNoAxesCombined,
   ChevronRight,
   CircleCheck,
-  Clapperboard,
-  Clock,
-  Cpu,
   ExternalLink,
-  FlaskConical,
-  FolderPlusIcon,
-  FormInput,
-  Globe2,
-  Handshake,
-  Heart,
-  HeartHandshake,
-  Info,
-  Landmark,
-  LayoutDashboard,
-  LockKeyhole,
-  LogIn,
+  icons,
   Mail,
-  MessageSquare,
-  MessagesSquare,
   Radio,
-  Rss,
-  ScrollText,
   Search,
-  Shield,
-  ShieldPlus,
-  ShoppingBag,
-  UserPlus,
 } from "lucide-react"
 import { subscribeToNewsletter } from "@/app/new-to-q/actions"
 import { initialNewsletterState } from "@/app/new-to-q/newsletter-state"
@@ -52,40 +26,20 @@ import {
 import { Input } from "@/components/ui/input"
 import type { FooterConfig, FooterLink, FooterSocialProfile } from "@/lib/footer-config"
 
-const iconMap = {
-  Archive,
-  ArrowUpRight,
-  AtSignIcon,
-  Bookmark,
-  ChartNoAxesCombined,
-  Clapperboard,
-  Clock,
-  Cpu,
-  FlaskConical,
-  FolderPlusIcon,
-  FormInput,
-  Globe2,
-  Handshake,
-  Heart,
-  HeartHandshake,
-  Info,
-  Landmark,
-  LayoutDashboard,
-  LockKeyhole,
-  LogIn,
-  Mail,
-  MessageSquare,
-  MessagesSquare,
-  Radio,
-  Rss,
-  ScrollText,
-  Shield,
-  ShieldPlus,
-  ShoppingBag,
-  UserPlus,
-  Twitter: AtSignIcon,
-  Youtube: Clapperboard,
-} as const
+const iconAliases: Record<string, string> = {
+  twitter: "AtSign",
+  youtube: "Clapperboard",
+}
+
+function toLucideComponentName(name: string): string {
+  return name
+    .trim()
+    .replace(/^lucide[-_:]/i, "")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("")
+}
 
 function footerLinkGroups(config: FooterConfig, placement: "footer" | "explore" | "legal") {
   const groups = new Map<string, FooterLink[]>()
@@ -101,10 +55,10 @@ function isExternalFooterHref(href: string): boolean {
   return /^https?:\/\//i.test(href)
 }
 
-type IconName = keyof typeof iconMap
-
 function FooterIcon({ name }: { name: string }) {
-  const Icon = iconMap[name as IconName] ?? ArrowUpRight
+  const normalizedName = name.trim().toLowerCase()
+  const componentName = iconAliases[normalizedName] ?? toLucideComponentName(name)
+  const Icon = icons[componentName as keyof typeof icons] ?? ArrowUpRight
   return <Icon className="size-4 shrink-0" aria-hidden="true" />
 }
 
