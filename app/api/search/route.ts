@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import { createClient } from "@/lib/supabase/server"
 import { getAllPosts } from "@/lib/blog-posts"
+import { getNews } from "@/lib/rss"
 import {
   buildSearchExcerpt,
   getSearchScore,
@@ -205,7 +206,7 @@ export async function GET(request: Request) {
         return []
       }
     })(),
-    getNews().catch(() => { partial.push("news"); return { feed: [] } as Awaited<ReturnType<typeof getNews>> }),
+    getNews().catch(() => { partial.push("news"); return { feed: [] } }),
   ])
 
   const allResults = [
