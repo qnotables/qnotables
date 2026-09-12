@@ -32,8 +32,8 @@ const SCROLL_JITTER = 3
 
 const secondaryLinks = [
   { label: "ARCHIVES", href: "/archives" },
-  { label: "ABOUT", href: "/about" },
   { label: "TOWN HALL", href: "/forum" },
+  { label: "ABOUT", href: "/about" },
   { label: "NEW TO Q?", href: "/new-to-q" },
 ]
 
