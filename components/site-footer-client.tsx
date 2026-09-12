@@ -5,28 +5,37 @@ import Link from "next/link"
 import {
   Archive,
   ArrowUpRight,
+  AtSignIcon,
+  Bookmark,
   ChartNoAxesCombined,
   ChevronRight,
   CircleCheck,
+  Clapperboard,
+  Clock,
   Cpu,
   ExternalLink,
   FlaskConical,
+  FolderPlusIcon,
+  FormInput,
   Globe2,
   Handshake,
+  Heart,
   HeartHandshake,
   Info,
   Landmark,
+  LayoutDashboard,
   LockKeyhole,
   LogIn,
   Mail,
+  MessageSquare,
   MessagesSquare,
   Radio,
   Rss,
   ScrollText,
   Search,
   Shield,
+  ShieldPlus,
   ShoppingBag,
-  Play,
   UserPlus,
 } from "lucide-react"
 import { subscribeToNewsletter } from "@/app/new-to-q/actions"
@@ -46,25 +55,36 @@ import type { FooterConfig, FooterLink, FooterSocialProfile } from "@/lib/footer
 const iconMap = {
   Archive,
   ArrowUpRight,
+  AtSignIcon,
+  Bookmark,
   ChartNoAxesCombined,
+  Clapperboard,
+  Clock,
   Cpu,
   FlaskConical,
+  FolderPlusIcon,
+  FormInput,
   Globe2,
   Handshake,
+  Heart,
   HeartHandshake,
   Info,
   Landmark,
+  LayoutDashboard,
   LockKeyhole,
   LogIn,
   Mail,
+  MessageSquare,
   MessagesSquare,
   Radio,
   Rss,
   ScrollText,
   Shield,
+  ShieldPlus,
   ShoppingBag,
-  Play,
   UserPlus,
+  Twitter: AtSignIcon,
+  Youtube: Clapperboard,
 } as const
 
 function footerLinkGroups(config: FooterConfig, placement: "footer" | "explore" | "legal") {
@@ -193,7 +213,7 @@ function SocialLinks({ profiles }: { profiles: FooterSocialProfile[] }) {
     <div className="flex items-center gap-2">
       {profiles.filter((profile) => profile.enabled).map((profile) => (
         <a key={profile.id} href={profile.href} target="_blank" rel="noreferrer" aria-label={profile.label} className="flex size-9 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {profile.icon === "Youtube" ? <Play className="size-4" aria-hidden="true" /> : <Globe2 className="size-4" aria-hidden="true" />}
+          <FooterIcon name={profile.icon} />
         </a>
       ))}
     </div>
