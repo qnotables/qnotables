@@ -1,5 +1,6 @@
 import { BlogPost } from "@/lib/blog-posts"
 import { Video } from "@/app/actions/video-actions"
+import { resolveFirstPostVideo } from "@/lib/post-media"
 
 /**
  * Transform a BlogPost into the format expected by archive components
@@ -24,58 +25,18 @@ export interface ArchiveRecord {
   type?: "blog" | "video"
   video_url?: string | null
   external_url?: string | null
+  video_preview?: {
+    kind: "video" | "embed"
+    src: string
+    poster?: string
+    title?: string
+  } | null
   content?: string | null
 }
 
-/**
- * Extract the first video URL from blog content HTML.
- * Looks for <video> tags with <source> children or direct src attributes.
- */
-export function extractFirstVideoUrl(content: string): string | null {
-  if (!content) return null
-
-  // Match <video ... ><source src="..." ... or <video src="..."
-  const videoSourceMatch = content.match(
-    /<video[^>]*>[\s\S]*?<source\s+[^>]*src=["']([^"']+)["'][^>]*>/i
-  )
-  if (videoSourceMatch) return videoSourceMatch[1]
-
-  // Fallback: direct src on video tag
-  const videoSrcMatch = content.match(/<video[^>]*\ssrc=["']([^"']+)["'][^>]*>/i)
-  if (videoSrcMatch) return videoSrcMatch[1]
-
-  return null
-}
-
-/**
- * Generate a Vercel Blob video thumbnail URL using the video's built-in poster/thumbnail.
- * Uses a query parameter to extract a frame or use the service's default thumbnail.
- */
-export function getVideoThumbnailUrl(videoUrl: string): string {
-  if (!videoUrl) return ""
-  
-  // For Vercel Blob URLs, we can request a thumbnail by adding ?thumbnail=true
-  // or by using a frame-extraction service. For now, return the video URL itself
-  // which many players render as a thumbnail, or append a query param if supported.
-  try {
-    const url = new URL(videoUrl)
-    // Add thumbnail query param for services that support it
-    url.searchParams.set("thumbnail", "true")
-    return url.toString()
-  } catch {
-    return videoUrl
-  }
-}
-
 export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
-  // If no cover image, try to extract a video thumbnail from content
-  let coverImage = post.coverImage
-  if (!coverImage && post.content) {
-    const videoUrl = extractFirstVideoUrl(post.content)
-    if (videoUrl) {
-      coverImage = getVideoThumbnailUrl(videoUrl)
-    }
-  }
+  const videoMedia = resolveFirstPostVideo(post.content)
+  const coverImage = post.coverImage || videoMedia?.poster || null
 
   return {
     id: post.id || post.slug,
@@ -95,6 +56,14 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     author: post.author || "HOT AND FRESH",
     cover_image: coverImage,
     type: "blog",
+    video_preview: videoMedia
+      ? {
+          kind: videoMedia.kind,
+          src: videoMedia.src,
+          poster: videoMedia.poster,
+          title: videoMedia.title,
+        }
+      : null,
     content: post.content || null,
   }
 }

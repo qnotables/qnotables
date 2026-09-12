@@ -110,9 +110,11 @@ export function SiteSwitcherEmbed() {
             href={active.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="label-mono whitespace-nowrap px-4 py-2.5 text-xs text-primary hover:underline"
+            className="label-mono inline-flex h-10 w-10 items-center justify-center text-base text-primary transition-colors hover:bg-primary/10 hover:underline"
+            aria-label={`Open ${active.label} in a new tab`}
+            title={`Open ${active.label} in a new tab`}
           >
-            OPEN IN NEW TAB →
+            <span aria-hidden="true">→</span>
           </a>
         </div>
       </div>
