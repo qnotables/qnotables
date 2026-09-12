@@ -43,7 +43,7 @@ export async function subscribeToNewsletter(
   const emailValue = formData.get("email")
   const sourceValue = formData.get("source")
   const email = typeof emailValue === "string" ? emailValue.trim().toLowerCase() : ""
-  const source = sourceValue === "homepage-daily-briefing" ? sourceValue : "new-to-q"
+  const source = sourceValue === "homepage-daily-briefing" || sourceValue === "footer" ? sourceValue : "new-to-q"
 
   if (!EMAIL_PATTERN.test(email) || email.length > 254) {
     return {

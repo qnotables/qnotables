@@ -15,6 +15,7 @@ import {
   Settings,
   Video,
   ScanSearch,
+  PanelBottom,
 } from "lucide-react"
 
 export interface NavItem {
@@ -41,4 +42,5 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Ads", href: "/dashboard/ads", icon: Megaphone, adminOnly: true },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldAlert },
   { label: "Settings", href: "/dashboard/settings", icon: Settings, adminOnly: true },
+  { label: "Footer & Social", href: "/dashboard/footer", icon: PanelBottom, adminOnly: true },
 ]
