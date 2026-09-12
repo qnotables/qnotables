@@ -391,8 +391,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
         />
       )}
 
-      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+      <main className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-stretch">
           <div className="min-w-0 max-w-3xl">
         {/* Breadcrumb */}
         <nav className="mb-6 flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
