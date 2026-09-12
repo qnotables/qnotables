@@ -286,7 +286,7 @@ export function HomeContentSections({ posts, threads }: { posts: BlogPost[]; thr
           headingId="latest-dispatches-heading"
         />
         {posts.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => <DispatchCard key={post.id || post.slug} post={post} />)}
           </div>
         ) : (
@@ -305,7 +305,7 @@ export function HomeContentSections({ posts, threads }: { posts: BlogPost[]; thr
           headingId="community-activity-heading"
         />
         {threads.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {threads.map((thread) => <CommunityCard key={thread.id} thread={thread} />)}
           </div>
         ) : (
