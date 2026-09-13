@@ -1,22 +1,23 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
-import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import useSWR from "swr"
+import { useEffect, useMemo, useState } from "react"
 import {
-  MessageSquare,
+  Activity,
+  ChevronDown,
   Clock,
-  Pin,
-  Star,
-  Lock,
   Image as ImageIcon,
   Link2,
-  Video,
-  Search,
-  ChevronDown,
-  Activity,
+  Lock,
+  MessageSquare,
+  Pin,
   Play,
+  Search,
+  Star,
+  Video,
 } from "lucide-react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ShareButtons } from "@/components/share-buttons"
 import { ForumThreadUpvote } from "@/components/forum-thread-upvote"
 import { timeAgo } from "@/lib/time"
@@ -24,88 +25,65 @@ import {
   FORUM_CATEGORIES,
   FORUM_DESKS,
   SORT_OPTIONS,
-  type SortOption,
-  buildExcerpt,
-  detectMediaBadges,
   normalizeCategoryName,
-  normalizeCategorySlug,
+  type SortOption,
 } from "@/lib/forum-utils"
 import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
+import type { ForumQueryResult, ForumThreadRecord } from "@/lib/forum"
 
-export interface ThreadListItem {
-  id: string
-  slug?: string | null
-  title: string
-  body: string
-  excerpt?: string | null
-  category: string | null
-  desk?: string | null
-  tags: string | null
-  created_at: string
-  last_activity_at?: string
-  viewCount?: number
-  author_id: string
-  authorName: string
-  replyCount: number
-  is_pinned: boolean
-  is_locked: boolean
-  is_featured: boolean
-  is_soft_deleted: boolean
-  upVoteCount: number
-  userVote: 1 | -1 | null
-}
+export type ThreadListItem = ForumThreadRecord
 
 interface ForumListProps {
-  threads: ThreadListItem[]
+  initialResult: ForumQueryResult
   isSignedIn: boolean
 }
 
-const PAGE_SIZE = 15
+const fetcher = async (url: string): Promise<ForumQueryResult> => {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error("Unable to load forum threads")
+  return response.json() as Promise<ForumQueryResult>
+}
 
-function CategoryBadge({ category }: { category: string | null }) {
-  if (!category) return null
-  const label = normalizeCategoryName(category) ?? category
+function SelectControl({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  children: React.ReactNode
+}) {
   return (
-    <span className="label-mono inline-block border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-      {label.toUpperCase()}
-    </span>
+    <label className="relative flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="label-mono w-full appearance-none border border-border bg-background px-3 py-2.5 pr-8 text-xs text-foreground outline-none transition-colors focus:border-primary sm:min-w-36"
+      >
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 mt-1 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+    </label>
   )
 }
 
-function MediaBadgeRow({ body, media }: { body: string; media: PostMedia | null }) {
-  const detected = detectMediaBadges(body)
-  const badges = {
-    ...detected,
-    hasImages: detected.hasImages || media?.kind === "image",
-    hasVideo: detected.hasVideo || media?.kind === "video" || media?.kind === "embed",
-  }
-  if (!badges.hasImages && !badges.hasLinks && !badges.hasSocialLinks && !badges.hasVideo) return null
+function MediaBadges({ thread }: { thread: ThreadListItem }) {
+  const badges = [
+    thread.media.hasImages ? { label: "IMG", icon: ImageIcon, title: "Contains images" } : null,
+    thread.media.hasVideo ? { label: "VID", icon: Video, title: "Contains video" } : null,
+    thread.media.hasLinks ? { label: "SRC", icon: Link2, title: "Contains links" } : null,
+  ].filter(Boolean) as Array<{ label: string; icon: typeof ImageIcon; title: string }>
+
   return (
-    <div className="flex items-center gap-1.5">
-      {badges.hasImages && (
-        <span
-          title="Contains images"
-          className="flex items-center gap-0.5 label-mono text-[10px] text-muted-foreground border border-border px-1 py-0.5"
-        >
-          <ImageIcon className="h-2.5 w-2.5" /> IMG
+    <div className="flex flex-wrap items-center gap-1.5">
+      {badges.map(({ label, icon: Icon, title }) => (
+        <span key={label} title={title} className="label-mono inline-flex items-center gap-1 border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          <Icon className="h-2.5 w-2.5" /> {label}
         </span>
-      )}
-      {badges.hasVideo && (
-        <span
-          title="Contains video"
-          className="flex items-center gap-0.5 label-mono text-[10px] text-muted-foreground border border-border px-1 py-0.5"
-        >
-          <Video className="h-2.5 w-2.5" /> VID
-        </span>
-      )}
-      {badges.hasLinks && (
-        <span
-          title="Contains links"
-          className="flex items-center gap-0.5 label-mono text-[10px] text-muted-foreground border border-border px-1 py-0.5"
-        >
-          <Link2 className="h-2.5 w-2.5" /> SRC
-        </span>
-      )}
+      ))}
     </div>
   )
 }
@@ -115,36 +93,18 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
   const [failed, setFailed] = useState(false)
 
   if (media.kind === "image") {
-    if (failed) {
-      return (
-        <a
-          href={media.src}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
-          onClick={(event) => event.stopPropagation()}
-          className="label-mono flex min-h-28 w-28 flex-shrink-0 items-center justify-center border-r border-border bg-muted/30 px-3 text-center text-[10px] text-primary hover:underline sm:w-44 md:w-52"
-        >
-          Open image
-        </a>
-      )
-    }
+    if (failed) return <a href={media.src} target="_blank" rel="noopener noreferrer nofollow" className="label-mono flex min-h-24 w-28 shrink-0 items-center justify-center border-r border-border bg-muted/30 px-2 text-center text-[10px] text-primary hover:underline">Open image</a>
     return (
-      <div className="w-28 flex-shrink-0 overflow-hidden sm:w-44 md:w-52">
+      <div className="w-28 shrink-0 overflow-hidden border-r border-border sm:w-40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={media.src}
-          alt={media.alt ?? "Thread preview"}
-          className="h-full min-h-28 w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
+        <img src={media.src} alt={media.alt ?? "Thread preview"} className="h-full min-h-24 w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" loading="lazy" onError={() => setFailed(true)} />
       </div>
     )
   }
 
   if (media.kind === "video") {
     return (
-      <div className="mt-3 w-full overflow-hidden border border-primary/40 aspect-video" onClick={(event) => event.preventDefault()}>
+      <div className="mt-3 aspect-video w-full overflow-hidden border border-primary/40" onClick={(event) => event.preventDefault()}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video src={media.src} poster={media.poster} controls preload="metadata" className="h-full w-full bg-background" />
       </div>
@@ -153,19 +113,12 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
 
   if (!active) {
     return (
-      <button
-        type="button"
-        onClick={(event) => { event.preventDefault(); setActive(true) }}
-        className="group/play relative mt-3 flex aspect-video w-full items-center justify-center overflow-hidden border border-border bg-muted/40 transition-colors hover:border-primary"
-        aria-label={`Play ${media.title ?? "embedded video"}`}
-      >
+      <button type="button" onClick={(event) => { event.preventDefault(); setActive(true) }} className="group/play relative mt-3 flex aspect-video w-full items-center justify-center overflow-hidden border border-border bg-muted/40 transition-colors hover:border-primary" aria-label={`Play ${media.title ?? "embedded video"}`}>
         {media.poster && !failed && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={media.poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" onError={() => setFailed(true)} />
         )}
-        <span className="relative z-10 flex h-14 w-14 items-center justify-center border border-primary/60 bg-background/80">
-          <Play className="h-6 w-6 fill-primary text-primary" />
-        </span>
+        <span className="relative z-10 flex h-12 w-12 items-center justify-center border border-primary/60 bg-background/80"><Play className="h-5 w-5 fill-primary text-primary" /></span>
         <span className="label-mono absolute bottom-2 right-3 z-10 text-[10px] text-foreground">CLICK TO PLAY</span>
       </button>
     )
@@ -173,387 +126,180 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
 
   return (
     <div className="mt-3 aspect-video w-full overflow-hidden border border-primary/40" onClick={(event) => event.preventDefault()}>
-      <iframe
-        src={media.src}
-        className="h-full w-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title={media.title ?? "Embedded video"}
-        loading="lazy"
-      />
+      <iframe src={media.src} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={media.title ?? "Embedded video"} loading="lazy" />
     </div>
   )
 }
 
-function ThreadCard({ t, isSignedIn }: { t: ThreadListItem; isSignedIn: boolean }) {
-  // Always derive the excerpt fresh from the full body rather than trusting
-  // the stored `excerpt` column: some legacy rows were truncated *before*
-  // markdown/JSON was stripped, leaving broken syntax (e.g. a markdown image
-  // tag cut off mid-URL with no closing paren) that can never be cleanly
-  // stripped after the fact. `body` is never truncated, so strip-then-
-  // truncate here always produces clean text.
-  const excerpt = buildExcerpt(t.body, 160)
-  const media = resolveFirstPostMedia(t.body)
-  const tags = t.tags ? t.tags.split(/[,\s]+/).filter(Boolean).slice(0, 4) : []
-  const categoryName = normalizeCategoryName(t.category)
-  const href = `/forum/${t.slug || t.id}`
-  const deskInfo = FORUM_DESKS.find((d) => d.slug === (t.desk ?? "other"))
+function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn: boolean }) {
+  const media = resolveFirstPostMedia(thread.body)
+  const href = `/forum/${thread.slug || thread.id}`
+  const excerpt = thread.excerpt || thread.body.replace(/\s+/g, " ").trim().slice(0, 180)
+  const tags = thread.tags ? thread.tags.split(/[,\s]+/).filter(Boolean).slice(0, 3) : []
+  const categoryName = normalizeCategoryName(thread.category)
+  const desk = FORUM_DESKS.find((item) => item.slug === (thread.desk ?? "other"))
 
   return (
-    <div
-      className={`group relative flex gap-0 border bg-card transition-colors hover:border-primary ${
-        t.is_pinned ? "border-primary/60" : "border-border"
-      }`}
-    >
-      {/* Thumbnail strip */}
+    <article className={`group flex gap-0 border bg-card transition-colors hover:border-primary ${thread.is_pinned ? "border-primary/60" : "border-border"}`}>
       {media?.kind === "image" && <StructuredMediaPreview media={media} />}
-
-      {/* Reply count column */}
-      <div className="flex w-14 flex-shrink-0 flex-col items-center justify-center gap-0.5 border-r border-border bg-muted/30 px-2 py-4 text-center">
-        <span className="stencil text-lg leading-none text-primary">{t.replyCount}</span>
-        <span className="label-mono text-[9px] text-muted-foreground">
-          {t.replyCount === 1 ? "REPLY" : "REPLIES"}
-        </span>
+      <div className="flex w-14 shrink-0 flex-col items-center justify-center gap-1 border-r border-border bg-muted/30 px-2 py-4 text-center">
+        <span className="stencil text-lg leading-none text-primary">{thread.replyCount}</span>
+        <span className="label-mono text-[9px] text-muted-foreground">{thread.replyCount === 1 ? "REPLY" : "REPLIES"}</span>
       </div>
-
-      {/* Main content */}
-      <div className="min-w-0 flex-1 p-4">
-        {/* Status badges row */}
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          {t.is_pinned && (
-            <span className="label-mono flex items-center gap-0.5 border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-              <Pin className="h-2.5 w-2.5" /> PINNED
-            </span>
-          )}
-          {t.is_featured && (
-            <span className="label-mono flex items-center gap-0.5 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
-              <Star className="h-2.5 w-2.5" /> FEATURED
-            </span>
-          )}
-          {t.is_locked && (
-            <span className="label-mono flex items-center gap-0.5 border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              <Lock className="h-2.5 w-2.5" /> LOCKED
-            </span>
-          )}
-          {deskInfo && deskInfo.slug !== "other" && (
-            <span className="label-mono inline-block border border-border/70 bg-muted/30 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              {deskInfo.label.toUpperCase()}
-            </span>
-          )}
-          <CategoryBadge category={categoryName} />
-          <MediaBadgeRow body={t.body} media={media} />
+      <div className="min-w-0 flex-1 p-4 md:p-5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {thread.is_pinned && <span className="label-mono inline-flex items-center gap-1 border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"><Pin className="h-2.5 w-2.5" /> PINNED</span>}
+          {thread.is_featured && <span className="label-mono inline-flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"><Star className="h-2.5 w-2.5" /> FEATURED</span>}
+          {thread.is_locked && <span className="label-mono inline-flex items-center gap-1 border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"><Lock className="h-2.5 w-2.5" /> LOCKED</span>}
+          <span className="label-mono border border-border/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">{categoryName.toUpperCase()}</span>
+          {desk && desk.slug !== "other" && <span className="label-mono border border-border/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">{desk.label.toUpperCase()}</span>}
+          <span className="label-mono border border-border/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">{thread.origin === "primary-source" ? "PRIMARY SOURCE" : "COMMUNITY"}</span>
+          <MediaBadges thread={thread} />
         </div>
-
-        {/* Title */}
-        <Link href={href} className="block">
-          <h2 className="stencil text-balance text-base leading-snug text-foreground transition-colors group-hover:text-primary md:text-lg">
-            {t.title}
-          </h2>
+        <Link href={href} className="mt-2 block">
+          <h3 className="stencil text-balance text-lg leading-snug text-foreground transition-colors group-hover:text-primary md:text-xl">{thread.title}</h3>
         </Link>
-
-        {/* Excerpt */}
-        {excerpt && (
-          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-            {excerpt}
-          </p>
-        )}
-
-        {/* Video and embed preview */}
+        {excerpt && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{excerpt}</p>}
         {media && media.kind !== "image" && <StructuredMediaPreview media={media} />}
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="label-mono border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
-              >
-                #{tag}
-              </span>
-            ))}
+        {thread.sourceUrl && <a href={thread.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="label-mono mt-3 inline-flex max-w-full items-center gap-1 text-[10px] text-primary hover:underline" onClick={(event) => event.stopPropagation()}><Link2 className="h-3 w-3 shrink-0" /> <span className="truncate">Open primary source</span></a>}
+        {tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1">{tags.map((tag) => <span key={tag} className="label-mono border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">#{tag}</span>)}</div>}
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+          <ShareButtons title={thread.title} url={href} excerpt={excerpt} />
+          {isSignedIn && <ForumThreadUpvote threadId={thread.id} initialUpVotes={thread.upVoteCount} userVote={thread.userVote} />}
+          <div className="label-mono flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">{thread.authorName}</span>
+            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {timeAgo(thread.created_at)}</span>
+            {thread.replyCount > 0 && thread.last_activity_at !== thread.created_at && <span className="flex items-center gap-1 text-primary/80"><Activity className="h-3 w-3" /> active {timeAgo(thread.last_activity_at)}</span>}
           </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          <ShareButtons title={t.title} url={href} excerpt={excerpt} />
-          {isSignedIn && (
-            <ForumThreadUpvote
-              threadId={t.id}
-              initialUpVotes={t.upVoteCount}
-              userVote={t.userVote}
-            />
-          )}
-        </div>
-
-        {/* Meta row */}
-        <div className="label-mono mt-2.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{t.authorName}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {timeAgo(t.created_at)}
-          </span>
-          {t.replyCount > 0 && t.last_activity_at && t.last_activity_at !== t.created_at && (
-            <span className="flex items-center gap-1 text-primary/80">
-              <Activity className="h-3 w-3" />
-              active {timeAgo(t.last_activity_at)}
-            </span>
-          )}
-          {typeof t.viewCount === "number" && t.viewCount > 0 && (
-            <span className="flex items-center gap-1">
-              {t.viewCount.toLocaleString()} view{t.viewCount === 1 ? "" : "s"}
-            </span>
-          )}
         </div>
       </div>
-
-      {/* Open thread arrow */}
-      <div className="flex flex-shrink-0 items-center pr-3">
-        <Link
-          href={href}
-          className="label-mono hidden border border-border px-3 py-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:block"
-          aria-label={`Open thread: ${t.title}`}
-        >
-          OPEN →
-        </Link>
-      </div>
-    </div>
+      <div className="hidden shrink-0 items-center pr-4 sm:flex"><Link href={href} className="label-mono border border-border px-3 py-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label={`Open thread: ${thread.title}`}>OPEN →</Link></div>
+    </article>
   )
 }
 
-export function ForumList({ threads, isSignedIn }: ForumListProps) {
+export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-  const [query, setQuery] = useState("")
-  const [sort, setSort] = useState<SortOption>("latest")
-  // Category/desk are owned by the URL — sidebar links and the dropdowns stay in sync
-  const filterCategory = searchParams.get("category") ?? ""
-  const filterDesk = searchParams.get("desk") ?? ""
-  const [filterTag, setFilterTag] = useState("")
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const urlQuery = searchParams.get("q") ?? ""
+  const category = searchParams.get("category") ?? ""
+  const desk = searchParams.get("desk") ?? ""
+  const origin = searchParams.get("origin") ?? ""
+  const media = searchParams.get("media") ?? ""
+  const sort = (searchParams.get("sort") as SortOption | null) ?? "latest"
+  const [query, setQuery] = useState(urlQuery)
+  const [extraThreads, setExtraThreads] = useState<ThreadListItem[]>([])
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  function setUrlFilter(key: "category" | "desk", value: string) {
+  const requestParams = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
-  const setFilterCategory = (value: string) => setUrlFilter("category", value)
-  const setFilterDesk = (value: string) => setUrlFilter("desk", value)
+    params.delete("page")
+    return params
+  }, [searchParams])
+  const requestKey = `/api/forum/threads${requestParams.toString() ? `?${requestParams.toString()}` : ""}`
+  const { data, error, isLoading } = useSWR<ForumQueryResult>(requestKey, fetcher, { fallbackData: initialResult, keepPreviousData: true, revalidateOnFocus: false })
+  const result = data ?? initialResult
+  const threads = [...result.threads, ...extraThreads]
 
-  // Effective "last activity" timestamp for a thread (falls back to creation).
-  const activityTime = (t: ThreadListItem) =>
-    new Date(t.last_activity_at ?? t.created_at).getTime()
-
-  const filtered = useMemo(() => {
-    let rows = [...threads]
-
-    // Search
-    const q = query.trim().toLowerCase()
-    if (q) {
-      rows = rows.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.body.toLowerCase().includes(q) ||
-          (t.tags ?? "").toLowerCase().includes(q) ||
-          (t.category ?? "").toLowerCase().includes(q) ||
-          t.authorName.toLowerCase().includes(q),
-      )
-    }
-
-    // Category filter — normalize both sides to slug so null→"other" is caught
-    if (filterCategory) {
-      rows = rows.filter((t) => normalizeCategorySlug(t.category) === filterCategory.toLowerCase())
-    }
-
-    // Desk filter
-    if (filterDesk) {
-      rows = rows.filter((t) => (t.desk ?? "other").toLowerCase() === filterDesk.toLowerCase())
-    }
-
-    // Tag filter
-    if (filterTag) {
-      const ft = filterTag.toLowerCase()
-      rows = rows.filter((t) => (t.tags ?? "").toLowerCase().includes(ft))
-    }
-
-    // Sort: pinned always first, then apply sort
-    const pinned = rows.filter((t) => t.is_pinned)
-    const rest = rows.filter((t) => !t.is_pinned)
-
-    const sortFn = (a: ThreadListItem, b: ThreadListItem): number => {
-      switch (sort) {
-        case "most-replies":
-          return b.replyCount - a.replyCount
-        case "featured":
-          return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || activityTime(b) - activityTime(a)
-        case "pinned":
-          return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || activityTime(b) - activityTime(a)
-        case "newest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        case "latest":
-        default:
-          // Latest activity: most recent reply (or creation) first
-          return activityTime(b) - activityTime(a)
-      }
-    }
-
-    return [...pinned.sort(sortFn), ...rest.sort(sortFn)]
-  }, [threads, query, sort, filterCategory, filterDesk, filterTag])
-
-  // Reset visible window whenever the result set changes
+  useEffect(() => setQuery(urlQuery), [urlQuery])
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [query, sort, filterCategory, filterDesk, filterTag])
+    const timeout = window.setTimeout(() => {
+      if (query.trim() === urlQuery.trim()) return
+      const params = new URLSearchParams(searchParams.toString())
+      if (query.trim()) params.set("q", query.trim())
+      else params.delete("q")
+      params.delete("page")
+      router.replace(`${pathname}${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+    }, 300)
+    return () => window.clearTimeout(timeout)
+  }, [pathname, query, router, searchParams, urlQuery])
+  useEffect(() => setExtraThreads([]), [requestKey])
 
-  const visible = filtered.slice(0, visibleCount)
-  const hasMore = filtered.length > visibleCount
+  function setParam(key: string, value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value) params.set(key, value)
+    else params.delete(key)
+    params.delete("page")
+    router.replace(`${pathname}${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+  }
 
-  const isEmpty = threads.length === 0
-  const noResults = !isEmpty && filtered.length === 0
+  function clearFilters() {
+    setQuery("")
+    router.replace(pathname, { scroll: false })
+  }
+
+  async function loadMore() {
+    if (!result.hasMore || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const params = new URLSearchParams(requestParams)
+      params.set("page", String(result.page + 1))
+      const next = await fetcher(`/api/forum/threads?${params.toString()}`)
+      setExtraThreads((current) => [...current, ...next.threads])
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  const isEmpty = !isLoading && result.total === 0
+  const noResults = !isLoading && Boolean(urlQuery || category || desk || origin || media) && result.total === 0
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Controls bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search threads, tags, authors…"
-            className="label-mono w-full border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none transition-colors focus:border-primary placeholder:text-muted-foreground/60"
-          />
+      <div className="border border-border bg-card p-3">
+        <div className="flex flex-col gap-2 lg:flex-row">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search threads</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search threads, sources, tags, or authors" className="label-mono w-full border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground outline-none transition-colors focus:border-primary placeholder:text-muted-foreground/60" />
+          </label>
+          <SelectControl label="Category" value={category} onChange={(value) => setParam("category", value)}>
+            <option value="">All categories</option>
+            {FORUM_CATEGORIES.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+          </SelectControl>
+          <SelectControl label="Desk" value={desk} onChange={(value) => setParam("desk", value)}>
+            <option value="">All desks</option>
+            {FORUM_DESKS.map((item) => <option key={item.slug} value={item.slug}>{item.label}</option>)}
+          </SelectControl>
         </div>
-
-        {/* Category filter — only show categories that have at least one thread */}
-        <div className="relative">
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="label-mono appearance-none border border-border bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
-          >
-            <option value="">All Categories</option>
-            {FORUM_CATEGORIES.filter((c) =>
-              threads.some((t) => normalizeCategorySlug(t.category) === c.slug)
-            ).map((c) => {
-              const count = threads.filter((t) => normalizeCategorySlug(t.category) === c.slug).length
-              return (
-                <option key={c.slug} value={c.slug}>
-                  {c.name} ({count})
-                </option>
-              )
-            })}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        </div>
-
-        {/* Desk filter — only show desks that have at least one thread */}
-        <div className="relative">
-          <select
-            value={filterDesk}
-            onChange={(e) => setFilterDesk(e.target.value)}
-            className="label-mono appearance-none border border-border bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
-          >
-            <option value="">All Desks</option>
-            {FORUM_DESKS.filter((d) => threads.some((t) => (t.desk ?? "other") === d.slug)).map((d) => {
-              const count = threads.filter((t) => (t.desk ?? "other") === d.slug).length
-              return (
-                <option key={d.slug} value={d.slug}>
-                  {d.label} ({count})
-                </option>
-              )
-            })}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        </div>
-
-        {/* Sort */}
-        <div className="relative">
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
-            className="label-mono appearance-none border border-border bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <SelectControl label="Origin" value={origin} onChange={(value) => setParam("origin", value)}>
+            <option value="">All origins</option>
+            <option value="community">Community</option>
+            <option value="primary-source">Primary source</option>
+          </SelectControl>
+          <SelectControl label="Media" value={media} onChange={(value) => setParam("media", value)}>
+            <option value="">Any media</option>
+            <option value="images">Images</option>
+            <option value="video">Video</option>
+            <option value="links">Links</option>
+            <option value="social">Social links</option>
+          </SelectControl>
+          <SelectControl label="Sort" value={sort} onChange={(value) => setParam("sort", value)}>
+            {SORT_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </SelectControl>
+          {(urlQuery || category || desk || origin || media || sort !== "latest") && <button type="button" onClick={clearFilters} className="label-mono border border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">Clear filters</button>}
         </div>
       </div>
 
-      {/* Results count */}
-      {!isEmpty && (
-        <p className="label-mono text-xs text-muted-foreground">
-          {filtered.length === threads.length
-            ? `${threads.length} thread${threads.length !== 1 ? "s" : ""}`
-            : `${filtered.length} of ${threads.length} threads`}
-        </p>
-      )}
+      <div className="flex items-center justify-between gap-3">
+        <p className="label-mono text-xs text-muted-foreground">{isLoading && !data ? "Loading the record…" : `${result.total.toLocaleString()} thread${result.total === 1 ? "" : "s"}`}</p>
+        {error && <p className="label-mono text-xs text-destructive">Could not refresh results.</p>}
+      </div>
 
-      {/* Empty state */}
       {isEmpty && (
-        <div className="corner-frame border border-border bg-card p-12 text-center">
-          <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground opacity-40" />
-          <p className="stencil mt-4 text-xl text-foreground">The Town Hall is quiet.</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Start the first discussion.
-          </p>
-          {!isSignedIn && (
-            <Link
-              href="/auth/login?next=/forum/new"
-              className="label-mono mt-4 inline-block border border-primary px-4 py-2 text-sm text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-            >
-              Sign in to post
-            </Link>
-          )}
+        <div className="border border-dashed border-border bg-card p-10 text-center">
+          <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/50" />
+          <p className="stencil mt-4 text-xl text-foreground">{noResults ? "No threads matched." : "The Town Hall is quiet."}</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{noResults ? "Try another combination of filters or clear the current view." : "Start the first useful discussion."}</p>
+          {noResults ? <button type="button" onClick={clearFilters} className="label-mono mt-4 text-sm text-primary hover:underline">Clear filters</button> : <Link href={isSignedIn ? "/forum/new" : "/auth/login?next=/forum/new"} className="label-mono mt-4 inline-block border border-primary px-4 py-2 text-sm text-primary transition-colors hover:bg-primary hover:text-primary-foreground">{isSignedIn ? "Start a thread" : "Sign in to post"}</Link>}
         </div>
       )}
 
-      {/* No results */}
-      {noResults && (
-        <div className="border border-border bg-card p-8 text-center">
-          <p className="stencil text-lg text-foreground">No threads matched your filters.</p>
-          <button
-            onClick={() => { setQuery(""); setFilterTag(""); setFilterCategory(""); setFilterDesk("") }}
-            className="label-mono mt-3 text-sm text-primary hover:underline"
-          >
-            Clear filters
-          </button>
-        </div>
-      )}
+      {threads.length > 0 && <div className="flex flex-col gap-2">{threads.map((thread) => <ThreadCard key={thread.id} thread={thread} isSignedIn={isSignedIn} />)}</div>}
 
-      {/* Thread list */}
-      {filtered.length > 0 && (
-        <div className="flex flex-col gap-2">
-              {visible.map((t) => (
-            <ThreadCard key={t.id} t={t} isSignedIn={isSignedIn} />
-          ))}
-        </div>
-      )}
-
-      {/* Load more */}
-      {hasMore && (
-        <div className="flex flex-col items-center gap-2 pt-2">
-          <button
-            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary sm:w-auto sm:px-8"
-          >
-            Load more threads
-          </button>
-          <span className="label-mono text-[10px] text-muted-foreground">
-            Showing {visible.length} of {filtered.length}
-          </span>
-        </div>
-      )}
+      {result.hasMore && <div className="flex flex-col items-center gap-2 pt-2"><button type="button" onClick={loadMore} disabled={loadingMore} className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-10">{loadingMore ? "Loading…" : "Load more threads"}</button><span className="label-mono text-[10px] text-muted-foreground">Showing {threads.length} of {result.total}</span></div>}
     </div>
   )
 }

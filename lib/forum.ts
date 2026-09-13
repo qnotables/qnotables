@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { FORUM_CATEGORIES, detectMediaBadges, type SortOption } from "@/lib/forum-utils"
 
 export interface ForumThreadLatestReply {
   body: string
@@ -305,5 +306,249 @@ export async function getLatestForumThread(): Promise<ForumThread | null> {
   } catch (error) {
     console.error("[v0] Failed to fetch latest forum thread:", error)
     return null
+  }
+}
+
+export type ForumOrigin = "community" | "primary-source"
+export type ForumMediaFilter = "images" | "video" | "links" | "social"
+
+export interface ForumFilters {
+  q: string
+  category: string
+  desk: string
+  origin: ForumOrigin | ""
+  media: ForumMediaFilter | ""
+  sort: SortOption
+  page: number
+}
+
+export interface ForumThreadRecord {
+  id: string
+  slug: string | null
+  title: string
+  body: string
+  excerpt: string | null
+  category: string | null
+  desk: string | null
+  tags: string | null
+  sourceUrl: string | null
+  origin: ForumOrigin
+  media: {
+    hasImages: boolean
+    hasLinks: boolean
+    hasSocialLinks: boolean
+    hasVideo: boolean
+  }
+  latestImageUrl: string | null
+  created_at: string
+  last_activity_at: string
+  viewCount: number
+  author_id: string
+  authorName: string
+  replyCount: number
+  is_pinned: boolean
+  is_locked: boolean
+  is_featured: boolean
+  is_soft_deleted: boolean
+  upVoteCount: number
+  userVote: 1 | -1 | null
+}
+
+export interface ForumQueryResult {
+  threads: ForumThreadRecord[]
+  total: number
+  page: number
+  pageSize: number
+  hasMore: boolean
+}
+
+export interface ForumSidebarData {
+  threadCount: number
+  replyCount: number
+  memberCount: number
+  categoryCounts: Record<string, number>
+  pinned: Array<{ id: string; slug: string | null; title: string; replyCount: number }>
+}
+
+const FORUM_PAGE_SIZE = 15
+const SAFE_SORTS = new Set(["latest", "newest", "most-replies", "featured", "pinned"])
+const SAFE_MEDIA = new Set(["images", "video", "links", "social"])
+
+function cleanParam(value: string | null | undefined): string {
+  return (value ?? "").trim().slice(0, 120)
+}
+
+function safeIlike(value: string): string {
+  return value.replace(/[%,()\\]/g, " ").replace(/\s+/g, " ").trim()
+}
+
+export function parseForumFilters(input: URLSearchParams | Record<string, string | undefined>): ForumFilters {
+  const get = (key: string) => input instanceof URLSearchParams ? input.get(key) ?? "" : input[key] ?? ""
+  const sort = cleanParam(get("sort")) as ForumFilters["sort"]
+  const pageValue = Number.parseInt(cleanParam(get("page")), 10)
+  const category = cleanParam(get("category")).toLowerCase()
+  const desk = cleanParam(get("desk")).toLowerCase()
+  const origin = cleanParam(get("origin")).toLowerCase()
+  const media = cleanParam(get("media")).toLowerCase()
+
+  return {
+    q: cleanParam(get("q")),
+    category,
+    desk,
+    origin: origin === "community" || origin === "primary-source" ? origin : "",
+    media: SAFE_MEDIA.has(media) ? media as ForumMediaFilter : "",
+    sort: SAFE_SORTS.has(sort) ? sort : "latest",
+    page: Number.isFinite(pageValue) && pageValue > 0 ? Math.min(pageValue, 100) : 1,
+  }
+}
+
+function applyForumFilters(query: any, filters: ForumFilters, authorIds: string[]) {
+  query = query.eq("is_soft_deleted", false).eq("is_pending", false).eq("status", "published")
+
+  if (filters.category) {
+    const categoryName = FORUM_CATEGORIES.find((category) => category.slug === filters.category)?.name
+    query = categoryName ? query.or(`category.eq.${filters.category},category.eq.${categoryName}`) : query.eq("category", filters.category)
+  }
+  if (filters.desk) query = query.eq("desk", filters.desk)
+  if (filters.origin === "primary-source") query = query.not("source_url", "is", null)
+  if (filters.origin === "community") query = query.is("source_url", null)
+
+  if (filters.q) {
+    const term = safeIlike(filters.q)
+    const clauses = ["title", "excerpt", "body", "tags", "category", "desk"].map((column) => `${column}.ilike.%${term}%`)
+    if (authorIds.length > 0) clauses.push(`author_id.in.(${authorIds.join(",")})`)
+    query = query.or(clauses.join(","))
+  }
+
+  if (filters.media) {
+    const patterns: Record<ForumMediaFilter, string[]> = {
+      images: ["body.ilike.%!image%", "body.ilike.%.jpg%", "body.ilike.%.jpeg%", "body.ilike.%.png%", "body.ilike.%.webp%"],
+      video: ["body.ilike.%youtube%", "body.ilike.%youtu.be%", "body.ilike.%rumble%", "body.ilike.%.mp4%", "body.ilike.%.webm%"],
+      links: ["body.ilike.%http%"],
+      social: ["body.ilike.%twitter.com%", "body.ilike.%x.com%", "body.ilike.%facebook.com%", "body.ilike.%t.me%", "body.ilike.%reddit.com%"],
+    }
+    query = query.or(patterns[filters.media].join(","))
+  }
+
+  return query
+}
+
+function applyForumSort(query: any, sort: ForumFilters["sort"]) {
+  query = query.order("is_pinned", { ascending: false })
+  if (sort === "newest") return query.order("created_at", { ascending: false })
+  if (sort === "most-replies") return query.order("reply_count", { ascending: false }).order("last_activity_at", { ascending: false, nullsFirst: false })
+  if (sort === "featured") return query.order("is_featured", { ascending: false }).order("last_activity_at", { ascending: false, nullsFirst: false })
+  if (sort === "pinned") return query.order("is_pinned", { ascending: false }).order("last_activity_at", { ascending: false, nullsFirst: false })
+  return query.order("last_activity_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false })
+}
+
+export async function getForumThreads(filters: ForumFilters, userId?: string): Promise<ForumQueryResult> {
+  const supabase = await createClient()
+  let authorIds: string[] = []
+
+  if (filters.q) {
+    const authorResult = await supabase.from("profiles").select("id").ilike("display_name", `%${safeIlike(filters.q)}%`).limit(50)
+    authorIds = (authorResult.data ?? []).map((profile: { id: string }) => profile.id)
+  }
+
+  const select = "id, slug, title, body, excerpt, category, desk, tags, source_url, created_at, last_activity_at, reply_count, view_count, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name)"
+  const from = () => {
+    let query = supabase.from("forum_threads").select(select)
+    query = applyForumFilters(query, filters, authorIds)
+    return query
+  }
+  const countQuery = applyForumFilters(supabase.from("forum_threads").select("id", { count: "exact", head: true }), filters, authorIds)
+
+  const fromIndex = (filters.page - 1) * FORUM_PAGE_SIZE
+  const [countResult, rowsResult] = await Promise.all([
+    countQuery,
+    applyForumSort(from(), filters.sort).range(fromIndex, fromIndex + FORUM_PAGE_SIZE - 1),
+  ])
+
+  if (rowsResult.error) throw new Error(rowsResult.error.message)
+  if (countResult.error) throw new Error(countResult.error.message)
+
+  const rows = rowsResult.data ?? []
+  const threadIds = rows.map((thread: any) => thread.id)
+  const [attachmentsResult, votesResult, userVotesResult] = await Promise.all([
+    threadIds.length
+      ? supabase.from("forum_attachments").select("thread_id, url, mime_type, created_at").in("thread_id", threadIds).eq("status", "active").order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    threadIds.length
+      ? supabase.from("thread_votes").select("thread_id, vote").in("thread_id", threadIds).eq("vote", 1)
+      : Promise.resolve({ data: [] }),
+    userId && threadIds.length
+      ? supabase.from("thread_votes").select("thread_id, vote").eq("user_id", userId).in("thread_id", threadIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const latestImageMap = new Map<string, string>()
+  for (const attachment of attachmentsResult.data ?? []) {
+    if (attachment.mime_type?.startsWith("image/") && !latestImageMap.has(attachment.thread_id)) latestImageMap.set(attachment.thread_id, attachment.url)
+  }
+  const upVoteMap = new Map<string, number>()
+  for (const vote of votesResult.data ?? []) upVoteMap.set(vote.thread_id, (upVoteMap.get(vote.thread_id) ?? 0) + 1)
+  const userVoteMap = new Map<string, 1 | -1>()
+  for (const vote of userVotesResult.data ?? []) if (vote.vote === 1 || vote.vote === -1) userVoteMap.set(vote.thread_id, vote.vote)
+
+  const threads = rows.map((thread: any): ForumThreadRecord => {
+    const body = thread.body ?? ""
+    const detected = detectMediaBadges(body)
+    const media = {
+      ...detected,
+      hasImages: detected.hasImages || latestImageMap.has(thread.id),
+    }
+    return {
+      id: thread.id,
+      slug: thread.slug ?? null,
+      title: thread.title,
+      body,
+      excerpt: thread.excerpt ?? null,
+      category: thread.category ?? null,
+      desk: thread.desk ?? null,
+      tags: thread.tags ?? null,
+      sourceUrl: thread.source_url ?? null,
+      origin: thread.source_url ? "primary-source" : "community",
+      media,
+      latestImageUrl: latestImageMap.get(thread.id) ?? null,
+      created_at: thread.created_at,
+      last_activity_at: thread.last_activity_at ?? thread.created_at,
+      viewCount: Number(thread.view_count ?? 0),
+      author_id: thread.author_id,
+      authorName: thread.profiles?.display_name ?? "operator",
+      replyCount: Number(thread.reply_count ?? 0),
+      is_pinned: Boolean(thread.is_pinned),
+      is_locked: Boolean(thread.is_locked),
+      is_featured: Boolean(thread.is_featured),
+      is_soft_deleted: Boolean(thread.is_soft_deleted),
+      upVoteCount: upVoteMap.get(thread.id) ?? 0,
+      userVote: userVoteMap.get(thread.id) ?? null,
+    }
+  })
+
+  const total = countResult.count ?? 0
+  return { threads, total, page: filters.page, pageSize: FORUM_PAGE_SIZE, hasMore: fromIndex + threads.length < total }
+}
+
+export async function getForumSidebarData(): Promise<ForumSidebarData> {
+  const supabase = await createClient()
+  const publicFilter = (table: string) => supabase.from(table).select("id", { count: "exact", head: true }).eq("is_soft_deleted", false).eq("is_pending", false).eq("status", "published")
+  const categoryCounts: Record<string, number> = {}
+  const categoryResults = await Promise.all(FORUM_CATEGORIES.map((category) => publicFilter("forum_threads").or(`category.eq.${category.slug},category.eq.${category.name}`)))
+  FORUM_CATEGORIES.forEach((category, index) => { categoryCounts[category.slug] = categoryResults[index].count ?? 0 })
+
+  const [threadCount, replyCount, memberCount, pinnedResult] = await Promise.all([
+    publicFilter("forum_threads"),
+    supabase.from("forum_replies").select("id", { count: "exact", head: true }).eq("is_pending", false).eq("is_hidden", false),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("forum_threads").select("id, slug, title, reply_count").eq("is_soft_deleted", false).eq("is_pending", false).eq("status", "published").eq("is_pinned", true).order("last_activity_at", { ascending: false, nullsFirst: false }).limit(5),
+  ])
+
+  return {
+    threadCount: threadCount.count ?? 0,
+    replyCount: replyCount.count ?? 0,
+    memberCount: memberCount.count ?? 0,
+    categoryCounts,
+    pinned: (pinnedResult.data ?? []).map((thread: any) => ({ id: thread.id, slug: thread.slug ?? null, title: thread.title, replyCount: Number(thread.reply_count ?? 0) })),
   }
 }

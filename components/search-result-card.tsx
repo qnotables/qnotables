@@ -61,7 +61,7 @@ export function SearchResultCard({ result, query, saved, copied, onSave, onCopy,
           <Link href={result.href} {...target} className="mt-2 block text-pretty font-heading text-xl font-semibold leading-tight text-foreground transition-colors group-hover:text-primary md:text-2xl">
             <HighlightedText text={result.title} query={query} />
           </Link>
-          <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-2 max-w-4xl break-words text-sm leading-6 text-muted-foreground">
             <HighlightedText text={result.excerpt || "No public excerpt is available for this record."} query={query} />
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
