@@ -25,6 +25,7 @@ import {
   FORUM_CATEGORIES,
   FORUM_DESKS,
   SORT_OPTIONS,
+  buildExcerpt,
   normalizeCategoryName,
   type SortOption,
 } from "@/lib/forum-utils"
@@ -134,7 +135,7 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
 function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn: boolean }) {
   const media = resolveFirstPostMedia(thread.body)
   const href = `/forum/${thread.slug || thread.id}`
-  const excerpt = thread.excerpt || thread.body.replace(/\s+/g, " ").trim().slice(0, 180)
+  const excerpt = thread.excerpt || buildExcerpt(thread.body)
   const tags = thread.tags ? thread.tags.split(/[,\s]+/).filter(Boolean).slice(0, 3) : []
   const categoryName = normalizeCategoryName(thread.category)
   const desk = FORUM_DESKS.find((item) => item.slug === (thread.desk ?? "other"))
@@ -190,7 +191,10 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
   const sort = (searchParams.get("sort") as SortOption | null) ?? "latest"
   const [query, setQuery] = useState(urlQuery)
   const [extraThreads, setExtraThreads] = useState<ThreadListItem[]>([])
+  const [loadedPage, setLoadedPage] = useState(initialResult.page)
+  const [hasMore, setHasMore] = useState(initialResult.hasMore)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState(false)
 
   const requestParams = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
@@ -214,7 +218,12 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
     }, 300)
     return () => window.clearTimeout(timeout)
   }, [pathname, query, router, searchParams, urlQuery])
-  useEffect(() => setExtraThreads([]), [requestKey])
+  useEffect(() => {
+    setExtraThreads([])
+    setLoadedPage(result.page)
+    setHasMore(result.hasMore)
+    setLoadMoreError(false)
+  }, [requestKey, result.hasMore, result.page])
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -230,13 +239,18 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
   }
 
   async function loadMore() {
-    if (!result.hasMore || loadingMore) return
+    if (!hasMore || loadingMore) return
     setLoadingMore(true)
+    setLoadMoreError(false)
     try {
       const params = new URLSearchParams(requestParams)
-      params.set("page", String(result.page + 1))
+      params.set("page", String(loadedPage + 1))
       const next = await fetcher(`/api/forum/threads?${params.toString()}`)
       setExtraThreads((current) => [...current, ...next.threads])
+      setLoadedPage(next.page)
+      setHasMore(next.hasMore)
+    } catch {
+      setLoadMoreError(true)
     } finally {
       setLoadingMore(false)
     }
@@ -299,7 +313,7 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
 
       {threads.length > 0 && <div className="flex flex-col gap-2">{threads.map((thread) => <ThreadCard key={thread.id} thread={thread} isSignedIn={isSignedIn} />)}</div>}
 
-      {result.hasMore && <div className="flex flex-col items-center gap-2 pt-2"><button type="button" onClick={loadMore} disabled={loadingMore} className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-10">{loadingMore ? "Loading…" : "Load more threads"}</button><span className="label-mono text-[10px] text-muted-foreground">Showing {threads.length} of {result.total}</span></div>}
+      {hasMore && <div className="flex flex-col items-center gap-2 pt-2"><button type="button" onClick={loadMore} disabled={loadingMore} className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-10">{loadingMore ? "Loading…" : "Load more threads"}</button>{loadMoreError && <p className="label-mono text-xs text-destructive">Could not load more threads. Try again.</p>}<span className="label-mono text-[10px] text-muted-foreground">Showing {threads.length} of {result.total}</span></div>}
     </div>
   )
 }

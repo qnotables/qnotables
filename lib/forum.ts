@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { FORUM_CATEGORIES, detectMediaBadges, type SortOption } from "@/lib/forum-utils"
+import { FORUM_CATEGORIES, buildExcerpt, detectMediaBadges, type SortOption } from "@/lib/forum-utils"
 
 export interface ForumThreadLatestReply {
   body: string
@@ -424,8 +424,8 @@ function applyForumFilters(query: any, filters: ForumFilters, authorIds: string[
     const patterns: Record<ForumMediaFilter, string[]> = {
       images: ["body.ilike.%!image%", "body.ilike.%.jpg%", "body.ilike.%.jpeg%", "body.ilike.%.png%", "body.ilike.%.webp%"],
       video: ["body.ilike.%youtube%", "body.ilike.%youtu.be%", "body.ilike.%rumble%", "body.ilike.%.mp4%", "body.ilike.%.webm%"],
-      links: ["body.ilike.%http%"],
-      social: ["body.ilike.%twitter.com%", "body.ilike.%x.com%", "body.ilike.%facebook.com%", "body.ilike.%t.me%", "body.ilike.%reddit.com%"],
+      links: ["body.ilike.%http%", "source_url.ilike.%http%"],
+      social: ["body.ilike.%twitter.com%", "body.ilike.%x.com%", "body.ilike.%facebook.com%", "body.ilike.%t.me%", "body.ilike.%reddit.com%", "source_url.ilike.%twitter.com%", "source_url.ilike.%x.com%", "source_url.ilike.%facebook.com%", "source_url.ilike.%t.me%", "source_url.ilike.%reddit.com%"],
     }
     query = query.or(patterns[filters.media].join(","))
   }
@@ -493,7 +493,7 @@ export async function getForumThreads(filters: ForumFilters, userId?: string): P
 
   const threads = rows.map((thread: any): ForumThreadRecord => {
     const body = thread.body ?? ""
-    const detected = detectMediaBadges(body)
+    const detected = detectMediaBadges(`${body} ${thread.source_url ?? ""}`)
     const media = {
       ...detected,
       hasImages: detected.hasImages || latestImageMap.has(thread.id),
@@ -503,7 +503,7 @@ export async function getForumThreads(filters: ForumFilters, userId?: string): P
       slug: thread.slug ?? null,
       title: thread.title,
       body,
-      excerpt: thread.excerpt ?? null,
+      excerpt: thread.excerpt?.trim() || buildExcerpt(body, 200) || null,
       category: thread.category ?? null,
       desk: thread.desk ?? null,
       tags: thread.tags ?? null,
@@ -539,7 +539,7 @@ export async function getForumSidebarData(): Promise<ForumSidebarData> {
 
   const [threadCount, replyCount, memberCount, pinnedResult] = await Promise.all([
     publicFilter("forum_threads"),
-    supabase.from("forum_replies").select("id", { count: "exact", head: true }).eq("is_pending", false).eq("is_hidden", false),
+    supabase.from("forum_replies").select("id", { count: "exact", head: true }).eq("is_pending", false).eq("is_hidden", false).eq("status", "published"),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("forum_threads").select("id, slug, title, reply_count").eq("is_soft_deleted", false).eq("is_pending", false).eq("status", "published").eq("is_pinned", true).order("last_activity_at", { ascending: false, nullsFirst: false }).limit(5),
   ])
