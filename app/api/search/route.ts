@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server"
-import { getPublishedVideos } from "@/app/actions/video-actions"
-import { createClient } from "@/lib/supabase/server"
-import { getAllPosts } from "@/lib/blog-posts"
-import { getNews } from "@/lib/rss"
+import { createAdminClient } from "@/lib/supabase/admin"
 import {
   buildSearchExcerpt,
+  createSearchQuery,
+  expandSearchQueries,
   getSearchScore,
   isPrimarySource,
   isSearchSort,
   isSearchTab,
+  normalizeComparableText,
   normalizeTagList,
   safeExternalUrl,
   searchTabForContentType,
+  searchTextMatches,
+  type SearchAliasTerm,
   type SearchResponse,
   type SearchResult,
   type SearchSort,
@@ -19,24 +21,42 @@ import {
 } from "@/lib/search-utils"
 
 const PAGE_SIZE_MAX = 30
+const CANDIDATE_LIMIT = 1000
 
-type ForumRow = {
+type ProjectionRow = {
   id: string
-  slug: string | null
+  source_kind: string
+  source_id: string
   title: string
-  body: unknown
-  excerpt: string | null
+  excerpt: string
+  body: string
+  normalized_search: string
+  compact_search: string
+  href: string
+  date_value: string | null
+  source: string | null
+  source_url: string | null
+  author: string | null
   category: string | null
   desk: string | null
-  tags: unknown
-  created_at: string
-  updated_at?: string | null
-  reply_count: number | null
-  profiles: Array<{ display_name: string }> | null
+  tags: string[] | null
+  content_type: string | null
+  replies: number | null
+  read_minutes: number | null
+  image: string | null
+  external: boolean
+  primary_source: boolean
 }
+
+type AliasGroupRow = { id: string; slug: string; enabled: boolean }
+type AliasTermRow = { term: string; normalized_term: string; compact_term: string; group_id: string }
 
 function cleanParam(value: string | null): string {
   return (value ?? "").trim().slice(0, 120)
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&")
 }
 
 function matchesFilter(result: SearchResult, params: URLSearchParams): boolean {
@@ -62,116 +82,52 @@ function matchesFilter(result: SearchResult, params: URLSearchParams): boolean {
   return true
 }
 
-function resultFromPost(post: Awaited<ReturnType<typeof getAllPosts>>[number], query: string): SearchResult {
-  const external = safeExternalUrl(post.sourceUrl ?? null)
-  const contentType = post.postType ?? post.tag ?? "Field Note"
-  const excerpt = buildSearchExcerpt(post.excerpt || post.content)
+function aliasesFromRows(groups: AliasGroupRow[], terms: AliasTermRow[]): SearchAliasTerm[] {
+  const groupTerms = new Map(groups.map((group) => [group.id, [] as string[]]))
+  for (const term of terms) groupTerms.get(term.group_id)?.push(term.term)
+  return terms.map((term) => ({
+    term: term.term,
+    normalizedTerm: term.normalized_term,
+    compactTerm: term.compact_term,
+    groupKey: term.group_id,
+    groupTerms: groupTerms.get(term.group_id),
+  }))
+}
+
+function resultFromProjection(row: ProjectionRow, query: string): SearchResult {
+  const type = row.source_kind === "town-hall" || row.source_kind === "news" || row.source_kind === "media"
+    ? row.source_kind
+    : searchTabForContentType(row.content_type)
+  const sourceUrl = safeExternalUrl(row.source_url)
+  const image = safeExternalUrl(row.image)
+  const excerpt = buildSearchExcerpt(row.excerpt || row.body)
+  const metadata = [row.source, row.author, row.category, row.desk, ...(row.tags ?? [])].filter(Boolean).join(" ")
   return {
-    id: `archive:${post.id ?? post.slug}`,
-    type: searchTabForContentType(contentType),
-    title: post.title,
+    id: `${row.source_kind}:${row.source_id}`,
+    type,
+    title: row.title,
     excerpt,
-    href: `/blog/${post.slug}`,
-    date: post.publishedAt ?? post.date ?? null,
-    source: post.sourceName ?? "QNotables Archive",
-    sourceUrl: external,
-    author: post.author ?? null,
-    category: post.category ?? post.tag ?? null,
-    desk: post.category ?? null,
-    tags: normalizeTagList(post.tags ?? post.tag),
-    contentType,
-    replies: null,
-    readMinutes: post.readMinutes ?? null,
-    image: safeExternalUrl(post.coverImage ?? post.seoImageUrl ?? null),
-    external: Boolean(external),
-    primarySource: isPrimarySource(external, post.sourceName ?? null),
-    score: getSearchScore(query, post.title, excerpt, buildSearchExcerpt(post.content, 1200)),
+    href: row.href,
+    date: row.date_value,
+    source: row.source,
+    sourceUrl,
+    author: row.author,
+    category: row.category,
+    desk: row.desk,
+    tags: normalizeTagList(row.tags),
+    contentType: row.content_type,
+    replies: row.replies,
+    readMinutes: row.read_minutes,
+    image,
+    external: Boolean(row.external || sourceUrl),
+    primarySource: Boolean(row.primary_source || isPrimarySource(sourceUrl, row.source)),
+    score: getSearchScore(query, row.title, excerpt, row.body, metadata),
   }
 }
 
-function resultFromVideo(video: Awaited<ReturnType<typeof getPublishedVideos>>[number], query: string): SearchResult {
-  const external = safeExternalUrl(video.external_url ?? video.video_url)
-  const title = video.title ?? "Untitled media record"
-  const excerpt = buildSearchExcerpt(video.description)
-  return {
-    id: `video:${video.id}`,
-    type: "media",
-    title,
-    excerpt,
-    href: external ?? `/videos/${video.id}`,
-    date: video.date ?? video.created_at ?? null,
-    source: video.category ?? "QNotables Media",
-    sourceUrl: external,
-    author: null,
-    category: video.category ?? null,
-    desk: video.category ?? null,
-    tags: normalizeTagList(video.category),
-    contentType: "Video",
-    replies: null,
-    readMinutes: null,
-    image: safeExternalUrl(video.thumbnail_url),
-    external: Boolean(external),
-    primarySource: isPrimarySource(external, video.category),
-    score: getSearchScore(query, title, excerpt),
-  }
-}
-
-function resultFromNews(story: Awaited<ReturnType<typeof getNews>>["feed"][number], query: string): SearchResult {
-  const external = safeExternalUrl(story.url ?? null)
-  const excerpt = buildSearchExcerpt(story.summary)
-  return {
-    id: `news:${story.id}`,
-    type: "news",
-    title: story.headline,
-    excerpt,
-    href: external ?? "/",
-    date: new Date(Date.now() - Math.max(0, story.minutesAgo) * 60_000).toISOString(),
-    source: story.source,
-    sourceUrl: external,
-    author: null,
-    category: story.category,
-    desk: story.category,
-    tags: normalizeTagList(story.category),
-    contentType: "RSS Wire",
-    replies: null,
-    readMinutes: story.readMinutes ?? null,
-    image: safeExternalUrl(story.image ?? null),
-    external: Boolean(external),
-    primarySource: isPrimarySource(external, story.source),
-    score: getSearchScore(query, story.headline, excerpt),
-  }
-}
-
-function resultFromThread(thread: ForumRow, query: string): SearchResult {
-  const author = thread.profiles?.[0]?.display_name ?? "operator"
-  const excerpt = buildSearchExcerpt(thread.excerpt || thread.body)
-  return {
-    id: `thread:${thread.id}`,
-    type: "town-hall",
-    title: thread.title,
-    excerpt,
-    href: `/forum/${thread.slug || thread.id}`,
-    date: thread.created_at ?? null,
-    source: "Town Hall",
-    sourceUrl: null,
-    author,
-    category: thread.category,
-    desk: thread.desk,
-    tags: normalizeTagList(thread.tags),
-    contentType: "Research Thread",
-    replies: thread.reply_count ?? 0,
-    readMinutes: null,
-    image: null,
-    external: false,
-    primarySource: false,
-    score: getSearchScore(query, thread.title, excerpt, buildSearchExcerpt(thread.body, 1200)),
-  }
-}
-
-function matchesQuery(result: SearchResult, query: string): boolean {
-  if (!query) return true
-  const needle = query.toLowerCase()
-  return `${result.title} ${result.excerpt} ${result.author ?? ""} ${result.source ?? ""} ${result.tags.join(" ")}`.toLowerCase().includes(needle)
+function matchesAnyQuery(row: ProjectionRow, queries: ReturnType<typeof expandSearchQueries>): boolean {
+  const searchable = `${row.normalized_search} ${row.compact_search}`
+  return queries.some((query) => searchTextMatches(query, searchable))
 }
 
 export async function GET(request: Request) {
@@ -185,36 +141,57 @@ export async function GET(request: Request) {
   const pageSize = Math.min(PAGE_SIZE_MAX, Math.max(6, Number.parseInt(searchParams.get("limit") ?? "18", 10) || 18))
   const partial: string[] = []
 
-  const [posts, videos, threadResponse, newsBundle] = await Promise.all([
-    getAllPosts().catch(() => { partial.push("archives"); return [] }),
-    getPublishedVideos().catch(() => { partial.push("media"); return [] }),
+  if (!createSearchQuery(query).valid) {
+    return NextResponse.json({
+      results: [],
+      counts: { all: 0, archives: 0, "town-hall": 0, news: 0, documents: 0, media: 0 },
+      total: 0,
+      page,
+      pageSize,
+      hasMore: false,
+      elapsedMs: Math.max(1, Math.round(performance.now() - startedAt)),
+      partial: [],
+      query,
+      compatibility: { threads: [], posts: [] },
+    } satisfies SearchResponse)
+  }
+
+  const db = createAdminClient()
+  const [groupResponse, documentsResponse] = await Promise.all([
+    db.from("search_alias_groups").select("id, slug, enabled").eq("enabled", true),
     (async () => {
-      try {
-        const supabase = await createClient()
-        const response = await supabase
-          .from("forum_threads")
-          .select("id, slug, title, body, excerpt, category, desk, tags, created_at, updated_at, reply_count, profiles(display_name)")
-          .eq("is_soft_deleted", false)
-          .eq("is_pending", false)
-          .eq("status", "published")
-          .order("created_at", { ascending: false })
-          .limit(300)
-        if (response.error) throw response.error
-        return response.data as ForumRow[]
-      } catch {
-        partial.push("town-hall")
-        return []
-      }
+      const groups = await db.from("search_alias_groups").select("id, slug, enabled").eq("enabled", true)
+      const aliases = groups.data?.length
+        ? await db.from("search_alias_terms").select("term, normalized_term, compact_term, group_id").in("group_id", groups.data.map((group) => group.id))
+        : { data: [], error: null }
+      const aliasTerms = aliases.data ?? []
+      const aliasRows = aliasesFromRows((groups.data ?? []) as AliasGroupRow[], aliasTerms as AliasTermRow[])
+      const searchQuery = createSearchQuery(query, aliasRows)
+      const searchQueries = expandSearchQueries(searchQuery, aliasRows)
+      const clauses = Array.from(new Set(searchQueries.flatMap((item) => [
+        `normalized_search.ilike.%${escapeLike(item.readable)}%`,
+        `compact_search.ilike.%${escapeLike(item.compact)}%`,
+      ])))
+      const projection = db
+        .from("search_documents")
+        .select("id, source_kind, source_id, title, excerpt, body, normalized_search, compact_search, href, date_value, source, source_url, author, category, desk, tags, content_type, replies, read_minutes, image, external, primary_source")
+        .or(clauses.join(","))
+        .limit(CANDIDATE_LIMIT)
+      if (tab !== "all") projection.eq("source_kind", tab)
+      const result = await projection
+      return { ...result, searchQueries }
     })(),
-    getNews().catch(() => { partial.push("news"); return { feed: [] } }),
   ])
 
-  const allResults = [
-    ...posts.map((post) => resultFromPost(post, query)),
-    ...videos.map((video) => resultFromVideo(video, query)),
-    ...threadResponse.map((thread) => resultFromThread(thread, query)),
-    ...newsBundle.feed.map((story) => resultFromNews(story, query)),
-  ].filter((result) => matchesQuery(result, query) && matchesFilter(result, searchParams))
+  if (groupResponse.error) partial.push("aliases")
+  if (documentsResponse.error) partial.push("index")
+
+  const searchQueries = documentsResponse.searchQueries ?? expandSearchQueries(createSearchQuery(query))
+  const rows = (documentsResponse.data ?? []) as ProjectionRow[]
+  const allResults = rows
+    .filter((row) => matchesAnyQuery(row, searchQueries))
+    .map((row) => resultFromProjection(row, query))
+    .filter((result) => matchesFilter(result, searchParams))
 
   const counts = {
     all: allResults.length,
@@ -233,9 +210,8 @@ export async function GET(request: Request) {
   const tabbed = tab === "all" ? sorted : sorted.filter((result) => result.type === tab)
   const offset = (page - 1) * pageSize
   const results = tabbed.slice(offset, offset + pageSize)
-
   const compatibilityThreads = results.filter((result) => result.type === "town-hall").slice(0, 6).map((result) => ({
-    id: result.id.replace("thread:", ""), title: result.title, body: result.excerpt, created_at: result.date ?? "", profiles: result.author ? { display_name: result.author } : null,
+    id: result.id.replace("town-hall:", ""), title: result.title, body: result.excerpt, created_at: result.date ?? "", profiles: result.author ? { display_name: result.author } : null,
   }))
   const compatibilityPosts = results.filter((result) => result.type === "archives" || result.type === "documents").slice(0, 6).map((result) => ({
     id: result.id, slug: result.href.split("/").pop() ?? result.id, title: result.title, excerpt: result.excerpt, tag: result.category ?? "Archive", created_at: result.date ?? "",

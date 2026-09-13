@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
+import { compactSearchText, normalizeComparableText } from "@/lib/search-utils"
 
 type Result = { success: boolean; error?: string }
 
@@ -352,4 +353,87 @@ export async function saveSettings(formData: FormData): Promise<Result> {
   await logActivity({ action: "updated site settings", targetType: "site_settings" })
   revalidatePath("/dashboard/settings")
   return { success: true }
+}
+
+export type SearchAliasGroupInput = {
+  id?: string
+  label: string
+  slug: string
+  terms: string[]
+  enabled: boolean
+}
+
+function cleanAliasTerms(values: string[]): Array<{ term: string; normalized_term: string; compact_term: string }> {
+  const seen = new Set<string>()
+  return values
+    .flatMap((value) => value.split(/[\\n,]/))
+    .map((value) => value.trim().slice(0, 120))
+    .filter((term) => {
+      const normalized = normalizeComparableText(term)
+      const compact = compactSearchText(term)
+      const key = compact || normalized
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .map((term) => ({ term, normalized_term: normalizeComparableText(term), compact_term: compactSearchText(term) }))
+    .slice(0, 30)
+}
+
+export async function saveSearchAliasGroup(input: SearchAliasGroupInput): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const label = input.label.trim().slice(0, 80)
+  const slug = input.slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80)
+  const terms = cleanAliasTerms(input.terms)
+  if (!label || !slug || terms.length === 0) return { success: false, error: "Add a label, slug, and at least one unique term." }
+
+  try {
+    const db = createAdminClient()
+    let groupId = input.id
+    if (groupId) {
+      const { error } = await db.from("search_alias_groups").update({ label, slug, enabled: Boolean(input.enabled), updated_at: new Date().toISOString() }).eq("id", groupId)
+      if (error) throw error
+      const { error: deleteError } = await db.from("search_alias_terms").delete().eq("group_id", groupId)
+      if (deleteError) throw deleteError
+    } else {
+      const { data, error } = await db.from("search_alias_groups").insert({ label, slug, enabled: Boolean(input.enabled) }).select("id").single()
+      if (error) throw error
+      groupId = data.id
+    }
+    const { error: termsError } = await db.from("search_alias_terms").insert(terms.map((term) => ({ ...term, group_id: groupId })))
+    if (termsError) throw termsError
+    await logActivity({ action: input.id ? "updated search alias group" : "created search alias group", targetType: "search_alias_group", targetId: groupId })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Unable to save the search alias group." }
+  }
+}
+
+export async function deleteSearchAliasGroup(id: string): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  try {
+    const db = createAdminClient()
+    const { error } = await db.from("search_alias_groups").delete().eq("id", id)
+    if (error) throw error
+    await logActivity({ action: "deleted search alias group", targetType: "search_alias_group", targetId: id })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Unable to delete the search alias group." }
+  }
+}
+
+export async function rebuildSearchIndex(): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  try {
+    const db = createAdminClient()
+    const { error } = await db.rpc("refresh_search_documents")
+    if (error) throw error
+    await logActivity({ action: "rebuilt search index", targetType: "search_documents" })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Unable to rebuild the search index." }
+  }
 }

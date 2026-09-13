@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 import { SettingsForm, type SiteSettings } from "@/components/dashboard/settings-form"
+import { SearchAliasManager, type SearchAliasGroupView } from "@/components/dashboard/search-alias-manager"
 
 export const metadata = {
   title: "Settings — Admin Dashboard",
@@ -28,7 +29,18 @@ export default async function SettingsPage() {
   if (!hasAccess) redirect("/dashboard/login")
 
   const admin = createAdminClient()
-  const { data } = await admin.from("site_settings").select("*").eq("id", 1).maybeSingle()
+  const [{ data }, { data: aliasGroups }, { data: aliasTerms }] = await Promise.all([
+    admin.from("site_settings").select("*").eq("id", 1).maybeSingle(),
+    admin.from("search_alias_groups").select("id, label, slug, enabled").order("label"),
+    admin.from("search_alias_terms").select("group_id, term").order("term"),
+  ])
+  const aliasViews: SearchAliasGroupView[] = (aliasGroups ?? []).map((group) => ({
+    id: group.id,
+    label: group.label,
+    slug: group.slug,
+    enabled: group.enabled,
+    terms: (aliasTerms ?? []).filter((term) => term.group_id === group.id).map((term) => term.term),
+  }))
 
   const settings: SiteSettings = data
     ? {
@@ -54,6 +66,7 @@ export default async function SettingsPage() {
         breadcrumbs={[{ label: "Settings" }]}
       />
       <SettingsForm settings={settings} />
+      <SearchAliasManager groups={aliasViews} />
     </div>
   )
 }

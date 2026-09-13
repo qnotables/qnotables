@@ -108,16 +108,154 @@ export function normalizeSearchText(value: string, maxLength = MAX_TEXT_LENGTH):
   return `${(boundary > maxLength * 0.7 ? clipped.slice(0, boundary) : clipped).trim()}…`
 }
 
+function foldSearchText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[’‘`´]/g, "'")
+    .replace(/[‐‑‒–—―]/g, "-")
+}
+
+export function normalizeComparableText(value: string): string {
+  return foldSearchText(value)
+    .toLowerCase()
+    .replace(/#(?=[\\p{L}\\p{N}])/gu, "")
+    .replace(/&/g, " and ")
+    .replace(/[']/g, "")
+    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+    .replace(/\\s+/g, " ")
+    .trim()
+}
+
+export function compactSearchText(value: string): string {
+  return normalizeComparableText(value).replace(/[^\\p{L}\\p{N}]/gu, "")
+}
+
+export interface SearchAliasTerm {
+  term: string
+  normalizedTerm?: string
+  compactTerm?: string
+  groupKey?: string
+  groupTerms?: string[]
+}
+
+export interface SearchQuery {
+  raw: string
+  readable: string
+  compact: string
+  tokens: string[]
+  alternatives: string[]
+  valid: boolean
+}
+
+const REVIEWED_ALIAS_GROUPS: string[][] = [
+  ["9/11", "9-11", "9 11", "September 11", "September 11th", "911"],
+  ["US", "U.S.", "United States", "USA", "U.S.A."],
+  ["Houthi", "Houthis"],
+  ["#Houthi", "Houthi"],
+]
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
+}
+
+function aliasesForQuery(query: string, aliases: SearchAliasTerm[]): string[] {
+  const normalized = normalizeComparableText(query)
+  const compact = compactSearchText(query)
+  const matchedGroups = REVIEWED_ALIAS_GROUPS.filter((group) => group.some((term) => normalizeComparableText(term) === normalized || compactSearchText(term) === compact))
+  const groupedAliases = new Map<string, string[]>()
+  for (const alias of aliases) {
+    const key = alias.groupKey ?? alias.term
+    const terms = groupedAliases.get(key) ?? []
+    terms.push(...(alias.groupTerms ?? [alias.term]))
+    groupedAliases.set(key, terms)
+  }
+  for (const [key, terms] of groupedAliases) {
+    if (terms.some((term) => normalizeComparableText(term) === normalized || compactSearchText(term) === compact)) {
+      matchedGroups.push(terms)
+    } else if (key === normalized || key === compact) {
+      matchedGroups.push(terms)
+    }
+  }
+  return uniqueStrings(matchedGroups.flat())
+}
+
+export function createSearchQuery(value: string, aliases: SearchAliasTerm[] = []): SearchQuery {
+  const raw = value.slice(0, 160).trim()
+  const readable = normalizeComparableText(raw)
+  const compact = compactSearchText(raw)
+  const tokens = readable ? readable.split(" ").filter(Boolean) : []
+  const alternatives = uniqueStrings([raw, readable, ...aliasesForQuery(raw, aliases)])
+  return { raw, readable, compact, tokens, alternatives, valid: Boolean(readable && /[\\p{L}\\p{N}]/u.test(readable)) }
+}
+
+function normalizedTokens(value: string): string[] {
+  return normalizeComparableText(value).split(" ").filter(Boolean)
+}
+
+export function searchTextMatches(query: SearchQuery | string, value: string): boolean {
+  const searchQuery = typeof query === "string" ? createSearchQuery(query) : query
+  if (!searchQuery.valid) return false
+  const valueReadable = normalizeComparableText(value)
+  if (!valueReadable) return false
+  if (valueReadable.includes(searchQuery.readable)) return true
+
+  const valueTokens = normalizedTokens(value)
+  const queryTokens = searchQuery.tokens
+  if (!queryTokens.length) return false
+  const targetCompact = searchQuery.compact
+  for (let start = 0; start < valueTokens.length; start += 1) {
+    let joined = ""
+    for (let end = start; end < valueTokens.length && end < start + 12; end += 1) {
+      joined += compactSearchText(valueTokens[end])
+      if (joined === targetCompact) return true
+      if (joined.length >= targetCompact.length) break
+    }
+  }
+  return false
+}
+
+export function expandSearchQueries(query: SearchQuery, aliases: SearchAliasTerm[] = []): SearchQuery[] {
+  const values = uniqueStrings([query.raw, query.readable, ...aliasesForQuery(query.raw, aliases)])
+  return values.map((value) => createSearchQuery(value)).filter((item) => item.valid)
+}
+
 export function buildSearchExcerpt(content: unknown, maxLength = 260): string {
   return normalizeSearchText(extractSearchText(content), maxLength)
 }
 
 export function getHighlightSegments(text: string, query: string): Array<{ text: string; match: boolean }> {
   const cleanQuery = query.trim()
-  if (!cleanQuery) return [{ text, match: false }]
-  const escaped = cleanQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const parts = text.split(new RegExp(`(${escaped})`, "ig"))
-  return parts.filter(Boolean).map((part) => ({ text: part, match: part.toLowerCase() === cleanQuery.toLowerCase() }))
+  if (!cleanQuery || !createSearchQuery(cleanQuery).valid) return [{ text, match: false }]
+  const ranges: Array<[number, number]> = []
+  const exact = cleanQuery.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")
+  for (const match of text.matchAll(new RegExp(exact, "igu"))) {
+    if (match.index !== undefined) ranges.push([match.index, match.index + match[0].length])
+  }
+  const tokenMatches = Array.from(text.matchAll(/[\\p{L}\\p{N}][\\p{L}\\p{N}'’./-]*/gu))
+  const queryTokens = createSearchQuery(cleanQuery).tokens
+  for (let start = 0; start < tokenMatches.length; start += 1) {
+    for (let end = start; end < Math.min(tokenMatches.length, start + Math.max(4, queryTokens.length + 2)); end += 1) {
+      const candidate = text.slice(tokenMatches[start].index ?? 0, (tokenMatches[end].index ?? 0) + tokenMatches[end][0].length)
+      if (searchTextMatches(cleanQuery, candidate)) ranges.push([tokenMatches[start].index ?? 0, (tokenMatches[end].index ?? 0) + tokenMatches[end][0].length])
+    }
+  }
+  if (!ranges.length) return [{ text, match: false }]
+  const merged = ranges.sort((a, b) => a[0] - b[0]).reduce<Array<[number, number]>>((result, range) => {
+    const previous = result[result.length - 1]
+    if (previous && range[0] <= previous[1]) previous[1] = Math.max(previous[1], range[1])
+    else result.push([...range])
+    return result
+  }, [])
+  const parts: Array<{ text: string; match: boolean }> = []
+  let cursor = 0
+  for (const [start, end] of merged) {
+    if (start > cursor) parts.push({ text: text.slice(cursor, start), match: false })
+    parts.push({ text: text.slice(start, end), match: true })
+    cursor = end
+  }
+  if (cursor < text.length) parts.push({ text: text.slice(cursor), match: false })
+  return parts
 }
 
 export function safeExternalUrl(value: unknown): string | null {
@@ -136,15 +274,20 @@ export function normalizeTagList(value: unknown): string[] {
   return []
 }
 
-export function getSearchScore(query: string, title: string, excerpt: string, body = ""): number {
-  const normalizedQuery = query.toLowerCase().trim()
-  if (!normalizedQuery) return 0
-  const titleValue = title.toLowerCase()
-  const excerptValue = excerpt.toLowerCase()
-  const bodyValue = body.toLowerCase()
-  return (titleValue.includes(normalizedQuery) ? 12 : 0) +
-    (excerptValue.includes(normalizedQuery) ? 6 : 0) +
-    (bodyValue.includes(normalizedQuery) ? 2 : 0)
+export function getSearchScore(query: string, title: string, excerpt: string, body = "", metadata = ""): number {
+  const searchQuery = createSearchQuery(query)
+  if (!searchQuery.valid) return 0
+  const originalQuery = searchQuery.raw.toLocaleLowerCase()
+  const originalTitle = title.toLocaleLowerCase()
+  const normalizedTitle = normalizeComparableText(title)
+  const metadataValue = normalizeComparableText(metadata)
+  const excerptValue = normalizeComparableText(excerpt)
+  const bodyValue = normalizeComparableText(body)
+  return (originalTitle.includes(originalQuery) ? 100 : 0) +
+    (searchTextMatches(searchQuery, normalizedTitle) ? 55 : 0) +
+    (searchTextMatches(searchQuery, metadataValue) ? 28 : 0) +
+    (searchTextMatches(searchQuery, excerptValue) ? 16 : 0) +
+    (searchTextMatches(searchQuery, bodyValue) ? 5 : 0)
 }
 
 export function isPrimarySource(sourceUrl: string | null, sourceName: string | null): boolean {
