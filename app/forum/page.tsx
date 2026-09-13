@@ -1,17 +1,14 @@
 export const dynamic = "force-dynamic"
 
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { ArrowDownRight, BookOpen, Plus } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { ForumList, type ThreadListItem } from "@/components/forum-list"
-import { ForumCommunityHub } from "@/components/forum-community-hub"
-import { ForumSidebar, type PinnedThread } from "@/components/forum-sidebar"
-import { ContentSidebar } from "@/components/content-sidebar"
-import { TopAd, BottomAd } from "@/components/ad-display"
+import { BackToTop } from "@/components/back-to-top"
+import { ForumList } from "@/components/forum-list"
+import { ForumSidebar } from "@/components/forum-sidebar"
 import { createClient } from "@/lib/supabase/server"
-import { FORUM_CATEGORIES, normalizeCategorySlug } from "@/lib/forum-utils"
-import { getNews } from "@/lib/rss"
+import { getForumSidebarData, getForumThreads, parseForumFilters } from "@/lib/forum"
 import { JsonLd } from "@/components/json-ld"
 import { collectionSchema, pageMetadata } from "@/lib/seo"
 
@@ -23,184 +20,91 @@ export const metadata = pageMetadata({
   path: "/forum",
 })
 
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
 export default async function ForumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await searchParams // trigger Suspense boundary; category/desk/search/sort are all read client-side via useSearchParams
+  const rawParams = await searchParams
+  const filters = parseForumFilters({
+    q: firstParam(rawParams.q),
+    category: firstParam(rawParams.category),
+    desk: firstParam(rawParams.desk),
+    origin: firstParam(rawParams.origin),
+    media: firstParam(rawParams.media),
+    sort: firstParam(rawParams.sort),
+    page: firstParam(rawParams.page),
+  })
   const supabase = await createClient()
-
-  // Fetch trending for sidebar — runs in parallel with thread queries below
-  const newsBundle = await getNews().catch(() => null)
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Fetch threads with author profiles and reply counts
-  let threads: any[] = []
-  const lastActivityMap = new Map<string, string>()
-  let memberCount = 0
-
-  try {
-    const [threadResult, replyResult, memberResult] = await Promise.all([
-      supabase
-        .from("forum_threads")
-        .select(
-          "id, slug, title, body, excerpt, category, desk, tags, created_at, last_activity_at, reply_count, view_count, author_id, is_pinned, is_locked, is_featured, is_soft_deleted, profiles(display_name)",
-        )
-        .eq("is_soft_deleted", false)
-        .eq("is_pending", false)
-        .eq("status", "published")
-        .order("is_pinned", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("forum_replies")
-        .select("thread_id, created_at")
-        .eq("is_pending", false)
-        .eq("is_hidden", false)
-        .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
-    ])
-
-    if (threadResult.error) throw new Error(threadResult.error.message)
-    threads = threadResult.data ?? []
-
-    for (const r of replyResult.data ?? []) {
-      if (!lastActivityMap.has(r.thread_id)) lastActivityMap.set(r.thread_id, r.created_at)
-    }
-
-    memberCount = memberResult.count ?? 0
-  } catch (err) {
-    console.error("[forum/page] data fetch error:", err)
-    // degrade gracefully — renders with empty list rather than crashing
-  }
-
-  const threadUpVoteMap = new Map<string, number>()
-  const threadUserVoteMap = new Map<string, 1 | -1>()
-  try {
-    if (threads.length > 0) {
-      const threadIds = threads.map((thread) => thread.id)
-      const [{ data: threadVotes }, { data: userVotes }] = await Promise.all([
-        supabase.from("thread_votes").select("thread_id, vote").in("thread_id", threadIds),
-        user
-          ? supabase
-              .from("thread_votes")
-              .select("thread_id, vote")
-              .eq("user_id", user.id)
-              .in("thread_id", threadIds)
-          : Promise.resolve({ data: [] as { thread_id: string; vote: number }[] }),
-      ])
-
-      for (const vote of threadVotes ?? []) {
-        if (vote.vote === 1) threadUpVoteMap.set(vote.thread_id, (threadUpVoteMap.get(vote.thread_id) ?? 0) + 1)
-      }
-      for (const vote of userVotes ?? []) {
-        if (vote.vote === 1 || vote.vote === -1) threadUserVoteMap.set(vote.thread_id, vote.vote)
-      }
-    }
-  } catch (err) {
-    console.error("[forum/page] vote fetch error:", err)
-  }
-
-  const rows: ThreadListItem[] = threads.map((t: any) => {
-    const replyCount = t.reply_count ?? 0
-    return {
-      id: t.id,
-      slug: t.slug ?? null,
-      title: t.title,
-      body: t.body ?? "",
-      excerpt: t.excerpt ?? null,
-      category: t.category ?? null,
-      desk: t.desk ?? "other",
-      tags: t.tags ?? null,
-      created_at: t.created_at,
-      last_activity_at: t.last_activity_at ?? lastActivityMap.get(t.id) ?? t.created_at,
-      viewCount: t.view_count ?? 0,
-      author_id: t.author_id,
-      authorName: t.profiles?.display_name ?? "operator",
-      replyCount,
-      is_pinned: Boolean(t.is_pinned),
-      is_locked: Boolean(t.is_locked),
-      is_featured: Boolean(t.is_featured),
-      is_soft_deleted: Boolean(t.is_soft_deleted),
-      upVoteCount: threadUpVoteMap.get(t.id) ?? 0,
-      userVote: threadUserVoteMap.get(t.id) ?? null,
-    }
-  })
-
-  // Sidebar data
-  const totalReplies = rows.reduce((sum, r) => sum + r.replyCount, 0)
-  const categoryCounts: Record<string, number> = {}
-  for (const c of FORUM_CATEGORIES) categoryCounts[c.slug] = 0
-  for (const r of rows) {
-    const slug = normalizeCategorySlug(r.category) // null → "other"
-    categoryCounts[slug] = (categoryCounts[slug] ?? 0) + 1
-  }
-
-  const pinned: PinnedThread[] = rows
-    .filter((r) => r.is_pinned)
-    .slice(0, 5)
-    .map((r) => ({ id: r.id, title: r.title, replyCount: r.replyCount }))
+  const [initialResult, sidebar] = await Promise.all([
+    getForumThreads(filters, user?.id),
+    getForumSidebarData(),
+  ])
 
   return (
     <div id="top" className="min-h-screen tactical-grid">
       <JsonLd data={collectionSchema("The Town Hall", forumDescription, "/forum")} />
       <SiteHeader />
-      <TopAd />
 
-      <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        <div className="mb-8 flex flex-wrap items-center gap-3">
-          <span className="h-2 w-2 bg-primary" />
-          <h1 className="stencil text-3xl text-foreground md:text-4xl">The Town Hall</h1>
-          <span className="label-mono hidden text-muted-foreground sm:inline">// OPEN FORUM</span>
-          <span className="ml-auto h-px flex-1 bg-border" />
-          {user ? (
-            <Link
-              href="/forum/new"
-              className="label-mono flex items-center gap-2 bg-primary px-4 py-2 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" /> New Thread
-            </Link>
-          ) : (
-            <Link
-              href="/auth/login?next=/forum/new"
-              className="label-mono flex items-center gap-2 border border-border px-4 py-2 text-foreground transition-colors hover:border-primary hover:text-primary"
-            >
-              Sign in to post
-            </Link>
-          )}
-        </div>
-
-        <ForumCommunityHub
-          threads={rows}
-          categoryCounts={categoryCounts}
-          isSignedIn={Boolean(user)}
-        />
-
-        <div className="mt-10 flex items-end justify-between gap-4">
-          <div>
-            <div className="label-mono text-xs text-primary">ALL DISCUSSIONS</div>
-            <h2 className="stencil mt-1 text-2xl text-foreground">Browse the full record</h2>
+      <main className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12">
+        <section className="border-b border-border pb-8">
+          <div className="label-mono flex items-center gap-2 text-xs text-primary">
+            <span className="h-2 w-2 bg-primary" aria-hidden="true" />
+            QNOTABLES / COMMUNITY RECORD
           </div>
-          <Link href="/forum/guidelines" className="label-mono text-xs text-primary hover:underline">Posting guidelines</Link>
-        </div>
+          <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <h1 className="stencil text-balance text-4xl text-foreground md:text-6xl">The Town Hall</h1>
+              <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
+                Bring a source, a question, or a careful observation. Make room for evidence, uncertainty, and good-faith disagreement.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {user ? (
+                <Link href="/forum/new" className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2.5 font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+                  <Plus className="h-4 w-4" /> Start a thread
+                </Link>
+              ) : (
+                <Link href="/auth/login?next=/forum/new" className="label-mono inline-flex items-center gap-2 border border-primary px-4 py-2.5 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                  Sign in to post
+                </Link>
+              )}
+              <Link href="/forum/guidelines" className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                <BookOpen className="h-4 w-4" /> Guidelines
+              </Link>
+            </div>
+          </div>
+        </section>
 
-        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-          <ForumList threads={rows} isSignedIn={Boolean(user)} />
-          <ContentSidebar>
-            <ForumSidebar
-              stats={{ threadCount: rows.length, replyCount: totalReplies, memberCount: memberCount ?? 0 }}
-              pinned={pinned}
-              categoryCounts={categoryCounts}
-              trending={newsBundle?.trending ?? []}
-            />
-          </ContentSidebar>
-        </div>
+        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="min-w-0">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <div className="label-mono text-xs text-primary">THE PUBLIC RECORD</div>
+                <h2 className="stencil mt-1 text-2xl text-foreground md:text-3xl">Browse discussions</h2>
+              </div>
+              <ArrowDownRight className="hidden h-5 w-5 text-primary sm:block" aria-hidden="true" />
+            </div>
+            <ForumList initialResult={initialResult} isSignedIn={Boolean(user)} />
+          </div>
+          <ForumSidebar
+            stats={{ threadCount: sidebar.threadCount, replyCount: sidebar.replyCount, memberCount: sidebar.memberCount }}
+            pinned={sidebar.pinned}
+            categoryCounts={sidebar.categoryCounts}
+          />
+        </section>
       </main>
 
-      <BottomAd />
       <SiteFooter />
+      <BackToTop />
     </div>
   )
 }
