@@ -9,10 +9,10 @@ import { getNewToQViewCount } from "./actions"
 
 export const metadata: Metadata = {
   title: "New to Q? | HOT AND FRESH",
-  description: "Everything you need to know to get started with Qnotables.",
+  description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
   openGraph: {
     title: "New to Q? | HOT AND FRESH",
-    description: "Everything you need to know to get started with Qnotables.",
+    description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
     type: "website",
     url: "/new-to-q",
     images: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "New to Q? | HOT AND FRESH",
-    description: "Everything you need to know to get started with Qnotables.",
+    description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
     images: [
       "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-iRxMWUcGACFCOjCdLia8Ipo0t3vyL6.png",
     ],
@@ -48,7 +48,7 @@ export default async function NewToQPage() {
           <p className="label-mono text-primary">Q - THE PLAN TO SAVE THE WORLD</p>
           <div className="flex items-center gap-4">
             <PageViewCounter initialCount={initialViewCount} />
-            <ShareButtons title="New to Q? | HOT AND FRESH" excerpt="Everything you need to know to get started with Qnotables." />
+            <ShareButtons title="New to Q? | HOT AND FRESH" excerpt="You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself." />
           </div>
         </div>
          {/* Featured video */}
