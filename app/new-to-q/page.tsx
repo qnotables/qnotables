@@ -10,6 +10,28 @@ import { getNewToQViewCount } from "./actions"
 export const metadata: Metadata = {
   title: "New to Q? | HOT AND FRESH",
   description: "Everything you need to know to get started with Qnotables.",
+  openGraph: {
+    title: "New to Q? | HOT AND FRESH",
+    description: "Everything you need to know to get started with Qnotables.",
+    type: "website",
+    url: "/new-to-q",
+    images: [
+      {
+        url: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-iRxMWUcGACFCOjCdLia8Ipo0t3vyL6.png",
+        width: 1728,
+        height: 910,
+        alt: "QNotables New to Q research guide",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "New to Q? | HOT AND FRESH",
+    description: "Everything you need to know to get started with Qnotables.",
+    images: [
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-iRxMWUcGACFCOjCdLia8Ipo0t3vyL6.png",
+    ],
+  },
 }
 
 export default async function NewToQPage() {
