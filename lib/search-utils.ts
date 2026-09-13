@@ -111,7 +111,7 @@ export function normalizeSearchText(value: string, maxLength = MAX_TEXT_LENGTH):
 function foldSearchText(value: string): string {
   return value
     .normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[’‘`´]/g, "'")
     .replace(/[‐‑‒–—―]/g, "-")
 }
@@ -119,16 +119,16 @@ function foldSearchText(value: string): string {
 export function normalizeComparableText(value: string): string {
   return foldSearchText(value)
     .toLowerCase()
-    .replace(/#(?=[\\p{L}\\p{N}])/gu, "")
+    .replace(/#(?=[\p{L}\p{N}])/gu, "")
     .replace(/&/g, " and ")
     .replace(/[']/g, "")
-    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
     .trim()
 }
 
 export function compactSearchText(value: string): string {
-  return normalizeComparableText(value).replace(/[^\\p{L}\\p{N}]/gu, "")
+  return normalizeComparableText(value).replace(/[^\p{L}\p{N}]/gu, "")
 }
 
 export interface SearchAliasTerm {
@@ -186,20 +186,17 @@ export function createSearchQuery(value: string, aliases: SearchAliasTerm[] = []
   const compact = compactSearchText(raw)
   const tokens = readable ? readable.split(" ").filter(Boolean) : []
   const alternatives = uniqueStrings([raw, readable, ...aliasesForQuery(raw, aliases)])
-  return { raw, readable, compact, tokens, alternatives, valid: Boolean(readable && /[\\p{L}\\p{N}]/u.test(readable)) }
+  return { raw, readable, compact, tokens, alternatives, valid: Boolean(readable && /[\p{L}\p{N}]/u.test(readable)) }
 }
 
 function normalizedTokens(value: string): string[] {
   return normalizeComparableText(value).split(" ").filter(Boolean)
 }
 
-export function searchTextMatches(query: SearchQuery | string, value: string): boolean {
-  const searchQuery = typeof query === "string" ? createSearchQuery(query) : query
+function matchesNormalizedQuery(searchQuery: SearchQuery, value: string): boolean {
   if (!searchQuery.valid) return false
   const valueReadable = normalizeComparableText(value)
   if (!valueReadable) return false
-  if (valueReadable.includes(searchQuery.readable)) return true
-
   const valueTokens = normalizedTokens(value)
   const queryTokens = searchQuery.tokens
   if (!queryTokens.length) return false
@@ -215,6 +212,31 @@ export function searchTextMatches(query: SearchQuery | string, value: string): b
   return false
 }
 
+export function searchTextMatches(query: SearchQuery | string, value: string): boolean {
+  const searchQuery = typeof query === "string" ? createSearchQuery(query) : query
+  if (matchesNormalizedQuery(searchQuery, value)) return true
+  return searchQuery.alternatives.some((alternative) => {
+    const alternativeQuery = createSearchQuery(alternative)
+    return alternativeQuery.raw !== searchQuery.raw && matchesNormalizedQuery(alternativeQuery, value)
+  })
+}
+
+function matchesSearchAtStart(query: string, value: string): boolean {
+  const searchQuery = createSearchQuery(query)
+  const variants = [searchQuery, ...searchQuery.alternatives.map((alternative) => createSearchQuery(alternative))]
+  return variants.some((variant) => {
+    if (!variant.valid) return false
+    const valueTokens = normalizedTokens(value)
+    let joined = ""
+    for (const token of valueTokens.slice(0, 12)) {
+      joined += compactSearchText(token)
+      if (joined === variant.compact) return true
+      if (joined.length >= variant.compact.length) return false
+    }
+    return false
+  })
+}
+
 export function expandSearchQueries(query: SearchQuery, aliases: SearchAliasTerm[] = []): SearchQuery[] {
   const values = uniqueStrings([query.raw, query.readable, ...aliasesForQuery(query.raw, aliases)])
   return values.map((value) => createSearchQuery(value)).filter((item) => item.valid)
@@ -228,16 +250,22 @@ export function getHighlightSegments(text: string, query: string): Array<{ text:
   const cleanQuery = query.trim()
   if (!cleanQuery || !createSearchQuery(cleanQuery).valid) return [{ text, match: false }]
   const ranges: Array<[number, number]> = []
-  const exact = cleanQuery.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")
-  for (const match of text.matchAll(new RegExp(exact, "igu"))) {
-    if (match.index !== undefined) ranges.push([match.index, match.index + match[0].length])
+  const lowerText = text.toLocaleLowerCase()
+  const lowerQuery = cleanQuery.toLocaleLowerCase()
+  let exactIndex = lowerText.indexOf(lowerQuery)
+  while (exactIndex >= 0) {
+    ranges.push([exactIndex, exactIndex + cleanQuery.length])
+    exactIndex = lowerText.indexOf(lowerQuery, exactIndex + 1)
   }
-  const tokenMatches = Array.from(text.matchAll(/[\\p{L}\\p{N}][\\p{L}\\p{N}'’./-]*/gu))
+  const tokenMatches = Array.from(text.matchAll(/[\p{L}\p{N}][\p{L}\p{N}'’./-]*/gu))
   const queryTokens = createSearchQuery(cleanQuery).tokens
   for (let start = 0; start < tokenMatches.length; start += 1) {
     for (let end = start; end < Math.min(tokenMatches.length, start + Math.max(4, queryTokens.length + 2)); end += 1) {
       const candidate = text.slice(tokenMatches[start].index ?? 0, (tokenMatches[end].index ?? 0) + tokenMatches[end][0].length)
-      if (searchTextMatches(cleanQuery, candidate)) ranges.push([tokenMatches[start].index ?? 0, (tokenMatches[end].index ?? 0) + tokenMatches[end][0].length])
+      if (matchesSearchAtStart(cleanQuery, candidate)) {
+        ranges.push([tokenMatches[start].index ?? 0, (tokenMatches[end].index ?? 0) + tokenMatches[end][0].length])
+        break
+      }
     }
   }
   if (!ranges.length) return [{ text, match: false }]
