@@ -2,6 +2,8 @@ import { type Story } from "@/lib/news-data"
 import { RSS_SOURCES } from "@/lib/rss"
 import { StoryCard } from "@/components/story-card"
 import { getImportAccess } from "@/app/actions/rss-import-actions"
+import { getActiveSignalActions } from "@/app/actions/signal-actions"
+import { signalFromStory } from "@/lib/signals"
 
 // Map each RSS source to a Story-compatible shape for display
 const FEED_STORIES: Record<string, Partial<Story>> = {
@@ -58,9 +60,10 @@ const FEED_STORIES: Record<string, Partial<Story>> = {
 }
 
 export async function RssFeedCards() {
-  const [isLoggedIn, enabledSources] = await Promise.all([
+  const [isLoggedIn, enabledSources, activeActions] = await Promise.all([
     getImportAccess(),
     Promise.resolve(RSS_SOURCES.filter((source) => source.enabled)),
+    getActiveSignalActions(),
   ])
 
   const stories: Story[] = enabledSources.map((source) => {
@@ -98,6 +101,7 @@ export async function RssFeedCards() {
           story={story}
           isLoggedIn={isLoggedIn}
           importContent={story.summary}
+          activeActions={activeActions[signalFromStory(story).signalKey]}
         />
       ))}
     </div>

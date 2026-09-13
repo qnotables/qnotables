@@ -32,6 +32,7 @@ const SCROLL_JITTER = 3
 
 const secondaryLinks = [
   { label: "ARCHIVES", href: "/archives" },
+  { label: "MY SIGNALS", href: "/account/signals" },
   { label: "TOWN HALL", href: "/forum" },
   { label: "ABOUT", href: "/about" },
   { label: "NEW TO Q?", href: "/new-to-q" },

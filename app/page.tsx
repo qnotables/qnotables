@@ -20,6 +20,8 @@ import { categories } from "@/lib/news-data"
 import { JsonLd } from "@/components/json-ld"
 import { pageMetadata, websiteSchema } from "@/lib/seo"
 import { getImportAccess } from "@/app/actions/rss-import-actions"
+import { getActiveSignalActions } from "@/app/actions/signal-actions"
+import { signalFromStory } from "@/lib/signals"
 
 export const metadata = pageMetadata({
   title: "QNotables — News, Research, and Public Records",
@@ -34,11 +36,13 @@ export default async function Page() {
     recentThreads,
     recentBlogs,
     isLoggedIn,
+    activeSignalActions,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(9),
     getRecentBlogPosts(6),
     getImportAccess(),
+    getActiveSignalActions(),
   ])
 
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
@@ -107,8 +111,10 @@ export default async function Page() {
                   source={story.source}
                   url={story.url}
                   type="feed"
+                  id={story.id}
                   isLoggedIn={isLoggedIn}
                   importContent={story.summary}
+                  activeActions={activeSignalActions[signalFromStory(story).signalKey]}
                 />
               ))}
             </div>
@@ -120,7 +126,13 @@ export default async function Page() {
 
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               {topStories.slice(2).map((story) => (
-                <StoryCard key={story.id} story={story} />
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  isLoggedIn={isLoggedIn}
+                  importContent={story.summary}
+                  activeActions={activeSignalActions[signalFromStory(story).signalKey]}
+                />
               ))}
             </div>
             <div className="w-full">

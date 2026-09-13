@@ -15,11 +15,15 @@ import {
   Share2,
 } from "lucide-react"
 import { getNotables, type NotablesPost } from "@/app/actions/notables-actions"
+import { SignalActionMenu } from "@/components/signal-action-menu"
+import { normalizeSignal, type SignalActionState, type SignalActionType } from "@/lib/signals"
 
 interface Props {
   initialItems: NotablesPost[]
   initialTotal: number
   boards: string[]
+  isLoggedIn: boolean
+  activeActions?: SignalActionState
 }
 
 const PAGE_SIZE = 20
@@ -188,12 +192,23 @@ function ShareButtons({ url, title }: { url: string; title: string }) {
   )
 }
 
-function NotablesCard({ item }: { item: NotablesPost }) {
+function NotablesCard({ item, isLoggedIn, activeActions = [] }: { item: NotablesPost; isLoggedIn: boolean; activeActions?: SignalActionType[] }) {
   const [imgError, setImgError] = useState(false)
   const coverImage = item.cover_image ?? item.og_image_url
   const rumbleEmbed = extractRumbleEmbed(item.body)
   const excerptText = extractExcerpt(item.body, item.excerpt)
   const postUrl = item.source_url ?? `https://qnotables.com`
+  const signal = normalizeSignal({
+    id: item.id,
+    kind: "notable",
+    title: item.title,
+    excerpt: excerptText,
+    source: "QNotables",
+    category: item.tag ?? "NOTABLES",
+    url: postUrl,
+    imageUrl: coverImage ?? undefined,
+    publishedAt: item.published_at ?? item.created_at,
+  })
 
   return (
     <article className="border border-border bg-card overflow-hidden transition-colors hover:bg-muted/40">
@@ -236,11 +251,12 @@ function NotablesCard({ item }: { item: NotablesPost }) {
             </span>
           )}
           <span
-            className="label-mono ml-auto text-[10px] text-muted-foreground"
+            className="label-mono text-[10px] text-muted-foreground"
             suppressHydrationWarning
           >
             {formatDate(item.published_at ?? item.created_at)}
           </span>
+          <SignalActionMenu signal={signal} isLoggedIn={isLoggedIn} activeActions={activeActions} />
         </div>
 
         {/* Title */}
@@ -273,7 +289,7 @@ function NotablesCard({ item }: { item: NotablesPost }) {
   )
 }
 
-export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
+export function NotablesFeed({ initialItems, initialTotal, boards, isLoggedIn, activeActions = {} }: Props) {
   const [items, setItems] = useState<NotablesPost[]>(initialItems)
   const [total, setTotal] = useState(initialTotal)
   const [search, setSearch] = useState("")
@@ -456,7 +472,22 @@ export function NotablesFeed({ initialItems, initialTotal, boards }: Props) {
       ) : (
         <div className="flex flex-col gap-4">
           {items.map((item) => (
-            <NotablesCard key={item.id} item={item} />
+            <NotablesCard
+              key={item.id}
+              item={item}
+              isLoggedIn={isLoggedIn}
+              activeActions={activeActions[normalizeSignal({
+                id: item.id,
+                kind: "notable",
+                title: item.title,
+                excerpt: extractExcerpt(item.body, item.excerpt),
+                source: "QNotables",
+                category: item.tag ?? "NOTABLES",
+                url: item.source_url ?? "https://qnotables.com",
+                imageUrl: item.cover_image ?? item.og_image_url ?? undefined,
+                publishedAt: item.published_at ?? item.created_at,
+              }).signalKey]}
+            />
           ))}
         </div>
       )}

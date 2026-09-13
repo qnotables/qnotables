@@ -4,10 +4,12 @@ import { StoryCard } from "@/components/story-card"
 import { DeskNav } from "@/components/desk-nav"
 import { useDeskFilter } from "@/components/desk-filter-context"
 import type { Category, Story } from "@/lib/news-data"
+import type { SignalActionState } from "@/lib/signals"
+import { signalFromStory } from "@/lib/signals"
 
 type Desk = { cat: Category; stories: Story[] }
 
-export function WireFeed({ desks, isLoggedIn }: { desks: Desk[]; isLoggedIn: boolean }) {
+export function WireFeed({ desks, isLoggedIn, activeActions = {} }: { desks: Desk[]; isLoggedIn: boolean; activeActions?: SignalActionState }) {
   const { active } = useDeskFilter()
 
   const visible = active === "NOTABLES" ? desks : desks.filter((d) => d.cat === active)
@@ -58,6 +60,7 @@ export function WireFeed({ desks, isLoggedIn }: { desks: Desk[]; isLoggedIn: boo
                       story={story}
                       isLoggedIn={isLoggedIn}
                       importContent={story.summary}
+                      activeActions={activeActions[signalFromStory(story).signalKey]}
                     />
                   ))}
                 </div>

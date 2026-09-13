@@ -4,6 +4,8 @@ import { PriorityTag } from "@/components/priority-tag"
 import { ShareButtons } from "@/components/share-buttons"
 import { CardImage } from "@/components/card-image"
 import { RssImportButton } from "@/components/rss-import-button"
+import { SignalActionMenu } from "@/components/signal-action-menu"
+import { signalFromStory, type SignalActionType } from "@/lib/signals"
 
 const DEFAULT_STORY_IMAGE = "/images/og-default.png"
 
@@ -12,16 +14,19 @@ export function StoryCard({
   variant = "default",
   isLoggedIn = false,
   importContent,
+  activeActions = [],
 }: {
   story: Story
   variant?: "default" | "wide"
   isLoggedIn?: boolean
   importContent?: string
+  activeActions?: SignalActionType[]
 }) {
   const s = story
   const href = s.url || "#"
   const linkProps = s.url ? { target: "_blank", rel: "noopener noreferrer" } : {}
   const cardImage = s.image || DEFAULT_STORY_IMAGE
+  const signal = signalFromStory(s)
   return (
     <article className="group flex h-full flex-col border border-border bg-card transition-colors hover:border-primary/60">
       <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -40,6 +45,9 @@ export function StoryCard({
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-2">
           <span className="label-mono text-primary">{s.category}</span>
+          <span className="ml-auto">
+            <SignalActionMenu signal={signal} isLoggedIn={isLoggedIn} activeActions={activeActions} />
+          </span>
         </div>
 
         <a href={href} {...linkProps} className="mt-2 block flex-1">
