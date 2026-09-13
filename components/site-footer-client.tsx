@@ -222,7 +222,7 @@ export function SiteFooterClient({ config, preview = false }: { config: FooterCo
             {legalLinks.map((link) => <FooterLinkItem key={link.id} link={link} compact />)}
           </div>
           <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="label-mono inline-flex items-center gap-2 self-start text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto" aria-label={config.backToTopLabel}>
-            {config.backToTopLabel}<Navigation2 className="size-3 -rotate-90" aria-hidden="true" />
+            {config.backToTopLabel}<Navigation-2 className="size-3 -rotate-90" aria-hidden="true" />
           </button>
         </div>
       </div>
