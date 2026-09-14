@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Play } from "lucide-react"
+import { CardImage } from "@/components/card-image"
 import type { PostVideoMedia } from "@/lib/post-media"
 
 export function PulseImagePreview({ src, alt }: { src: string; alt: string }) {
@@ -10,14 +11,12 @@ export function PulseImagePreview({ src, alt }: { src: string; alt: string }) {
   if (hasError) return null
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <CardImage
       src={src}
       alt={alt}
-      loading="lazy"
-      decoding="async"
+      aspectRatio="auto"
+      className="h-full"
       onError={() => setHasError(true)}
-      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
     />
   )
 }

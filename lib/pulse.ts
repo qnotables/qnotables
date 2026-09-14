@@ -1,7 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveFirstPostVideo, type PostVideoMedia } from "@/lib/post-media"
 import { buildExcerpt, extractBareUrls, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
-import { isValidVideoUrl } from "@/lib/video-embed-utils"
 
 export const PULSE_DEFAULTS = {
   kicker: "COMMUNITY SIGNAL",
@@ -142,8 +141,20 @@ function makeCard(
   }
 }
 
+function normalizePreviewUrl(value: string | null | undefined): string | null {
+  if (!value) return null
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
+    parsed.hash = ""
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
 function validPreviewImage(value: string | null | undefined): string | null {
-  return value && isValidVideoUrl(value) ? value : null
+  return normalizePreviewUrl(value)
 }
 
 function firstAvailable(
@@ -208,7 +219,10 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   }
 
   const previewUrls = Array.from(new Set(
-    candidates.flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")].filter((url): url is string => Boolean(url))),
+    candidates
+      .flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")])
+      .map((url) => normalizePreviewUrl(url))
+      .filter((url): url is string => Boolean(url)),
   )).slice(0, 250)
   const { data: previewRows } = previewUrls.length
     ? await admin
@@ -216,16 +230,17 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
         .select("url, image_url")
         .in("url", previewUrls)
         .eq("status", "ready")
-        .gt("expires_at", new Date().toISOString())
     : { data: [] as PulseLinkPreview[] }
   const previewsByUrl = new Map(
-    ((previewRows ?? []) as PulseLinkPreview[]).map((preview) => [preview.url, preview]),
+    ((previewRows ?? []) as PulseLinkPreview[])
+      .map((preview) => [normalizePreviewUrl(preview.url), preview] as const)
+      .filter((entry): entry is readonly [string, PulseLinkPreview] => Boolean(entry[0])),
   )
   const mediaByThread = new Map<string, PulseMedia>()
   for (const thread of candidates) {
     const preview = [thread.source_url, ...extractBareUrls(thread.body || "")]
       .filter((url): url is string => Boolean(url))
-      .map((url) => previewsByUrl.get(url))
+      .map((url) => previewsByUrl.get(normalizePreviewUrl(url) ?? ""))
       .find((candidate) => validPreviewImage(candidate?.image_url))
     const video = resolveFirstPostVideo(thread.body) ?? resolveFirstPostVideo(thread.source_url)
     mediaByThread.set(thread.id, {
