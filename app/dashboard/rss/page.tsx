@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getRssPolicy } from "@/lib/rss"
 import { PageHeader, StatCard } from "@/components/dashboard/ui"
+import { RssControls } from "@/components/dashboard/rss-controls"
 import { RssDiagnostics } from "@/components/dashboard/rss-diagnostics"
 import { RssImportButton } from "@/components/rss-import-button"
 import {
@@ -33,6 +36,19 @@ export default async function RssPage() {
   const feedUrl = `${siteUrl}/feed.xml`
   const siteConfigured = isSiteUrlConfigured()
 
+  const db = createAdminClient()
+  const [{ data: sourceRows }, { data: reviewRows }] = await Promise.all([
+    db
+      .from("rss_sources")
+      .select("source_key, name, feed_url, enabled, last_fetched_at, last_success_at, last_error, item_count")
+      .order("name", { ascending: true }),
+    db
+      .from("rss_items")
+      .select("id, title, source_name, primary_category, review_status, manual_lock, published_at")
+      .order("created_at", { ascending: false })
+      .limit(12),
+  ])
+  const policy = await getRssPolicy()
   const items = await getFeedItems(50)
   const validation = validateRssItems(items)
 
@@ -82,6 +98,29 @@ export default async function RssPage() {
 
       {/* Diagnostics + copy URL */}
       <RssDiagnostics feedUrl={feedUrl} />
+
+      <RssControls
+        sources={(sourceRows ?? []).map((source) => ({
+          source_key: source.source_key,
+          name: source.name,
+          feed_url: source.feed_url,
+          enabled: source.enabled,
+          last_fetched_at: source.last_fetched_at,
+          last_success_at: source.last_success_at,
+          last_error: source.last_error,
+          item_count: source.item_count,
+        }))}
+        policy={policy}
+        reviewItems={(reviewRows ?? []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          source_name: item.source_name,
+          primary_category: item.primary_category,
+          review_status: item.review_status === "approved" || item.review_status === "rejected" ? item.review_status : "moderation",
+          manual_lock: item.manual_lock,
+          published_at: item.published_at,
+        }))}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="border border-border bg-card p-4">

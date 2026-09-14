@@ -211,6 +211,77 @@ export async function deleteRssItem(id: string): Promise<Result> {
   return { success: true }
 }
 
+function cleanRssList(value: string, limit = 50): string[] {
+  return value
+    .split(/[\\n,]/)
+    .map((item) => item.trim().toLowerCase().slice(0, 80))
+    .filter((item, index, values) => item.length > 0 && values.indexOf(item) === index)
+    .slice(0, limit)
+}
+
+export async function toggleRssSource(sourceKey: string, enabled: boolean): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const key = sourceKey.trim()
+  if (!key || key.length > 120) return { success: false, error: "Invalid source key." }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_sources")
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq("source_key", key)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `${enabled ? "enabled" : "disabled"} RSS source`, targetType: "rss_source", targetId: key })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/")
+  return { success: true }
+}
+
+export async function saveRssPolicy(formData: FormData): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const retentionDays = Number.parseInt(String(formData.get("retention_days") ?? "3"), 10)
+  const db = createAdminClient()
+  const payload = {
+    id: 1,
+    rss_excluded_categories: cleanRssList(String(formData.get("excluded_categories") ?? "")),
+    rss_excluded_terms: cleanRssList(String(formData.get("excluded_terms") ?? "")),
+    rss_retention_days: Number.isFinite(retentionDays) ? Math.max(1, Math.min(90, retentionDays)) : 3,
+    rss_policy_updated_at: new Date().toISOString(),
+    rss_policy_updated_by: "dashboard",
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })
+  if (error) return { success: false, error: error.message }
+  await logActivity({ action: "updated RSS editorial policy", targetType: "site_settings" })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function reviewRssItem(
+  id: string,
+  reviewStatus: "moderation" | "approved" | "rejected",
+): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  if (!id || !["moderation", "approved", "rejected"].includes(reviewStatus)) {
+    return { success: false, error: "Invalid RSS review update." }
+  }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ review_status: reviewStatus, manual_lock: true, manually_classified_at: new Date().toISOString() })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `RSS item marked ${reviewStatus}`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
 /* ----------------------------- Media ----------------------------- */
 
 export async function saveMediaAsset(input: {
