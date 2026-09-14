@@ -3,6 +3,7 @@ import type { BlogPost } from "@/lib/blog-posts"
 import type { ForumThread } from "@/lib/forum"
 import type { Story } from "@/lib/news-data"
 import type { SignalAnalysisItem } from "@/lib/signal-analysis"
+import { buildExcerpt } from "@/lib/forum-utils"
 import { normalizeSignal, type Signal } from "@/lib/signals"
 
 export type HomeFeedKind = "editorial" | "forum" | "wire" | "notable" | "analysis"
@@ -24,6 +25,11 @@ export interface HomeFeedItem {
 function cleanText(value: string | null | undefined, fallback: string): string {
   const cleaned = (value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
   return cleaned || fallback
+}
+
+function cleanExcerpt(value: string | null | undefined, fallback: string): string {
+  const excerpt = buildExcerpt((value ?? "").trim())
+  return cleanText(excerpt, fallback)
 }
 
 function validDate(value: string | null | undefined): string {
@@ -98,7 +104,7 @@ export function adaptHomeFeed({
       kind: "forum",
       topic: cleanText(thread.category, "OPEN FORUM").toUpperCase(),
       title: cleanText(thread.title, "Untitled discussion"),
-      excerpt: cleanText(thread.latestReply?.body || thread.body, "Community discussion is available in the forum."),
+      excerpt: cleanExcerpt(thread.latestReply?.body || thread.body, "Community discussion is available in the forum."),
       source: "QNOTABLES FORUM",
       publishedAt: validDate(thread.lastActivityAt || thread.latestReply?.createdAt || thread.createdAt),
       href: thread.slug ? `/forum/${encodeURIComponent(thread.slug)}` : `/forum/thread/${encodeURIComponent(thread.id)}`,
@@ -133,7 +139,7 @@ export function adaptHomeFeed({
       kind: "notable",
       topic: cleanText(notable.tag || notable.board, "NOTABLES").toUpperCase(),
       title: cleanText(notable.title, "Untitled notable"),
-      excerpt: cleanText(notable.excerpt || notable.body || notable.raw_text, "Open the notable record for the source material."),
+      excerpt: cleanExcerpt(notable.excerpt || notable.body || notable.raw_text, "Open the notable record for the source material."),
       source: cleanText(notable.source, "NOTABLES DESK"),
       publishedAt: validDate(notable.published_at || notable.created_at_source || notable.scraped_at),
       href,
