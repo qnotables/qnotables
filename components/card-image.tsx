@@ -7,6 +7,7 @@ interface CardImageProps {
   objectPosition?: "center" | "top" | "bottom"
   className?: string
   onLoad?: () => void
+  onError?: () => void
 }
 
 /**
@@ -27,6 +28,7 @@ export function CardImage({
   objectPosition = "top",
   className = "",
   onLoad,
+  onError,
 }: CardImageProps) {
   // Determine final variant based on media type
   const isGraphicType = mediaType && ["graph", "chart", "infographic", "document_image"].includes(mediaType)
@@ -58,6 +60,7 @@ export function CardImage({
         alt={alt}
         loading="lazy"
         onLoad={onLoad}
+        onError={onError}
         className={`h-full w-full ${objectFitClass} ${objectPositionClass}`}
       />
     </div>

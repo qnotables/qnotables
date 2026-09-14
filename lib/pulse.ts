@@ -1,7 +1,7 @@
+import { createHash } from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveFirstPostVideo, type PostVideoMedia } from "@/lib/post-media"
 import { buildExcerpt, extractBareUrls, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
-import { isValidVideoUrl } from "@/lib/video-embed-utils"
 
 export const PULSE_DEFAULTS = {
   kicker: "COMMUNITY SIGNAL",
@@ -142,8 +142,62 @@ function makeCard(
   }
 }
 
-function validPreviewImage(value: string | null | undefined): string | null {
-  return value && isValidVideoUrl(value) ? value : null
+function normalizePreviewUrl(value: string | null | undefined, baseUrl?: string): string | null {
+  if (!value) return null
+  try {
+    const parsed = new URL(value, baseUrl)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
+    parsed.hash = ""
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+function validPreviewImage(value: string | null | undefined, baseUrl?: string): string | null {
+  return normalizePreviewUrl(value, baseUrl)
+}
+
+function getMetaAttribute(tag: string, attribute: string): string | null {
+  const match = tag.match(new RegExp(`\\b${attribute}\\s*=\\s*["']([^"']+)["']`, "i"))
+  return match?.[1]?.trim() || null
+}
+
+function extractOpenGraphImage(html: string): string | null {
+  const tags = html.slice(0, 600_000).match(/<meta\b[^>]*>/gi) ?? []
+  for (const tag of tags) {
+    const key = (getMetaAttribute(tag, "property") || getMetaAttribute(tag, "name") || "").toLowerCase()
+    if (key === "og:image" || key === "twitter:image" || key === "twitter:image:src") {
+      const content = getMetaAttribute(tag, "content")
+      if (content) return content
+    }
+  }
+  return null
+}
+
+async function fetchOpenGraphImage(sourceUrl: string): Promise<string | null> {
+  const normalizedSource = normalizePreviewUrl(sourceUrl)
+  if (!normalizedSource) return null
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5_000)
+  try {
+    const response = await fetch(normalizedSource, {
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "user-agent": "QNotables/1.0 (+https://www.qnotables.ai)",
+      },
+      redirect: "follow",
+      signal: controller.signal,
+    })
+    if (!response.ok || !response.headers.get("content-type")?.toLowerCase().includes("text/html")) return null
+    const rawImage = extractOpenGraphImage(await response.text())
+    return validPreviewImage(rawImage, response.url || normalizedSource)
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 function firstAvailable(
@@ -208,7 +262,10 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   }
 
   const previewUrls = Array.from(new Set(
-    candidates.flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")].filter((url): url is string => Boolean(url))),
+    candidates
+      .flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")])
+      .map((url) => normalizePreviewUrl(url))
+      .filter((url): url is string => Boolean(url)),
   )).slice(0, 250)
   const { data: previewRows } = previewUrls.length
     ? await admin
@@ -216,16 +273,37 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
         .select("url, image_url")
         .in("url", previewUrls)
         .eq("status", "ready")
-        .gt("expires_at", new Date().toISOString())
     : { data: [] as PulseLinkPreview[] }
   const previewsByUrl = new Map(
-    ((previewRows ?? []) as PulseLinkPreview[]).map((preview) => [preview.url, preview]),
+    ((previewRows ?? []) as PulseLinkPreview[])
+      .map((preview) => [normalizePreviewUrl(preview.url), preview] as const)
+      .filter((entry): entry is readonly [string, PulseLinkPreview] => Boolean(entry[0])),
   )
+  const uncachedPreviewUrls = previewUrls.filter((url) => !previewsByUrl.has(url)).slice(0, 20)
+  const fetchedPreviewImages = await Promise.all(
+    uncachedPreviewUrls.map(async (url) => ({ url, imageUrl: await fetchOpenGraphImage(url) })),
+  )
+  const fetchedRows = fetchedPreviewImages
+    .filter((entry): entry is { url: string; imageUrl: string } => Boolean(entry.imageUrl))
+    .map(({ url, imageUrl }) => ({
+      url_hash: createHash("sha256").update(url).digest("hex"),
+      url,
+      image_url: imageUrl,
+      status: "ready",
+      fetched_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    }))
+  if (fetchedRows.length) {
+    await admin.from("forum_link_previews").upsert(fetchedRows, { onConflict: "url_hash" })
+  }
+  for (const { url, imageUrl } of fetchedPreviewImages) {
+    if (imageUrl) previewsByUrl.set(url, { url, image_url: imageUrl })
+  }
   const mediaByThread = new Map<string, PulseMedia>()
   for (const thread of candidates) {
     const preview = [thread.source_url, ...extractBareUrls(thread.body || "")]
       .filter((url): url is string => Boolean(url))
-      .map((url) => previewsByUrl.get(url))
+      .map((url) => previewsByUrl.get(normalizePreviewUrl(url) ?? ""))
       .find((candidate) => validPreviewImage(candidate?.image_url))
     const video = resolveFirstPostVideo(thread.body) ?? resolveFirstPostVideo(thread.source_url)
     mediaByThread.set(thread.id, {
