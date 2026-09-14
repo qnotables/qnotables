@@ -409,9 +409,115 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://moxie.foxbusiness.com/google-publisher/latest.xml",
     enabled: true,
   },
-]
+  ]
 
-type ParsedItem = {
+export interface RssPolicy {
+  excludedCategories: string[]
+  excludedTerms: string[]
+  retentionDays: number
+}
+
+const DEFAULT_RSS_POLICY: RssPolicy = {
+  excludedCategories: [],
+  excludedTerms: ["sports", "celebrity"],
+  retentionDays: 3,
+}
+
+async function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  try {
+    const { createClient } = await import("@supabase/supabase-js")
+    return createClient(url, key)
+  } catch {
+    return null
+  }
+}
+
+function cleanPolicyList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((item, index, values) => values.indexOf(item) === index)
+    .slice(0, 50)
+}
+
+export async function getConfiguredRssSources(): Promise<RSSSource[]> {
+  const supabase = await getSupabase()
+  if (!supabase) return RSS_SOURCES.filter((source) => source.enabled)
+
+  try {
+    const { data, error } = await supabase
+      .from("rss_sources")
+      .select("source_key, name, feed_url, enabled")
+      .order("name", { ascending: true })
+
+    if (error || !data?.length) {
+      if (error) console.warn("[v0] RSS source registry unavailable:", error.message)
+      return RSS_SOURCES.filter((source) => source.enabled)
+    }
+
+    return data.map((source) => ({
+      id: source.source_key,
+      name: source.name,
+      url: source.feed_url,
+      enabled: source.enabled,
+    }))
+  } catch (error) {
+    console.warn("[v0] RSS source registry lookup failed:", error)
+    return RSS_SOURCES.filter((source) => source.enabled)
+  }
+}
+
+export async function getRssPolicy(): Promise<RssPolicy> {
+  const supabase = await getSupabase()
+  if (!supabase) return DEFAULT_RSS_POLICY
+
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("rss_excluded_categories, rss_excluded_terms, rss_retention_days")
+      .eq("id", 1)
+      .maybeSingle()
+
+    if (error || !data) return DEFAULT_RSS_POLICY
+
+    return {
+      excludedCategories: cleanPolicyList(data.rss_excluded_categories),
+      excludedTerms: cleanPolicyList(data.rss_excluded_terms),
+      retentionDays: Math.max(1, Math.min(90, Number(data.rss_retention_days) || 3)),
+    }
+  } catch (error) {
+    console.warn("[v0] RSS policy lookup failed:", error)
+    return DEFAULT_RSS_POLICY
+  }
+}
+
+function isExcludedStory(story: Story, policy: RssPolicy): boolean {
+  const category = String(story.category ?? "").trim().toLowerCase()
+  if (policy.excludedCategories.includes(category)) return true
+
+  const searchText = `${story.headline} ${story.summary} ${story.source}`.toLowerCase()
+  return policy.excludedTerms.some((term) => term && searchText.includes(term))
+}
+
+async function updateRssSourceHealth(
+  sourceKey: string,
+  patch: { last_success_at?: string | null; last_error?: string | null; item_count?: number },
+) {
+  const supabase = await getSupabase()
+  if (!supabase) return
+  const { error } = await supabase
+    .from("rss_sources")
+    .update({ ...patch, last_fetched_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("source_key", sourceKey)
+  if (error) console.warn("[v0] RSS source health update failed:", error.message)
+}
+
+  type ParsedItem = {
   mediaThumbnail?: { $?: { url?: string } }
   mediaContent?: { $?: { url?: string } }
 }
@@ -511,7 +617,7 @@ function categorizeArticle(headline: string, summary: string): Category {
 /**
  * Fetch and parse a single RSS source
  */
-async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
+async function fetchRSSSource(source: RSSSource, policy: RssPolicy): Promise<Story[]> {
   if (!source.enabled) return []
   
   try {
@@ -519,21 +625,38 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
       headers: { "user-agent": "Mozilla/5.0 (compatible; HotAndFreshBot/1.0)" },
       next: { revalidate: 300 },
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      await updateRssSourceHealth(source.id, { last_error: `HTTP ${res.status}`, item_count: 0 })
+      return []
+    }
     const xml = await res.text()
     const parsed = await parser.parseString(xml)
 
-    // Drop stories older than 3 days so the wire only surfaces fresh reports.
+    // Drop stories older than the editorial retention window.
     // Items without a parseable date are kept, since we cannot prove they are stale.
-    const MAX_STORY_AGE_MS = 3 * 24 * 60 * 60 * 1000
+    const MAX_STORY_AGE_MS = policy.retentionDays * 24 * 60 * 60 * 1000
     const now = Date.now()
     const recentItems = (parsed.items ?? []).filter((raw) => {
       const item = raw as Parser.Item & ParsedItem
       const published = item.isoDate || item.pubDate
-      if (!published) return true
-      const ms = new Date(published).getTime()
-      if (isNaN(ms)) return true
-      return now - ms <= MAX_STORY_AGE_MS
+      if (published) {
+        const ms = new Date(published).getTime()
+        if (!isNaN(ms) && now - ms > MAX_STORY_AGE_MS) return false
+      }
+
+      const headline = (item.title ?? "").trim()
+      const summary = stripHtml(item.contentSnippet || item.content || "").slice(0, 220)
+      const category = categorizeArticle(headline, summary)
+      return !isExcludedStory(
+        { headline, summary, source: source.name, category } as Story,
+        policy,
+      )
+    })
+
+    await updateRssSourceHealth(source.id, {
+      last_success_at: new Date().toISOString(),
+      last_error: null,
+      item_count: recentItems.length,
     })
 
     return recentItems.slice(0, 40).map((raw, i) => {
@@ -570,6 +693,8 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
       }
     })
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown fetch error"
+    await updateRssSourceHealth(source.id, { last_error: message.slice(0, 500), item_count: 0 })
     console.error(`[v0] Failed to fetch RSS source "${source.name}":`, err)
     return []
   }
@@ -578,9 +703,9 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
 /**
  * Fetch stories from all enabled RSS sources
  */
-async function fetchAllRSSSources(): Promise<Story[]> {
-  const enabledSources = RSS_SOURCES.filter((s) => s.enabled)
-  
+async function fetchAllRSSSources(sources: RSSSource[], policy: RssPolicy): Promise<Story[]> {
+  const enabledSources = sources.filter((s) => s.enabled)
+
   if (enabledSources.length === 0) {
     console.warn("[v0] No RSS sources enabled")
     return []
@@ -588,7 +713,7 @@ async function fetchAllRSSSources(): Promise<Story[]> {
 
   // Fetch all sources in parallel
   const results = await Promise.allSettled(
-    enabledSources.map((source) => fetchRSSSource(source))
+    enabledSources.map((source) => fetchRSSSource(source, policy))
   )
 
   // Interleave successful feeds so one prolific source cannot fill every
@@ -628,8 +753,9 @@ export async function getNews(): Promise<NewsBundle> {
   const latestBlogPost = await getLatestPost()
   const blogPostStory = blogPostToStory(latestBlogPost)
   
-  const stories = await fetchAllRSSSources()
-  const homepageFeedLimit = Math.max(30, RSS_SOURCES.filter((source) => source.enabled).length)
+  const [sources, policy] = await Promise.all([getConfiguredRssSources(), getRssPolicy()])
+  const stories = await fetchAllRSSSources(sources, policy)
+  const homepageFeedLimit = Math.max(30, sources.filter((source) => source.enabled).length)
 
   // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
   if (blogPostStory && blogPostStory.image) {

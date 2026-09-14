@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
 import { compactSearchText, normalizeComparableText } from "@/lib/search-utils"
+import { categories } from "@/lib/news-data"
 
 type Result = { success: boolean; error?: string }
 
@@ -211,6 +212,114 @@ export async function deleteRssItem(id: string): Promise<Result> {
   return { success: true }
 }
 
+function cleanRssList(value: string, limit = 50): string[] {
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim().toLowerCase().slice(0, 80))
+    .filter((item, index, values) => item.length > 0 && values.indexOf(item) === index)
+    .slice(0, limit)
+}
+
+export async function toggleRssSource(sourceKey: string, enabled: boolean): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const key = sourceKey.trim()
+  if (!key || key.length > 120) return { success: false, error: "Invalid source key." }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_sources")
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq("source_key", key)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `${enabled ? "enabled" : "disabled"} RSS source`, targetType: "rss_source", targetId: key })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/")
+  return { success: true }
+}
+
+export async function saveRssPolicy(formData: FormData): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const retentionDays = Number.parseInt(String(formData.get("retention_days") ?? "3"), 10)
+  const db = createAdminClient()
+  const payload = {
+    id: 1,
+    rss_excluded_categories: cleanRssList(String(formData.get("excluded_categories") ?? "")),
+    rss_excluded_terms: cleanRssList(String(formData.get("excluded_terms") ?? "")),
+    rss_retention_days: Number.isFinite(retentionDays) ? Math.max(1, Math.min(90, retentionDays)) : 3,
+    rss_policy_updated_at: new Date().toISOString(),
+    rss_policy_updated_by: "dashboard",
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })
+  if (error) return { success: false, error: error.message }
+  await logActivity({ action: "updated RSS editorial policy", targetType: "site_settings" })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function reviewRssItem(
+  id: string,
+  reviewStatus: "moderation" | "approved" | "rejected",
+): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  if (!id || !["moderation", "approved", "rejected"].includes(reviewStatus)) {
+    return { success: false, error: "Invalid RSS review update." }
+  }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ review_status: reviewStatus, manual_lock: true, manually_classified_at: new Date().toISOString() })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `RSS item marked ${reviewStatus}`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function toggleRssItemLock(id: string, locked: boolean): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  if (!id || id.length > 80) return { success: false, error: "Invalid RSS item id." }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ manual_lock: locked, manually_classified_at: locked ? new Date().toISOString() : null })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `${locked ? "locked" : "unlocked"} RSS item override`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function recategorizeRssItem(id: string, category: string): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const normalizedCategory = category.trim().toUpperCase()
+  if (!id || id.length > 80 || !categories.includes(normalizedCategory as (typeof categories)[number])) {
+    return { success: false, error: "Invalid RSS category update." }
+  }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ primary_category: normalizedCategory, manual_lock: true, manually_classified_at: new Date().toISOString() })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `recategorized RSS item as ${normalizedCategory}`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
 /* ----------------------------- Media ----------------------------- */
 
 export async function saveMediaAsset(input: {
@@ -335,6 +444,13 @@ export async function saveSettings(formData: FormData): Promise<Result> {
   const rawMaxEmbeds = parseInt(String(formData.get("forum_max_embeds") ?? "4"), 10)
   const rawSignalMinScore = parseInt(String(formData.get("signal_analysis_min_score") ?? "55"), 10)
   const rawSignalMaxItems = parseInt(String(formData.get("signal_analysis_max_items") ?? "24"), 10)
+  const rawPulseActiveAge = parseInt(String(formData.get("pulse_active_max_age_days") ?? "14"), 10)
+  const rawPulseBackchannelAge = parseInt(String(formData.get("pulse_backchannel_max_age_days") ?? "14"), 10)
+  const excludedPulseIds = String(formData.get("pulse_excluded_thread_ids") ?? "")
+    .split(/[\\n,]/)
+    .map((value) => value.trim())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+    .slice(0, 100)
   const payload = {
     id: 1,
     site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
@@ -352,13 +468,32 @@ export async function saveSettings(formData: FormData): Promise<Result> {
     signal_preview_enabled: formData.get("signal_preview_enabled") === "on",
     signal_analysis_min_score: isNaN(rawSignalMinScore) ? 55 : Math.max(0, Math.min(100, rawSignalMinScore)),
     signal_analysis_max_items: isNaN(rawSignalMaxItems) ? 24 : Math.max(1, Math.min(100, rawSignalMaxItems)),
+    pulse_enabled: formData.get("pulse_enabled") === "on",
+    pulse_editor_thread_id: String(formData.get("pulse_editor_thread_id") ?? "").trim() || null,
+    pulse_excluded_thread_ids: excludedPulseIds,
+    pulse_active_max_age_days: isNaN(rawPulseActiveAge) ? 14 : Math.max(1, Math.min(90, rawPulseActiveAge)),
+    pulse_backchannel_max_age_days: isNaN(rawPulseBackchannelAge) ? 14 : Math.max(1, Math.min(90, rawPulseBackchannelAge)),
+    pulse_kicker: String(formData.get("pulse_kicker") ?? "").trim() || "COMMUNITY SIGNAL",
+    pulse_title: String(formData.get("pulse_title") ?? "").trim() || "THE TOWN HALL",
+    pulse_description: String(formData.get("pulse_description") ?? "").trim() || "Follow the signal. Examine the evidence. Add to the record.",
+    pulse_enter_label: String(formData.get("pulse_enter_label") ?? "").trim() || "ENTER THE TOWN HALL",
+    pulse_start_label: String(formData.get("pulse_start_label") ?? "").trim() || "START A THREAD",
+    pulse_updated_by: "dashboard",
     updated_at: new Date().toISOString(),
   }
   const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })
   if (error) return { success: false, error: error.message }
   await logActivity({ action: "updated site settings", targetType: "site_settings" })
   revalidatePath("/dashboard/settings")
+  revalidatePath("/")
+  revalidatePath("/forum")
   return { success: true }
+}
+
+export async function searchPulseThreads(query: string): Promise<Array<{ threadId: string; title: string; category: string; href: string; sourceStatus: "PRIMARY SOURCE" | "COMMUNITY THREAD" }>> {
+  if (!(await guard())) return []
+  const { searchPulseThreads: searchThreads } = await import("@/lib/pulse")
+  return searchThreads(query)
 }
 
 export async function runSignalAnalysisAction(): Promise<Result & { scannedCount: number; createdCount: number; updatedCount: number }> {

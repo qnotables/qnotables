@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react"
 import { Loader2, Save, Check } from "lucide-react"
 import { saveSettings } from "@/app/dashboard/actions"
+import { PulseSettingsPanel } from "@/components/dashboard/pulse-settings-panel"
+import type { PulseCard } from "@/lib/pulse"
 
 export interface SiteSettings {
   site_name: string
@@ -20,6 +22,16 @@ export interface SiteSettings {
   signal_preview_enabled: boolean
   signal_analysis_min_score: number
   signal_analysis_max_items: number
+  pulse_enabled: boolean
+  pulse_editor_thread_id: string | null
+  pulse_excluded_thread_ids: string[]
+  pulse_active_max_age_days: number
+  pulse_backchannel_max_age_days: number
+  pulse_kicker: string
+  pulse_title: string
+  pulse_description: string
+  pulse_enter_label: string
+  pulse_start_label: string
 }
 
 function Toggle({ name, label, description, defaultChecked }: { name: string; label: string; description: string; defaultChecked: boolean }) {
@@ -34,7 +46,7 @@ function Toggle({ name, label, description, defaultChecked }: { name: string; la
   )
 }
 
-export function SettingsForm({ settings }: { settings: SiteSettings }) {
+export function SettingsForm({ settings, pulsePreview }: { settings: SiteSettings; pulsePreview: PulseCard[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -109,6 +121,8 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
           </div>
         </div>
       </section>
+
+      <PulseSettingsPanel settings={settings} previewCards={pulsePreview} />
 
       <section className="flex flex-col gap-4">
         <h2 className="stencil text-lg text-foreground">Forum</h2>
