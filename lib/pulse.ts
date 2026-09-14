@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { resolveFirstPostVideo, type PostVideoMedia } from "@/lib/post-media"
+import { resolveFirstPostImage, resolveFirstPostVideo, type PostVideoMedia } from "@/lib/post-media"
 import { buildExcerpt, extractBareUrls, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
 
 export const PULSE_DEFAULTS = {
@@ -60,6 +60,7 @@ interface PulseThread {
   slug: string | null
   title: string
   body: string
+  content_json: unknown
   excerpt: string | null
   category: string | null
   desk: string | null
@@ -75,8 +76,10 @@ interface PulseThread {
 }
 
 interface PulseReply {
+  id: string
   thread_id: string
   body: string
+  content_json: unknown
   created_at: string
   is_pending: boolean | null
   is_hidden: boolean | null
@@ -86,6 +89,13 @@ interface PulseReply {
 interface PulseLinkPreview {
   url: string
   image_url: string | null
+}
+
+interface PulseImageAttachment {
+  thread_id: string | null
+  reply_id: string | null
+  url: string
+  created_at: string
 }
 
 function deploymentPulseDefault(): boolean {
@@ -103,6 +113,15 @@ function daysAgo(days: number): number {
 
 function activityAt(thread: PulseThread, latestReply?: PulseReply): string {
   return latestReply?.created_at || thread.last_activity_at || thread.created_at
+}
+
+function serializePulseContent(contentJson: unknown, body: string | null | undefined): string {
+  if (contentJson && typeof contentJson === "object") return JSON.stringify(contentJson)
+  return body ?? ""
+}
+
+function firstImageUrl(contentJson: unknown, body: string | null | undefined): string | null {
+  return resolveFirstPostImage(serializePulseContent(contentJson, body))?.src ?? null
 }
 
 function isEligible(thread: PulseThread, excludedIds: Set<string>): boolean {
@@ -218,7 +237,7 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
       .maybeSingle(),
     admin
       .from("forum_threads")
-      .select("id, slug, title, body, excerpt, category, desk, source_url, created_at, last_activity_at, reply_count, is_pinned, is_featured, is_soft_deleted, is_pending, status")
+      .select("id, slug, title, body, content_json, excerpt, category, desk, source_url, created_at, last_activity_at, reply_count, is_pinned, is_featured, is_soft_deleted, is_pending, status")
       .eq("is_soft_deleted", false)
       .eq("is_pending", false)
       .eq("status", "published")
@@ -248,7 +267,7 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
 
   const { data: replies } = await admin
     .from("forum_replies")
-    .select("thread_id, body, created_at, is_pending, is_hidden, status")
+    .select("id, thread_id, body, content_json, created_at, is_pending, is_hidden, status")
     .in("thread_id", candidates.map((thread) => thread.id))
     .eq("is_pending", false)
     .eq("is_hidden", false)
@@ -261,9 +280,39 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
     if (!latestReplies.has(reply.thread_id) && buildExcerpt(reply.body || "", 20)) latestReplies.set(reply.thread_id, reply)
   }
 
+  const latestReplyIds = Array.from(latestReplies.values()).map((reply) => reply.id)
+  const [{ data: threadImageAttachments }, { data: replyImageAttachments }] = await Promise.all([
+    admin
+      .from("forum_attachments")
+      .select("thread_id, reply_id, url, created_at")
+      .in("thread_id", candidates.map((thread) => thread.id))
+      .eq("status", "active")
+      .like("mime_type", "image/%")
+      .order("created_at", { ascending: false }),
+    latestReplyIds.length
+      ? admin
+          .from("forum_attachments")
+          .select("thread_id, reply_id, url, created_at")
+          .in("reply_id", latestReplyIds)
+          .eq("status", "active")
+          .like("mime_type", "image/%")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as PulseImageAttachment[] }),
+  ])
+  const threadImages = new Map<string, string>()
+  for (const attachment of (threadImageAttachments ?? []) as PulseImageAttachment[]) {
+    if (attachment.thread_id && !threadImages.has(attachment.thread_id)) threadImages.set(attachment.thread_id, attachment.url)
+  }
+  const replyThreadIds = new Map(Array.from(latestReplies.values()).map((reply) => [reply.id, reply.thread_id]))
+  const replyImages = new Map<string, string>()
+  for (const attachment of (replyImageAttachments ?? []) as PulseImageAttachment[]) {
+    const threadId = attachment.reply_id ? replyThreadIds.get(attachment.reply_id) : null
+    if (threadId && !replyImages.has(threadId)) replyImages.set(threadId, attachment.url)
+  }
+
   const previewUrls = Array.from(new Set(
     candidates
-      .flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")])
+      .flatMap((thread) => [thread.source_url, ...extractBareUrls(serializePulseContent(thread.content_json, thread.body))])
       .map((url) => normalizePreviewUrl(url))
       .filter((url): url is string => Boolean(url)),
   )).slice(0, 250)
@@ -301,15 +350,21 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   }
   const mediaByThread = new Map<string, PulseMedia>()
   for (const thread of candidates) {
-    const preview = [thread.source_url, ...extractBareUrls(thread.body || "")]
+    const serializedContent = serializePulseContent(thread.content_json, thread.body)
+    const latestReply = latestReplies.get(thread.id)
+    const preview = [thread.source_url, ...extractBareUrls(serializedContent)]
       .filter((url): url is string => Boolean(url))
       .map((url) => previewsByUrl.get(normalizePreviewUrl(url) ?? ""))
       .find((candidate) => validPreviewImage(candidate?.image_url))
-    const video = resolveFirstPostVideo(thread.body) ?? resolveFirstPostVideo(thread.source_url)
+    const authoredImage = validPreviewImage(firstImageUrl(thread.content_json, thread.body))
+    const attachedImage = validPreviewImage(threadImages.get(thread.id) ?? replyImages.get(thread.id))
+    const replyImage = validPreviewImage(firstImageUrl(latestReply?.content_json, latestReply?.body))
+    const sourceImage = validPreviewImage(preview?.image_url)
+    const video = resolveFirstPostVideo(serializedContent) ?? resolveFirstPostVideo(thread.source_url)
     mediaByThread.set(thread.id, {
-      ogImageUrl: validPreviewImage(preview?.image_url),
+      ogImageUrl: authoredImage ?? attachedImage ?? replyImage ?? sourceImage,
       video: video
-        ? { ...video, poster: video.poster || validPreviewImage(preview?.image_url) || undefined }
+        ? { ...video, poster: video.poster || sourceImage || undefined }
         : null,
     })
   }
