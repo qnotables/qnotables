@@ -16,7 +16,7 @@
  */
 
 import * as cheerio from "cheerio"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeServerHtml } from "@/lib/server-html-sanitizer"
 import { NOTABLES_FETCH_HEADERS, isAllowedByRobots } from "./robots"
 import type { NotablesRecord } from "./types"
 import { buildHash } from "./dedup"
@@ -103,9 +103,9 @@ export async function parseNotablesHtml(
     const rawBodyHtml = bodyEl.html() || $(el).html() || ""
 
     // Sanitize: strip all scripts and dangerous attributes
-    const cleanHtml = DOMPurify.sanitize(rawBodyHtml, {
-      ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "br", "p", "span"],
-      ALLOWED_ATTR: ["href", "class"],
+    const cleanHtml = sanitizeServerHtml(rawBodyHtml, {
+      allowedTags: ["b", "i", "em", "strong", "a", "br", "p", "span"],
+      allowedAttrs: ["href", "class"],
     })
 
     const rawText = rawBodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()

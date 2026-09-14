@@ -4,7 +4,7 @@
  * Preserves original publish dates; sanitizes HTML.
  */
 
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeServerHtml } from "@/lib/server-html-sanitizer"
 import { generateSlug } from "@/lib/import-utils"
 import type { ImportedPost } from "@/lib/import-parsers"
 
@@ -66,10 +66,9 @@ const ALLOWED_ATTR = [
 function sanitizeHtml(html: string): { clean: string; unsafeRemoved: boolean } {
   if (!html) return { clean: "", unsafeRemoved: false }
   const original = html
-  const clean = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    FORCE_BODY: true,
+  const clean = sanitizeServerHtml(html, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttrs: ALLOWED_ATTR,
   })
   // Force external links to open safely
   const secured = clean.replace(
