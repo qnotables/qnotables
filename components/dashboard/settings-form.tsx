@@ -16,6 +16,10 @@ export interface SiteSettings {
   forum_moderation_mode: boolean
   forum_max_links: number
   forum_max_embeds: number
+  signal_analysis_enabled: boolean
+  signal_preview_enabled: boolean
+  signal_analysis_min_score: number
+  signal_analysis_max_items: number
 }
 
 function Toggle({ name, label, description, defaultChecked }: { name: string; label: string; description: string; defaultChecked: boolean }) {
@@ -85,6 +89,25 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
         <Toggle name="public_registration" label="Public Registration" description="Allow new users to sign up." defaultChecked={settings.public_registration} />
         <Toggle name="shop_preview_mode" label="Shop Preview Mode" description="Display the shop in preview-only mode." defaultChecked={settings.shop_preview_mode} />
         <Toggle name="maintenance_mode" label="Maintenance Mode" description="Take the public site offline for maintenance." defaultChecked={settings.maintenance_mode} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="stencil text-lg text-foreground">Signal Analysis</h2>
+          <p className="label-mono mt-1 text-xs text-muted-foreground">Score recent wire and notables items for manual review before public preview.</p>
+        </div>
+        <Toggle name="signal_analysis_enabled" label="Enable Analysis Runs" description="Allow the protected cron or dashboard action to build the review queue." defaultChecked={settings.signal_analysis_enabled} />
+        <Toggle name="signal_preview_enabled" label="Enable Public Preview" description="Show approved analysis items in the public stream." defaultChecked={settings.signal_preview_enabled} />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="label-mono text-muted-foreground">Minimum score <span className="ml-1 normal-case text-muted-foreground/60">(0–100)</span></label>
+            <input name="signal_analysis_min_score" type="number" min={0} max={100} defaultValue={settings.signal_analysis_min_score ?? 55} className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="label-mono text-muted-foreground">Max items per run <span className="ml-1 normal-case text-muted-foreground/60">(1–100)</span></label>
+            <input name="signal_analysis_max_items" type="number" min={1} max={100} defaultValue={settings.signal_analysis_max_items ?? 24} className={inputClass} />
+          </div>
+        </div>
       </section>
 
       <section className="flex flex-col gap-4">

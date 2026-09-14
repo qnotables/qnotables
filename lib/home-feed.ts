@@ -2,9 +2,10 @@ import type { NotablesPost } from "@/app/actions/notables-actions"
 import type { BlogPost } from "@/lib/blog-posts"
 import type { ForumThread } from "@/lib/forum"
 import type { Story } from "@/lib/news-data"
+import type { SignalAnalysisItem } from "@/lib/signal-analysis"
 import { normalizeSignal, type Signal } from "@/lib/signals"
 
-export type HomeFeedKind = "editorial" | "forum" | "wire" | "notable"
+export type HomeFeedKind = "editorial" | "forum" | "wire" | "notable" | "analysis"
 
 export interface HomeFeedItem {
   id: string
@@ -68,11 +69,13 @@ export function adaptHomeFeed({
   threads,
   stories,
   notables,
+  analysis = [],
 }: {
   blogs: BlogPost[]
   threads: ForumThread[]
   stories: Story[]
   notables: NotablesPost[]
+  analysis?: SignalAnalysisItem[]
 }): HomeFeedItem[] {
   const editorial = blogs.slice(0, 5).map((post) =>
     makeItem({
@@ -139,7 +142,20 @@ export function adaptHomeFeed({
     })
   })
 
-  return [...editorial, ...forum, ...wire, ...notableItems]
+  const analysisItems = analysis.slice(0, 8).map((item) => makeItem({
+    id: `analysis:${item.id}`,
+    kind: "analysis",
+    topic: cleanText(item.category, "SIGNAL ANALYSIS").toUpperCase(),
+    title: cleanText(item.title, "Untitled signal"),
+    excerpt: cleanText(item.excerpt, item.analysis.rationale || "Approved signal analysis."),
+    source: cleanText(item.source, "ANALYSIS DESK"),
+    publishedAt: validDate(item.publishedAt),
+    href: validExternalUrl(item.url) || "/notables",
+    external: Boolean(validExternalUrl(item.url)),
+    image: safeImageUrl(item.imageUrl),
+  }))
+
+  return [...editorial, ...forum, ...wire, ...notableItems, ...analysisItems]
     .sort((a, b) => {
       const dateDifference = Date.parse(b.publishedAt) - Date.parse(a.publishedAt)
       return dateDifference || a.id.localeCompare(b.id)

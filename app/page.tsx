@@ -20,6 +20,7 @@ import { getImportAccess } from "@/app/actions/rss-import-actions"
 import { getActiveSignalActions } from "@/app/actions/signal-actions"
 import { getNotables } from "@/app/actions/notables-actions"
 import { adaptHomeFeed } from "@/lib/home-feed"
+import { getApprovedSignalAnalysisItems } from "@/lib/signal-analysis"
 
 export const metadata = pageMetadata({
   title: "QNotables — News, Research, and Public Records",
@@ -36,6 +37,7 @@ export default async function Page() {
     notables,
     isLoggedIn,
     activeSignalActions,
+    approvedSignalItems,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(5),
@@ -43,6 +45,7 @@ export default async function Page() {
     getNotables({ pageSize: 5 }),
     getImportAccess(),
     getActiveSignalActions(),
+    getApprovedSignalAnalysisItems(8),
   ])
 
   const homeFeedItems = adaptHomeFeed({
@@ -50,6 +53,7 @@ export default async function Page() {
     threads: recentThreads,
     stories: [featured, ...topStories, ...feed],
     notables: notables.items,
+    analysis: approvedSignalItems,
   })
 
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({

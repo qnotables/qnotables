@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { MessageSquare, Radio, Rss, ScrollText } from "lucide-react"
+import { MessageSquare, Radio, Rss, ScanSearch, ScrollText } from "lucide-react"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
 import { SignalActionMenu } from "@/components/signal-action-menu"
@@ -13,6 +13,7 @@ const KIND_LABELS = {
   forum: "FORUM",
   wire: "WIRE",
   notable: "NOTABLE",
+  analysis: "ANALYSIS",
 } as const
 
 const KIND_ICONS = {
@@ -20,6 +21,7 @@ const KIND_ICONS = {
   forum: MessageSquare,
   wire: Radio,
   notable: Rss,
+  analysis: ScanSearch,
 } as const
 
 function FeedDestination({ item, children }: { item: HomeFeedItem; children: ReactNode }) {
