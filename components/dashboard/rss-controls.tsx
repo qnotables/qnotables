@@ -1,8 +1,15 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Check, Loader2, Pause, Play, Save } from "lucide-react"
-import { reviewRssItem, saveRssPolicy, toggleRssSource } from "@/app/dashboard/actions"
+import { Check, Loader2, Lock, Pause, Play, Save, Unlock } from "lucide-react"
+import { categories } from "@/lib/news-data"
+import {
+  recategorizeRssItem,
+  reviewRssItem,
+  saveRssPolicy,
+  toggleRssItemLock,
+  toggleRssSource,
+} from "@/app/dashboard/actions"
 
 export interface RssSourceControlRow {
   source_key: string
@@ -79,14 +86,38 @@ function SourceRow({ source }: { source: RssSourceControlRow }) {
 function ReviewRow({ item }: { item: RssReviewRow }) {
   const [pending, startTransition] = useTransition()
   const [status, setStatus] = useState(item.review_status)
+  const [category, setCategory] = useState(item.primary_category)
+  const [locked, setLocked] = useState(item.manual_lock)
   const [error, setError] = useState<string | null>(null)
 
   function update(nextStatus: "approved" | "rejected" | "moderation") {
     setError(null)
     startTransition(async () => {
       const result = await reviewRssItem(item.id, nextStatus)
-      if (result.success) setStatus(nextStatus)
-      else setError(result.error ?? "Unable to update review")
+      if (result.success) {
+        setStatus(nextStatus)
+        setLocked(true)
+      } else setError(result.error ?? "Unable to update review")
+    })
+  }
+
+  function updateCategory(nextCategory: string) {
+    setError(null)
+    startTransition(async () => {
+      const result = await recategorizeRssItem(item.id, nextCategory)
+      if (result.success) {
+        setCategory(nextCategory)
+        setLocked(true)
+      } else setError(result.error ?? "Unable to recategorize item")
+    })
+  }
+
+  function updateLock() {
+    setError(null)
+    startTransition(async () => {
+      const result = await toggleRssItemLock(item.id, !locked)
+      if (result.success) setLocked(!locked)
+      else setError(result.error ?? "Unable to update lock")
     })
   }
 
@@ -95,12 +126,22 @@ function ReviewRow({ item }: { item: RssReviewRow }) {
       <div className="min-w-0">
         <p className="font-semibold text-foreground">{item.title}</p>
         <p className="label-mono mt-1 text-[10px] text-muted-foreground">
-          {item.source_name ?? "Unknown source"} · {item.primary_category} · {status}
-          {item.manual_lock ? " · locked" : ""}
+          {item.source_name ?? "Unknown source"} · {category} · {status}
+          {locked ? " · locked" : ""}
         </p>
         {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <label className="sr-only" htmlFor={`rss-category-${item.id}`}>Category for {item.title}</label>
+        <select
+          id={`rss-category-${item.id}`}
+          value={category}
+          onChange={(event) => updateCategory(event.target.value)}
+          disabled={pending}
+          className="label-mono border border-border bg-background px-2 py-1.5 text-[10px] text-foreground outline-none focus:border-primary disabled:opacity-50"
+        >
+          {categories.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
         <button
           type="button"
           onClick={() => update("approved")}
@@ -125,6 +166,17 @@ function ReviewRow({ item }: { item: RssReviewRow }) {
           className="label-mono border border-border px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40"
         >
           Hold
+        </button>
+        <button
+          type="button"
+          onClick={updateLock}
+          disabled={pending}
+          title={locked ? "Unlock override" : "Lock override"}
+          aria-label={`${locked ? "Unlock" : "Lock"} override for ${item.title}`}
+          className="label-mono inline-flex items-center gap-1 border border-border px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40"
+        >
+          {locked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+          {locked ? "Unlock" : "Lock"}
         </button>
       </div>
     </div>

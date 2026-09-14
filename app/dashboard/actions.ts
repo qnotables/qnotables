@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
 import { compactSearchText, normalizeComparableText } from "@/lib/search-utils"
+import { categories } from "@/lib/news-data"
 
 type Result = { success: boolean; error?: string }
 
@@ -213,7 +214,7 @@ export async function deleteRssItem(id: string): Promise<Result> {
 
 function cleanRssList(value: string, limit = 50): string[] {
   return value
-    .split(/[\\n,]/)
+    .split(/[\n,]/)
     .map((item) => item.trim().toLowerCase().slice(0, 80))
     .filter((item, index, values) => item.length > 0 && values.indexOf(item) === index)
     .slice(0, limit)
@@ -277,6 +278,43 @@ export async function reviewRssItem(
   if (error) return { success: false, error: error.message }
 
   await logActivity({ action: `RSS item marked ${reviewStatus}`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function toggleRssItemLock(id: string, locked: boolean): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  if (!id || id.length > 80) return { success: false, error: "Invalid RSS item id." }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ manual_lock: locked, manually_classified_at: locked ? new Date().toISOString() : null })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `${locked ? "locked" : "unlocked"} RSS item override`, targetType: "rss_item", targetId: id })
+  revalidatePath("/dashboard/rss")
+  revalidatePath("/feed.xml")
+  return { success: true }
+}
+
+export async function recategorizeRssItem(id: string, category: string): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const normalizedCategory = category.trim().toUpperCase()
+  if (!id || id.length > 80 || !categories.includes(normalizedCategory as (typeof categories)[number])) {
+    return { success: false, error: "Invalid RSS category update." }
+  }
+
+  const db = createAdminClient()
+  const { error } = await db
+    .from("rss_items")
+    .update({ primary_category: normalizedCategory, manual_lock: true, manually_classified_at: new Date().toISOString() })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await logActivity({ action: `recategorized RSS item as ${normalizedCategory}`, targetType: "rss_item", targetId: id })
   revalidatePath("/dashboard/rss")
   revalidatePath("/feed.xml")
   return { success: true }

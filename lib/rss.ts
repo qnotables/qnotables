@@ -693,6 +693,8 @@ async function fetchRSSSource(source: RSSSource, policy: RssPolicy): Promise<Sto
       }
     })
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown fetch error"
+    await updateRssSourceHealth(source.id, { last_error: message.slice(0, 500), item_count: 0 })
     console.error(`[v0] Failed to fetch RSS source "${source.name}":`, err)
     return []
   }

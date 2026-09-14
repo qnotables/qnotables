@@ -1,5 +1,5 @@
 import { type Story } from "@/lib/news-data"
-import { RSS_SOURCES } from "@/lib/rss"
+import { getConfiguredRssSources } from "@/lib/rss"
 import { StoryCard } from "@/components/story-card"
 import { getImportAccess } from "@/app/actions/rss-import-actions"
 import { getActiveSignalActions } from "@/app/actions/signal-actions"
@@ -62,7 +62,7 @@ const FEED_STORIES: Record<string, Partial<Story>> = {
 export async function RssFeedCards() {
   const [isLoggedIn, enabledSources, activeActions] = await Promise.all([
     getImportAccess(),
-    Promise.resolve(RSS_SOURCES.filter((source) => source.enabled)),
+    getConfiguredRssSources(),
     getActiveSignalActions(),
   ])
 
