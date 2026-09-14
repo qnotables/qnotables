@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
       file_type: file.type,
       file_size: file.size,
       alt_text: altText || null,
+      uploaded_by: user.id,
     })
 
     if (mediaError) {

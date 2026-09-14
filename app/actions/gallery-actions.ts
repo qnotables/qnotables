@@ -102,8 +102,22 @@ export async function fetchMediaLibraryImages(
     return []
   }
 
+  const rows = data ?? []
+  const legacyUrls = rows
+    .filter((row: any) => !row.uploaded_by)
+    .map((row: any) => row.file_url)
+  const { data: legacyGalleryRows } = legacyUrls.length
+    ? await admin.from('gallery_images').select('image_url, user_id').in('image_url', legacyUrls)
+    : { data: [] }
+  const legacyUploaderByUrl = new Map(
+    (legacyGalleryRows ?? []).map((row: any) => [row.image_url, row.user_id]),
+  )
   const uploaderIds = Array.from(
-    new Set((data ?? []).map((row: any) => row.uploaded_by).filter(Boolean)),
+    new Set(
+      rows
+        .map((row: any) => row.uploaded_by || legacyUploaderByUrl.get(row.file_url))
+        .filter(Boolean),
+    ),
   )
   const { data: profiles } = uploaderIds.length
     ? await admin.from('profiles').select('id, username, display_name').in('id', uploaderIds)
@@ -116,20 +130,23 @@ export async function fetchMediaLibraryImages(
   }
 
   // Map media_assets row → GalleryImage
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    user_id: row.uploaded_by ?? '',
-    title: row.file_name ?? 'Untitled',
-    description: undefined,
-    alt_text: row.alt_text ?? row.file_name ?? 'Media item',
-    image_url: row.file_url,
-    file_type: row.file_type ?? 'image/jpeg',
-    approved: true,
-    featured: false,
-    created_at: row.created_at,
-    updated_at: row.created_at,
-    uploaderUsername: row.uploaded_by ? uploaderNames.get(row.uploaded_by) : undefined,
-  }))
+  return rows.map((row: any) => {
+    const uploaderId = row.uploaded_by || legacyUploaderByUrl.get(row.file_url)
+    return {
+      id: row.id,
+      user_id: uploaderId ?? '',
+      title: row.file_name ?? 'Untitled',
+      description: undefined,
+      alt_text: row.alt_text ?? row.file_name ?? 'Media item',
+      image_url: row.file_url,
+      file_type: row.file_type ?? 'image/jpeg',
+      approved: true,
+      featured: false,
+      created_at: row.created_at,
+      updated_at: row.created_at,
+      uploaderUsername: uploaderId ? uploaderNames.get(uploaderId) : undefined,
+    }
+  })
 }
 
 export async function deleteGalleryImage(
