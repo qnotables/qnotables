@@ -31,8 +31,10 @@ async function handle(request: NextRequest) {
   try {
     const result = await runScrape(triggeredBy)
 
-    return NextResponse.json({
-      success: true,
+  return NextResponse.json(
+    {
+      success: result.failed === 0,
+      partial: result.failed > 0 && result.succeeded > 0,
       triggeredBy: result.triggeredBy,
       totalSources: result.totalSources,
       succeeded: result.succeeded,
@@ -42,7 +44,9 @@ async function handle(request: NextRequest) {
       startedAt: result.startedAt,
       finishedAt: result.finishedAt,
       details: result.details,
-    })
+    },
+    { status: result.failed > 0 ? 207 : 200 },
+  )
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     console.error("[scraper] Fatal error:", message)

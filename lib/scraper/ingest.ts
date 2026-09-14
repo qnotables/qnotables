@@ -122,6 +122,7 @@ async function processSource(source: ScraperSource): Promise<SourceResult> {
       }
 
       await saveDraftPost(item, source.category, supabase)
+      existing.add(item.canonicalUrl)
       result.newPosts++
     }
 
@@ -179,6 +180,12 @@ export async function runScrape(triggeredBy: "cron" | "manual" = "cron"): Promis
     details,
   }
 
-  await saveScrapeLog(run)
+  try {
+    await saveScrapeLog(run)
+  } catch (error) {
+    // Preserve source-level diagnostics for the caller even if observability storage is unavailable.
+    console.error("[scraper] Failed to persist scrape log:", error)
+  }
+
   return run
 }

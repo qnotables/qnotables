@@ -78,9 +78,11 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<Notabl
     console.error("[notables] Database configuration unavailable", error)
     return { items: [], total: 0, error: "The notables feed is temporarily unavailable." }
   }
-  const { search, tag, dateFrom, dateTo, page = 1, pageSize = 20 } = filters
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+  const { search, tag, dateFrom, dateTo } = filters
+  const pageNumber = Math.max(1, Number.isFinite(filters.page) ? Math.floor(filters.page as number) : 1)
+  const limit = Math.min(50, Math.max(1, Number.isFinite(filters.pageSize) ? Math.floor(filters.pageSize as number) : 20))
+  const from = (pageNumber - 1) * limit
+  const to = from + limit - 1
 
   let query = supabase
     .from("notables")
@@ -93,16 +95,24 @@ export async function getNotables(filters: NotablesFilters = {}): Promise<Notabl
   }
 
   if (dateFrom) {
-    query = query.gte("scraped_at", new Date(dateFrom).toISOString())
+    const start = new Date(dateFrom)
+    if (Number.isFinite(start.getTime())) {
+      query = query.gte("scraped_at", start.toISOString())
+    }
   }
   if (dateTo) {
     const end = new Date(dateTo)
-    end.setDate(end.getDate() + 1)
-    query = query.lt("scraped_at", end.toISOString())
+    if (Number.isFinite(end.getTime())) {
+      end.setDate(end.getDate() + 1)
+      query = query.lt("scraped_at", end.toISOString())
+    }
   }
 
   if (search && search.trim()) {
-    query = query.or(`title.ilike.%${search.trim()}%,body.ilike.%${search.trim()}%,raw_text.ilike.%${search.trim()}%`)
+    const safeSearch = search.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ").slice(0, 120)
+    if (safeSearch) {
+      query = query.or(`title.ilike.%${safeSearch}%,body.ilike.%${safeSearch}%,raw_text.ilike.%${safeSearch}%`)
+    }
   }
 
   const { data, error, count } = await query

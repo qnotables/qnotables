@@ -2,6 +2,8 @@ import Parser from "rss-parser"
 import type { ScraperSource, ScrapedItem } from "./types"
 import { isAllowedByRobots, SCRAPER_FETCH_HEADERS } from "./robots"
 
+const MAX_ITEMS_PER_SOURCE = 40
+
 const rssParser = new Parser({
   customFields: {
     item: [
@@ -131,6 +133,7 @@ export async function parseRssSource(source: ScraperSource): Promise<ScrapedItem
   // Fetch manually so we can sanitize XML before parsing
   const res = await fetch(source.url, {
     headers: SCRAPER_FETCH_HEADERS,
+    signal: AbortSignal.timeout(15_000),
     next: { revalidate: 300 },
   })
   if (!res.ok) {
@@ -141,7 +144,7 @@ export async function parseRssSource(source: ScraperSource): Promise<ScrapedItem
   const feed = await rssParser.parseString(cleanXml)
   const items: ScrapedItem[] = []
 
-  for (const item of feed.items ?? []) {
+  for (const item of (feed.items ?? []).slice(0, MAX_ITEMS_PER_SOURCE)) {
     const url = item.link || item.guid
     if (!url) continue
 

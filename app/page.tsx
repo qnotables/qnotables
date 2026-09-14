@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/site-header"
-import { StoryCard } from "@/components/story-card"
 import { TrendingPanel } from "@/components/trending-panel"
 import { GallerySection } from "@/components/gallery-section"
 import { SiteFooter } from "@/components/site-footer"
@@ -8,10 +7,8 @@ import { DeskFilterProvider } from "@/components/desk-filter-context"
 import { TopAd, BottomAd, InFeedAd } from "@/components/ad-display"
 import { ContentSidebar } from "@/components/content-sidebar"
 import { LiveStreamButton } from "@/components/live-stream-button"
-import { HomeContentSections } from "@/components/home-content-sections"
-
+import { HomeFeed } from "@/components/home-feed"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
-import { FlashStory } from "@/components/flash-story"
 import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
 import { getRecentBlogPosts } from "@/lib/blog-posts"
@@ -21,7 +18,8 @@ import { JsonLd } from "@/components/json-ld"
 import { pageMetadata, websiteSchema } from "@/lib/seo"
 import { getImportAccess } from "@/app/actions/rss-import-actions"
 import { getActiveSignalActions } from "@/app/actions/signal-actions"
-import { signalFromStory } from "@/lib/signals"
+import { getNotables } from "@/app/actions/notables-actions"
+import { adaptHomeFeed } from "@/lib/home-feed"
 
 export const metadata = pageMetadata({
   title: "QNotables — News, Research, and Public Records",
@@ -35,15 +33,24 @@ export default async function Page() {
     { featured, topStories, feed, trending, live },
     recentThreads,
     recentBlogs,
+    notables,
     isLoggedIn,
     activeSignalActions,
   ] = await Promise.all([
     getNews(),
-    getRecentForumThreads(9),
-    getRecentBlogPosts(6),
+    getRecentForumThreads(5),
+    getRecentBlogPosts(5),
+    getNotables({ pageSize: 5 }),
     getImportAccess(),
     getActiveSignalActions(),
   ])
+
+  const homeFeedItems = adaptHomeFeed({
+    blogs: recentBlogs,
+    threads: recentThreads,
+    stories: [featured, ...topStories, ...feed],
+    notables: notables.items,
+  })
 
   const wireStories = [featured, ...topStories, ...feed].map((s) => ({
     id: s.id,
@@ -94,47 +101,12 @@ export default async function Page() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* primary column */}
           <div className="lg:col-span-2">
-            {/* Stable editorial and community cards; no automatic rotation. */}
-            <HomeContentSections posts={recentBlogs} threads={recentThreads} />
+            <HomeFeed items={homeFeedItems} isLoggedIn={isLoggedIn} activeActions={activeSignalActions} />
 
-            {/* Flash Story Cards */}
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {topStories.slice(0, 2).map((story) => (
-                <FlashStory
-                  key={story.id}
-                  title={story.headline}
-                  excerpt={story.summary}
-                  category={story.category}
-                  date={new Date(Date.now() - story.minutesAgo * 60 * 1000).toISOString()}
-                  readMinutes={story.readMinutes}
-                  image={story.image}
-                  source={story.source}
-                  url={story.url}
-                  type="feed"
-                  id={story.id}
-                  isLoggedIn={isLoggedIn}
-                  importContent={story.summary}
-                  activeActions={activeSignalActions[signalFromStory(story).signalKey]}
-                />
-              ))}
-            </div>
-
-            {/* In-feed ad */}
             <div className="mt-6">
               <InFeedAd index={4} />
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {topStories.slice(2).map((story) => (
-                <StoryCard
-                  key={story.id}
-                  story={story}
-                  isLoggedIn={isLoggedIn}
-                  importContent={story.summary}
-                  activeActions={activeSignalActions[signalFromStory(story).signalKey]}
-                />
-              ))}
-            </div>
             <div className="w-full">
               <iframe
                 src="https://discord.com/widget?id=1521130800676995225&theme=dark"
