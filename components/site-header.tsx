@@ -31,11 +31,11 @@ const MOBILE_REVEAL_DISTANCE = 20
 const SCROLL_JITTER = 3
 
 const secondaryLinks = [
+  { label: "TOWN HALL", href: "/forum" },
   { label: "ARCHIVES", href: "/archives" },
   { label: "MY SIGNALS", href: "/account/signals" },
-  { label: "TOWN HALL", href: "/forum" },
   { label: "ABOUT", href: "/about" },
-  { label: "NEW TO Q?", href: "/new-to-q" },
+  { label: "NEW TO Q", href: "/new-to-q" },
 ]
 
 const allCategories = Array.from(new Set(["NOTABLES", ...categories]))
