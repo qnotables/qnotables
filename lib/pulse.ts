@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { buildExcerpt, getCategoryBySlug, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
+import { buildExcerpt, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
 
 export const PULSE_DEFAULTS = {
   kicker: "COMMUNITY SIGNAL",
@@ -128,7 +128,7 @@ function firstAvailable(
   return candidates.find((thread) => !used.has(thread.id) && predicate(thread)) ?? null
 }
 
-export async function getTownHallPulse(): Promise<TownHallPulse> {
+export async function getTownHallPulse(includeDisabled = false): Promise<TownHallPulse> {
   const admin = createAdminClient()
   const [{ data: settingsRow }, { data: threadRows, error: threadError }] = await Promise.all([
     admin
@@ -160,7 +160,7 @@ export async function getTownHallPulse(): Promise<TownHallPulse> {
     updatedBy: settingsRow?.pulse_updated_by ?? null,
   }
 
-  if (threadError || !settings.enabled || !threadRows?.length) return { settings, cards: [] }
+  if (threadError || (!settings.enabled && !includeDisabled) || !threadRows?.length) return { settings, cards: [] }
 
   const threads = threadRows as PulseThread[]
   const candidates = threads.filter((thread) => isEligible(thread, new Set(settings.excludedThreadIds)))
@@ -194,7 +194,7 @@ export async function getTownHallPulse(): Promise<TownHallPulse> {
     used.add(active.id)
     cards.push(makeCard(active, "active", latestReplies.get(active.id)))
   } else {
-    const open = firstAvailable(ranked, used, () => true)
+    const open = firstAvailable(ranked, used, (thread) => !latestReplies.has(thread.id))
     if (open) {
       used.add(open.id)
       cards.push(makeCard(open, "active", latestReplies.get(open.id), true))

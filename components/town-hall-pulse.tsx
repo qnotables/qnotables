@@ -78,5 +78,5 @@ export function TownHallPulse({ pulse, isLoggedIn }: { pulse: TownHallPulse; isL
 }
 
 export function PulsePreview({ cards }: { cards: PulseCard[] }) {
-  return <PulseCards pulse={{ settings: { enabled: true, kicker: "", title: "", description: "", enterLabel: "", startLabel: "" }, cards }} />
+  return <PulseCards pulse={{ settings: { enabled: true, editorThreadId: null, excludedThreadIds: [], activeMaxAgeDays: 14, backchannelMaxAgeDays: 14, kicker: "", title: "", description: "", enterLabel: "", startLabel: "", updatedBy: null }, cards }} />
 }

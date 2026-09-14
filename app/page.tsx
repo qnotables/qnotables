@@ -21,6 +21,8 @@ import { getActiveSignalActions } from "@/app/actions/signal-actions"
 import { getNotables } from "@/app/actions/notables-actions"
 import { adaptHomeFeed } from "@/lib/home-feed"
 import { getApprovedSignalAnalysisItems } from "@/lib/signal-analysis"
+import { getTownHallPulse } from "@/lib/pulse"
+import { TownHallPulse } from "@/components/town-hall-pulse"
 
 export const metadata = pageMetadata({
   title: "QNotables — News, Research, and Public Records",
@@ -38,6 +40,7 @@ export default async function Page() {
     isLoggedIn,
     activeSignalActions,
     approvedSignalItems,
+    townHallPulse,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(5),
@@ -46,6 +49,7 @@ export default async function Page() {
     getImportAccess(),
     getActiveSignalActions(),
     getApprovedSignalAnalysisItems(8),
+    getTownHallPulse(),
   ])
 
   const homeFeedItems = adaptHomeFeed({
@@ -88,6 +92,8 @@ export default async function Page() {
             NOTABLES DO NOT EQUAL ENDORSEMENTS
           </p>
         </div>
+
+        <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
 
         {/* Media Library */}
         <div className="mb-8">

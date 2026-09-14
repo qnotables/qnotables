@@ -335,6 +335,13 @@ export async function saveSettings(formData: FormData): Promise<Result> {
   const rawMaxEmbeds = parseInt(String(formData.get("forum_max_embeds") ?? "4"), 10)
   const rawSignalMinScore = parseInt(String(formData.get("signal_analysis_min_score") ?? "55"), 10)
   const rawSignalMaxItems = parseInt(String(formData.get("signal_analysis_max_items") ?? "24"), 10)
+  const rawPulseActiveAge = parseInt(String(formData.get("pulse_active_max_age_days") ?? "14"), 10)
+  const rawPulseBackchannelAge = parseInt(String(formData.get("pulse_backchannel_max_age_days") ?? "14"), 10)
+  const excludedPulseIds = String(formData.get("pulse_excluded_thread_ids") ?? "")
+    .split(/[\\n,]/)
+    .map((value) => value.trim())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+    .slice(0, 100)
   const payload = {
     id: 1,
     site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
@@ -352,13 +359,32 @@ export async function saveSettings(formData: FormData): Promise<Result> {
     signal_preview_enabled: formData.get("signal_preview_enabled") === "on",
     signal_analysis_min_score: isNaN(rawSignalMinScore) ? 55 : Math.max(0, Math.min(100, rawSignalMinScore)),
     signal_analysis_max_items: isNaN(rawSignalMaxItems) ? 24 : Math.max(1, Math.min(100, rawSignalMaxItems)),
+    pulse_enabled: formData.get("pulse_enabled") === "on",
+    pulse_editor_thread_id: String(formData.get("pulse_editor_thread_id") ?? "").trim() || null,
+    pulse_excluded_thread_ids: excludedPulseIds,
+    pulse_active_max_age_days: isNaN(rawPulseActiveAge) ? 14 : Math.max(1, Math.min(90, rawPulseActiveAge)),
+    pulse_backchannel_max_age_days: isNaN(rawPulseBackchannelAge) ? 14 : Math.max(1, Math.min(90, rawPulseBackchannelAge)),
+    pulse_kicker: String(formData.get("pulse_kicker") ?? "").trim() || "COMMUNITY SIGNAL",
+    pulse_title: String(formData.get("pulse_title") ?? "").trim() || "THE TOWN HALL",
+    pulse_description: String(formData.get("pulse_description") ?? "").trim() || "Follow the signal. Examine the evidence. Add to the record.",
+    pulse_enter_label: String(formData.get("pulse_enter_label") ?? "").trim() || "ENTER THE TOWN HALL",
+    pulse_start_label: String(formData.get("pulse_start_label") ?? "").trim() || "START A THREAD",
+    pulse_updated_by: "dashboard",
     updated_at: new Date().toISOString(),
   }
   const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })
   if (error) return { success: false, error: error.message }
   await logActivity({ action: "updated site settings", targetType: "site_settings" })
   revalidatePath("/dashboard/settings")
+  revalidatePath("/")
+  revalidatePath("/forum")
   return { success: true }
+}
+
+export async function searchPulseThreads(query: string): Promise<Array<{ threadId: string; title: string; category: string; href: string; sourceStatus: "PRIMARY SOURCE" | "COMMUNITY THREAD" }>> {
+  if (!(await guard())) return []
+  const { searchPulseThreads: searchThreads } = await import("@/lib/pulse")
+  return searchThreads(query)
 }
 
 export async function runSignalAnalysisAction(): Promise<Result & { scannedCount: number; createdCount: number; updatedCount: number }> {

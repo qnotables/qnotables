@@ -4,6 +4,7 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { PageHeader } from "@/components/dashboard/ui"
 import { SettingsForm, type SiteSettings } from "@/components/dashboard/settings-form"
 import { SearchAliasManager, type SearchAliasGroupView } from "@/components/dashboard/search-alias-manager"
+import { getTownHallPulse } from "@/lib/pulse"
 
 export const metadata = {
   title: "Settings — Admin Dashboard",
@@ -26,6 +27,16 @@ const DEFAULTS: SiteSettings = {
   signal_preview_enabled: false,
   signal_analysis_min_score: 55,
   signal_analysis_max_items: 24,
+  pulse_enabled: false,
+  pulse_editor_thread_id: null,
+  pulse_excluded_thread_ids: [],
+  pulse_active_max_age_days: 14,
+  pulse_backchannel_max_age_days: 14,
+  pulse_kicker: "COMMUNITY SIGNAL",
+  pulse_title: "THE TOWN HALL",
+  pulse_description: "Follow the signal. Examine the evidence. Add to the record.",
+  pulse_enter_label: "ENTER THE TOWN HALL",
+  pulse_start_label: "START A THREAD",
 }
 
 export default async function SettingsPage() {
@@ -33,10 +44,11 @@ export default async function SettingsPage() {
   if (!hasAccess) redirect("/dashboard/login")
 
   const admin = createAdminClient()
-  const [{ data }, { data: aliasGroups }, { data: aliasTerms }] = await Promise.all([
+  const [{ data }, { data: aliasGroups }, { data: aliasTerms }, pulse] = await Promise.all([
     admin.from("site_settings").select("*").eq("id", 1).maybeSingle(),
     admin.from("search_alias_groups").select("id, label, slug, enabled").order("label"),
     admin.from("search_alias_terms").select("group_id, term").order("term"),
+    getTownHallPulse(true),
   ])
   const aliasViews: SearchAliasGroupView[] = (aliasGroups ?? []).map((group) => ({
     id: group.id,
@@ -63,6 +75,16 @@ export default async function SettingsPage() {
         signal_preview_enabled: data.signal_preview_enabled ?? false,
         signal_analysis_min_score: data.signal_analysis_min_score ?? 55,
         signal_analysis_max_items: data.signal_analysis_max_items ?? 24,
+        pulse_enabled: data.pulse_enabled ?? false,
+        pulse_editor_thread_id: data.pulse_editor_thread_id ?? null,
+        pulse_excluded_thread_ids: Array.isArray(data.pulse_excluded_thread_ids) ? data.pulse_excluded_thread_ids : [],
+        pulse_active_max_age_days: data.pulse_active_max_age_days ?? 14,
+        pulse_backchannel_max_age_days: data.pulse_backchannel_max_age_days ?? 14,
+        pulse_kicker: data.pulse_kicker ?? DEFAULTS.pulse_kicker,
+        pulse_title: data.pulse_title ?? DEFAULTS.pulse_title,
+        pulse_description: data.pulse_description ?? DEFAULTS.pulse_description,
+        pulse_enter_label: data.pulse_enter_label ?? DEFAULTS.pulse_enter_label,
+        pulse_start_label: data.pulse_start_label ?? DEFAULTS.pulse_start_label,
       }
     : DEFAULTS
 
@@ -73,7 +95,7 @@ export default async function SettingsPage() {
         description="Configure site-wide preferences and feature toggles."
         breadcrumbs={[{ label: "Settings" }]}
       />
-      <SettingsForm settings={settings} />
+      <SettingsForm settings={settings} pulsePreview={pulse.cards} />
       <SearchAliasManager groups={aliasViews} />
     </div>
   )
