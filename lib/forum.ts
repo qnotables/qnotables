@@ -1,10 +1,21 @@
 import { createClient } from "@/lib/supabase/server"
 import { FORUM_CATEGORIES, buildExcerpt, detectMediaBadges, type SortOption } from "@/lib/forum-utils"
+import { resolveFirstPostImage } from "@/lib/post-media"
 
 export interface ForumThreadLatestReply {
   body: string
   authorName: string
   createdAt: string
+  imageUrl?: string | null
+}
+
+function serializeForumContent(contentJson: unknown, body: string | null | undefined): string {
+  if (contentJson && typeof contentJson === "object") return JSON.stringify(contentJson)
+  return body ?? ""
+}
+
+function resolveForumImage(contentJson: unknown, body: string | null | undefined): string | null {
+  return resolveFirstPostImage(serializeForumContent(contentJson, body))?.src ?? null
 }
 
 export interface ForumThread {
@@ -159,7 +170,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
     const { data: threadRows, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, slug, title, body, created_at, updated_at, reply_count, category, is_pinned, is_featured, profiles(display_name)"
+        "id, slug, title, body, content_json, created_at, updated_at, reply_count, category, is_pinned, is_featured, profiles(display_name)"
       )
       .eq("is_soft_deleted", false)
       .eq("is_pending", false)
@@ -179,7 +190,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
     // before limiting the result so an older thread with a new reply can surface.
     const { data: recentReplies } = await supabase
       .from("forum_replies")
-      .select("id, thread_id, body, created_at, profiles(display_name)")
+      .select("id, thread_id, body, content_json, created_at, profiles(display_name)")
       .in("thread_id", threadIds)
       .eq("is_pending", false)
       .eq("is_hidden", false)
@@ -194,6 +205,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
           body: r.body ?? "",
           authorName: (r as any).profiles?.display_name || "Anonymous",
           createdAt: r.created_at,
+          imageUrl: resolveForumImage(r.content_json, r.body),
         })
       }
     }
@@ -262,7 +274,7 @@ export async function getRecentForumThreads(limit = 3): Promise<ForumThread[]> {
       createdAt: t.created_at,
       updatedAt: t.updated_at || undefined,
       lastActivityAt: activityAt,
-      latestImageUrl: latestImageMap.get(t.id),
+      latestImageUrl: latestImageMap.get(t.id) ?? resolveForumImage(t.content_json, t.body) ?? latestReply?.imageUrl ?? undefined,
       replyCount: Number(t.reply_count ?? 0),
       category: t.category || undefined,
       isPinned: t.is_pinned || false,

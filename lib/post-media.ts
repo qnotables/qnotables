@@ -39,7 +39,7 @@ function mediaFromUrl(url: string, identity: string, title?: string, poster?: st
   return null
 }
 
-function mediaFromNode(node: JsonNode, path: string, videoOnly = false): PostMedia | null {
+function mediaFromNode(node: JsonNode, path: string, videoOnly = false, imageOnly = false): PostMedia | null {
   const attrs = node.attrs ?? {}
   const title = typeof attrs.title === "string" ? attrs.title : undefined
   const poster = typeof attrs.poster === "string" ? attrs.poster : typeof attrs.thumbnailUrl === "string" ? attrs.thumbnailUrl : undefined
@@ -48,11 +48,11 @@ function mediaFromNode(node: JsonNode, path: string, videoOnly = false): PostMed
     const src = safeUrl(attrs.src)
     if (src) return { kind: "image", src, alt: typeof attrs.alt === "string" ? attrs.alt : title, identity: `json:${path}` }
   }
-  if (node.type === "videoBlock" || node.type === "video") {
+  if (!imageOnly && (node.type === "videoBlock" || node.type === "video")) {
     const src = safeUrl(attrs.src)
     if (src) return { kind: "video", src, poster: safeUrl(poster) ?? undefined, title, identity: `json:${path}` }
   }
-  if (node.type === "embedBlock") {
+  if (!imageOnly && node.type === "embedBlock") {
     const original = safeUrl(attrs.originalUrl)
     const embed = safeUrl(attrs.embedUrl)
     const url = original ?? embed
@@ -62,7 +62,7 @@ function mediaFromNode(node: JsonNode, path: string, videoOnly = false): PostMed
       if (embed) return { kind: "embed", src: embed, poster: safeUrl(poster) ?? undefined, title, identity: `json:${path}` }
     }
   }
-  if (node.type === "htmlEmbedBlock" && typeof attrs.html === "string") {
+  if (!imageOnly && node.type === "htmlEmbedBlock" && typeof attrs.html === "string") {
     const iframe = attrs.html.match(/<iframe[^>]+src=["']([^"']+)["']/i)?.[1]
     const src = safeUrl(iframe)
     if (src) {
@@ -73,16 +73,16 @@ function mediaFromNode(node: JsonNode, path: string, videoOnly = false): PostMed
   }
 
   for (let index = 0; index < (node.content?.length ?? 0); index += 1) {
-    const media = mediaFromNode(node.content![index], `${path}.${index}`, videoOnly)
+    const media = mediaFromNode(node.content![index], `${path}.${index}`, videoOnly, imageOnly)
     if (media) return media
   }
   return null
 }
 
-function firstLegacyMedia(content: string, videoOnly = false): PostMedia | null {
+function firstLegacyMedia(content: string, videoOnly = false, imageOnly = false): PostMedia | null {
   const candidates: Array<{ index: number; media: PostMedia }> = []
   const add = (index: number, media: PostMedia | null) => {
-    if (media && (!videoOnly || media.kind !== "image")) candidates.push({ index, media })
+    if (media && (!videoOnly || media.kind !== "image") && (!imageOnly || media.kind === "image")) candidates.push({ index, media })
   }
   let match: RegExpExecArray | null
 
@@ -91,7 +91,7 @@ function firstLegacyMedia(content: string, videoOnly = false): PostMedia | null 
     try {
       const value = JSON.parse(match[1]) as Record<string, unknown>
       const url = safeUrl(value.originalUrl) ?? safeUrl(value.embedUrl) ?? safeUrl(value.url)
-      if (url) add(match.index, mediaFromUrl(url, `text:${match.index}`, typeof value.title === "string" ? value.title : undefined, typeof value.thumbnailUrl === "string" ? value.thumbnailUrl : undefined) ?? { kind: "embed", src: url, identity: `text:${match.index}` })
+      if (!imageOnly && url) add(match.index, mediaFromUrl(url, `text:${match.index}`, typeof value.title === "string" ? value.title : undefined, typeof value.thumbnailUrl === "string" ? value.thumbnailUrl : undefined) ?? { kind: "embed", src: url, identity: `text:${match.index}` })
     } catch {}
   }
 
@@ -100,7 +100,7 @@ function firstLegacyMedia(content: string, videoOnly = false): PostMedia | null 
     const url = safeUrl(match[2])
     if (!url) continue
     const poster = match[0].match(/poster=["']([^"']+)["']/i)?.[1]
-    if (match[1].toLowerCase() !== "img" || !videoOnly) {
+    if (imageOnly ? match[1].toLowerCase() === "img" : match[1].toLowerCase() !== "img" || !videoOnly) {
       add(match.index, match[1].toLowerCase() === "img"
         ? { kind: "image", src: url, identity: `text:${match.index}` }
         : mediaFromUrl(url, `text:${match.index}`, undefined, poster) ?? { kind: "embed", src: url, identity: `text:${match.index}` })
@@ -111,7 +111,9 @@ function firstLegacyMedia(content: string, videoOnly = false): PostMedia | null 
     const markdown = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)(?:\s+["'][^"']*["'])?\)/gi
     while ((match = markdown.exec(content))) {
       const url = safeUrl(match[2])
-      if (url) add(match.index, mediaFromUrl(url, `text:${match.index}`, match[1]))
+      if (url) add(match.index, imageOnly
+        ? { kind: "image", src: url, alt: match[1], identity: `text:${match.index}` }
+        : mediaFromUrl(url, `text:${match.index}`, match[1]))
     }
   }
 
@@ -132,6 +134,15 @@ export function resolveFirstPostMedia(content?: string | null): PostMedia | null
     if (parsed?.type === "doc") return mediaFromNode(parsed, "0")
   } catch {}
   return firstLegacyMedia(content)
+}
+
+export function resolveFirstPostImage(content?: string | null): Extract<PostMedia, { kind: "image" }> | null {
+  if (!content) return null
+  try {
+    const parsed = JSON.parse(content) as JsonNode
+    if (parsed?.type === "doc") return mediaFromNode(parsed, "0", false, true) as Extract<PostMedia, { kind: "image" }> | null
+  } catch {}
+  return firstLegacyMedia(content, false, true) as Extract<PostMedia, { kind: "image" }> | null
 }
 
 export function resolveFirstPostVideo(content?: string | null): PostVideoMedia | null {
