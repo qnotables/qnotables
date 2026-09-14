@@ -20,36 +20,48 @@ function PulseCardView({ card }: { card: PulseCard }) {
         <span className="label-mono text-[10px] text-muted-foreground">{card.sourceStatus}</span>
       </div>
       {card.video ? (
-        <div className="relative z-10 mt-5">
+        <Link
+          href={card.href}
+          className="relative z-10 mt-5 block overflow-hidden border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`Open discussion: ${card.title}`}
+        >
           <PulseVideoPreview video={card.video} title={card.title} />
           <span className="label-mono pointer-events-none absolute left-2 top-2 border border-primary bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-primary backdrop-blur-sm">VIDEO PREVIEW</span>
-        </div>
+        </Link>
       ) : card.ogImageUrl ? (
-        <div className="relative z-10 mt-5 aspect-[16/8] overflow-hidden border border-border bg-muted/30">
+        <Link
+          href={card.href}
+          className="relative z-10 mt-5 block aspect-[16/8] overflow-hidden border border-border bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`Open discussion: ${card.title}`}
+        >
           <PulseImagePreview src={card.ogImageUrl} alt={`${card.title} preview`} />
-          <span className="label-mono absolute bottom-2 left-2 border border-border bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-foreground backdrop-blur-sm">SOURCE PREVIEW</span>
-        </div>
+          <span className="label-mono pointer-events-none absolute bottom-2 left-2 border border-border bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-foreground backdrop-blur-sm">SOURCE PREVIEW</span>
+        </Link>
       ) : null}
       <div className="mt-5 flex items-start gap-3">
         <span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 bg-primary" />
         <div>
           <p className="label-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{card.category}</p>
           <h3 className="stencil mt-2 text-lg leading-tight text-foreground">
-            <Link href={card.href} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Open discussion: ${card.title}`}>
+            <Link href={card.href} className="transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Open discussion: ${card.title}`}>
               {card.title}
             </Link>
           </h3>
         </div>
       </div>
       <p className="relative mt-4 line-clamp-3 text-sm leading-6 text-muted-foreground">{card.excerpt}</p>
-      <div className="relative mt-auto flex items-center justify-between gap-3 pt-5">
+      <div className="relative mt-auto flex items-end justify-between gap-3 pt-5">
         <span className="label-mono inline-flex items-center gap-2 text-[10px] text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           {card.replyCount} {card.replyCount === 1 ? "REPLY" : "REPLIES"} · {formatActivity(card.activityAt)}
         </span>
-        <span className="label-mono inline-flex items-center gap-1 text-[10px] text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <Link
+          href={card.href}
+          className="label-mono inline-flex shrink-0 items-center gap-1 border border-primary px-2.5 py-2 text-[10px] font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`Join discussion: ${card.title}`}
+        >
           JOIN DISCUSSION <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </span>
+        </Link>
       </div>
     </article>
   )
@@ -81,6 +93,7 @@ export function TownHallPulse({ pulse, isLoggedIn }: { pulse: TownHallPulse; isL
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/forum" className="label-mono inline-flex items-center gap-2 border border-primary px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{pulse.settings.enterLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+          <Link href={isLoggedIn ? "/account/signals" : "/auth/login?next=/account/signals"} className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">MY SIGNALS</Link>
           <Link href={isLoggedIn ? "/forum/new" : "/auth/login?next=/forum/new"} className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{isLoggedIn ? pulse.settings.startLabel : "SIGN IN TO PARTICIPATE"}<ScanSearch className="h-3.5 w-3.5" aria-hidden="true" /></Link>
         </div>
       </div>
