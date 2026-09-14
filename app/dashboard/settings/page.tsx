@@ -22,6 +22,10 @@ const DEFAULTS: SiteSettings = {
   forum_moderation_mode: false,
   forum_max_links: 8,
   forum_max_embeds: 4,
+  signal_analysis_enabled: false,
+  signal_preview_enabled: false,
+  signal_analysis_min_score: 55,
+  signal_analysis_max_items: 24,
 }
 
 export default async function SettingsPage() {
@@ -55,6 +59,10 @@ export default async function SettingsPage() {
         forum_moderation_mode: data.forum_moderation_mode ?? false,
         forum_max_links: data.forum_max_links ?? 8,
         forum_max_embeds: data.forum_max_embeds ?? 4,
+        signal_analysis_enabled: data.signal_analysis_enabled ?? false,
+        signal_preview_enabled: data.signal_preview_enabled ?? false,
+        signal_analysis_min_score: data.signal_analysis_min_score ?? 55,
+        signal_analysis_max_items: data.signal_analysis_max_items ?? 24,
       }
     : DEFAULTS
 

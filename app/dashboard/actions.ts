@@ -333,6 +333,8 @@ export async function saveSettings(formData: FormData): Promise<Result> {
   const db = createAdminClient()
   const rawMaxLinks = parseInt(String(formData.get("forum_max_links") ?? "8"), 10)
   const rawMaxEmbeds = parseInt(String(formData.get("forum_max_embeds") ?? "4"), 10)
+  const rawSignalMinScore = parseInt(String(formData.get("signal_analysis_min_score") ?? "55"), 10)
+  const rawSignalMaxItems = parseInt(String(formData.get("signal_analysis_max_items") ?? "24"), 10)
   const payload = {
     id: 1,
     site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
@@ -346,12 +348,45 @@ export async function saveSettings(formData: FormData): Promise<Result> {
     forum_moderation_mode: formData.get("forum_moderation_mode") === "on",
     forum_max_links: isNaN(rawMaxLinks) ? 8 : Math.max(1, Math.min(50, rawMaxLinks)),
     forum_max_embeds: isNaN(rawMaxEmbeds) ? 4 : Math.max(1, Math.min(20, rawMaxEmbeds)),
+    signal_analysis_enabled: formData.get("signal_analysis_enabled") === "on",
+    signal_preview_enabled: formData.get("signal_preview_enabled") === "on",
+    signal_analysis_min_score: isNaN(rawSignalMinScore) ? 55 : Math.max(0, Math.min(100, rawSignalMinScore)),
+    signal_analysis_max_items: isNaN(rawSignalMaxItems) ? 24 : Math.max(1, Math.min(100, rawSignalMaxItems)),
     updated_at: new Date().toISOString(),
   }
   const { error } = await db.from("site_settings").upsert(payload, { onConflict: "id" })
   if (error) return { success: false, error: error.message }
   await logActivity({ action: "updated site settings", targetType: "site_settings" })
   revalidatePath("/dashboard/settings")
+  return { success: true }
+}
+
+export async function runSignalAnalysisAction(): Promise<Result & { scannedCount: number; createdCount: number; updatedCount: number }> {
+  if (!(await guard())) return { success: false, error: "Not authorized.", scannedCount: 0, createdCount: 0, updatedCount: 0 }
+  try {
+    const { runSignalAnalysis } = await import("@/lib/signal-analysis")
+    const result = await runSignalAnalysis("manual")
+    revalidatePath("/dashboard/signal-analysis")
+    return { success: result.success, error: result.errors[0], scannedCount: result.scannedCount, createdCount: result.createdCount, updatedCount: result.updatedCount }
+  } catch {
+    return { success: false, error: "Unable to run signal analysis.", scannedCount: 0, createdCount: 0, updatedCount: 0 }
+  }
+}
+
+export async function reviewSignalAnalysisItem(
+  id: string,
+  status: "approved" | "dismissed",
+): Promise<Result> {
+  if (!(await guard())) return { success: false, error: "Not authorized." }
+  const db = createAdminClient()
+  const { error } = await db
+    .from("signal_analysis_items")
+    .update({ status, reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", id)
+  if (error) return { success: false, error: "Unable to update signal review status." }
+  await logActivity({ action: `signal marked ${status}`, targetType: "signal_analysis_item", targetId: id })
+  revalidatePath("/dashboard/signal-analysis")
+  revalidatePath("/")
   return { success: true }
 }
 

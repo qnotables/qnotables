@@ -32,6 +32,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Archives", href: "/dashboard/archives", icon: Archive },
   { label: "Import", href: "/dashboard/import", icon: FileUp },
   { label: "Scraper", href: "/dashboard/scraper", icon: ScanSearch },
+  { label: "Signal Analysis", href: "/dashboard/signal-analysis", icon: ScanSearch, adminOnly: true },
   { label: "Forum", href: "/dashboard/forum", icon: MessageSquare },
   { label: "Friends", href: "/dashboard/friends", icon: Handshake },
   { label: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },

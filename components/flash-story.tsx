@@ -3,6 +3,8 @@ import { Clock, Archive } from "lucide-react"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
 import { RssImportButton } from "@/components/rss-import-button"
+import { SignalActionMenu } from "@/components/signal-action-menu"
+import { normalizeSignal, type SignalActionType } from "@/lib/signals"
 
 interface FlashStoryProps {
   title: string
@@ -17,6 +19,8 @@ interface FlashStoryProps {
   type: "archive" | "feed"
   isLoggedIn?: boolean
   importContent?: string
+  id?: string
+  activeActions?: SignalActionType[]
 }
 
 export function FlashStory({ 
@@ -32,8 +36,20 @@ export function FlashStory({
   type,
   isLoggedIn = false,
   importContent,
+  id,
+  activeActions = [],
 }: FlashStoryProps) {
   const href = type === "archive" && slug ? `/archives/${slug}` : url || "#"
+  const signal = normalizeSignal({
+    id: id ?? slug,
+    kind: type,
+    title,
+    excerpt,
+    source,
+    category,
+    url: href !== "#" ? href : undefined,
+    imageUrl: image,
+  })
   const linkProps = href !== "#" && href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {}
   
   return (
@@ -82,6 +98,9 @@ export function FlashStory({
               <span>{source}</span>
             </>
           )}
+          <span className="ml-auto">
+            <SignalActionMenu signal={signal} isLoggedIn={isLoggedIn} activeActions={activeActions} />
+          </span>
         </div>
 
         {/* Title */}

@@ -7,6 +7,8 @@ import { getNotables, getNotablesBoards } from "@/app/actions/notables-actions"
 import { Rss } from "lucide-react"
 import { JsonLd } from "@/components/json-ld"
 import { collectionSchema, pageMetadata } from "@/lib/seo"
+import { getImportAccess } from "@/app/actions/rss-import-actions"
+import { getActiveSignalActions } from "@/app/actions/signal-actions"
 
 const description = "Browse the latest QResearch notables imported from Qnotables.com. Search by keyword, tag, or date."
 
@@ -15,9 +17,11 @@ export const dynamic = "force-dynamic"
 export const metadata = pageMetadata({ title: "Notables", description, path: "/notables" })
 
 export default async function NotablesPage() {
-  const [result, boards] = await Promise.all([
+  const [result, boards, isLoggedIn, activeSignalActions] = await Promise.all([
     getNotables({ page: 1, pageSize: 20 }),
     getNotablesBoards(),
+    getImportAccess(),
+    getActiveSignalActions(),
   ])
   const { items, total, error } = result
 
@@ -78,7 +82,7 @@ export default async function NotablesPage() {
         </header>
 
         {/* Feed with search + filters */}
-        <NotablesFeed initialItems={items} initialTotal={total} boards={boards} />
+        <NotablesFeed initialItems={items} initialTotal={total} boards={boards} isLoggedIn={isLoggedIn} activeActions={activeSignalActions} />
         </div>
         <ContentSidebar />
       </main>

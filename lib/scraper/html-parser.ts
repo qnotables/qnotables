@@ -2,6 +2,8 @@ import * as cheerio from "cheerio"
 import type { ScraperSource, ScrapedItem } from "./types"
 import { isAllowedByRobots, SCRAPER_FETCH_HEADERS } from "./robots"
 
+const MAX_ITEMS_PER_SOURCE = 40
+
 function absoluteUrl(href: string, base: string): string {
   try {
     return new URL(href, base).href
@@ -54,6 +56,8 @@ export async function parseHtmlSource(source: ScraperSource): Promise<ScrapedIte
   const items: ScrapedItem[] = []
 
   $(selector).each((_i, el) => {
+    if (_i >= MAX_ITEMS_PER_SOURCE) return
+
     // Find a link inside the element
     const linkEl = $(el).find("a[href]").first()
     const href = linkEl.attr("href")

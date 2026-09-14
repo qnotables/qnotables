@@ -548,13 +548,12 @@ async function fetchRSSSource(source: RSSSource): Promise<Story[]> {
           : 60 + i * 7
       const reports = hashReports(headline)
 
-      const rawIdentifier = item.guid || item.link
       const identifier =
-        typeof rawIdentifier === "string"
-          ? rawIdentifier
-          : rawIdentifier && typeof rawIdentifier === "object"
-            ? JSON.stringify(rawIdentifier)
-            : String(i)
+        typeof item.guid === "string" && item.guid.trim()
+          ? item.guid
+          : typeof item.link === "string" && item.link.trim()
+            ? item.link
+            : `${slugify(headline) || "item"}-${published || "undated"}-${i}`
 
       return {
         id: `${source.id}-${identifier}`,
