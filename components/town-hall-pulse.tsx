@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowUpRight, MessageSquare, Radio, ScanSearch } from "lucide-react"
 import type { PulseCard, PulseSettings, TownHallPulse } from "@/lib/pulse"
+import { PulseImagePreview, PulseVideoPreview } from "@/components/pulse-video-preview"
 
 function formatActivity(value: string): string {
   const date = new Date(value)
@@ -18,6 +19,17 @@ function PulseCardView({ card }: { card: PulseCard }) {
         <span className="label-mono text-[10px] font-semibold tracking-[0.16em] text-primary">{card.eyebrow}</span>
         <span className="label-mono text-[10px] text-muted-foreground">{card.sourceStatus}</span>
       </div>
+      {card.video ? (
+        <div className="relative z-10 mt-5">
+          <PulseVideoPreview video={card.video} title={card.title} />
+          <span className="label-mono pointer-events-none absolute left-2 top-2 border border-primary bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-primary backdrop-blur-sm">VIDEO PREVIEW</span>
+        </div>
+      ) : card.ogImageUrl ? (
+        <div className="relative z-10 mt-5 aspect-[16/8] overflow-hidden border border-border bg-muted/30">
+          <PulseImagePreview src={card.ogImageUrl} alt={`${card.title} preview`} />
+          <span className="label-mono absolute bottom-2 left-2 border border-border bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-foreground backdrop-blur-sm">SOURCE PREVIEW</span>
+        </div>
+      ) : null}
       <div className="mt-5 flex items-start gap-3">
         <span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 bg-primary" />
         <div>

@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { buildExcerpt, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
+import { resolveFirstPostVideo, type PostVideoMedia } from "@/lib/post-media"
+import { buildExcerpt, extractBareUrls, getDeskLabel, normalizeCategoryName } from "@/lib/forum-utils"
+import { isValidVideoUrl } from "@/lib/video-embed-utils"
 
 export const PULSE_DEFAULTS = {
   kicker: "COMMUNITY SIGNAL",
@@ -25,6 +27,13 @@ export interface PulseCard {
   href: string
   threadId: string
   isOpenDiscussion: boolean
+  ogImageUrl: string | null
+  video: PostVideoMedia | null
+}
+
+export interface PulseMedia {
+  ogImageUrl: string | null
+  video: PostVideoMedia | null
 }
 
 export interface PulseSettings {
@@ -74,6 +83,11 @@ interface PulseReply {
   status: string | null
 }
 
+interface PulseLinkPreview {
+  url: string
+  image_url: string | null
+}
+
 function deploymentPulseDefault(): boolean {
   return process.env.VERCEL_ENV !== "production" && process.env.NODE_ENV !== "production"
 }
@@ -102,7 +116,13 @@ function isEligible(thread: PulseThread, excludedIds: Set<string>): boolean {
   )
 }
 
-function makeCard(thread: PulseThread, slot: PulseSlot, latestReply: PulseReply | undefined, isOpenDiscussion = false): PulseCard {
+function makeCard(
+  thread: PulseThread,
+  slot: PulseSlot,
+  latestReply: PulseReply | undefined,
+  media: PulseMedia,
+  isOpenDiscussion = false,
+): PulseCard {
   const category = normalizeCategoryName(thread.category || thread.desk)
   const slug = thread.slug || thread.id
   return {
@@ -117,7 +137,13 @@ function makeCard(thread: PulseThread, slot: PulseSlot, latestReply: PulseReply 
     href: `/forum/${encodeURIComponent(slug)}`,
     threadId: thread.id,
     isOpenDiscussion,
+    ogImageUrl: media.ogImageUrl,
+    video: media.video,
   }
+}
+
+function validPreviewImage(value: string | null | undefined): string | null {
+  return value && isValidVideoUrl(value) ? value : null
 }
 
 function firstAvailable(
@@ -181,6 +207,35 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
     if (!latestReplies.has(reply.thread_id) && buildExcerpt(reply.body || "", 20)) latestReplies.set(reply.thread_id, reply)
   }
 
+  const previewUrls = Array.from(new Set(
+    candidates.flatMap((thread) => [thread.source_url, ...extractBareUrls(thread.body || "")].filter((url): url is string => Boolean(url))),
+  )).slice(0, 250)
+  const { data: previewRows } = previewUrls.length
+    ? await admin
+        .from("forum_link_previews")
+        .select("url, image_url")
+        .in("url", previewUrls)
+        .eq("status", "ready")
+        .gt("expires_at", new Date().toISOString())
+    : { data: [] as PulseLinkPreview[] }
+  const previewsByUrl = new Map(
+    ((previewRows ?? []) as PulseLinkPreview[]).map((preview) => [preview.url, preview]),
+  )
+  const mediaByThread = new Map<string, PulseMedia>()
+  for (const thread of candidates) {
+    const preview = [thread.source_url, ...extractBareUrls(thread.body || "")]
+      .filter((url): url is string => Boolean(url))
+      .map((url) => previewsByUrl.get(url))
+      .find((candidate) => validPreviewImage(candidate?.image_url))
+    const video = resolveFirstPostVideo(thread.body) ?? resolveFirstPostVideo(thread.source_url)
+    mediaByThread.set(thread.id, {
+      ogImageUrl: validPreviewImage(preview?.image_url),
+      video: video
+        ? { ...video, poster: video.poster || validPreviewImage(preview?.image_url) || undefined }
+        : null,
+    })
+  }
+
   const ranked = [...candidates].sort((a, b) => Date.parse(activityAt(b, latestReplies.get(b.id))) - Date.parse(activityAt(a, latestReplies.get(a.id))))
   const used = new Set<string>()
   const cards: PulseCard[] = []
@@ -192,12 +247,12 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   })
   if (active) {
     used.add(active.id)
-    cards.push(makeCard(active, "active", latestReplies.get(active.id)))
+    cards.push(makeCard(active, "active", latestReplies.get(active.id), mediaByThread.get(active.id) ?? { ogImageUrl: null, video: null }))
   } else {
     const open = firstAvailable(ranked, used, (thread) => !latestReplies.has(thread.id))
     if (open) {
       used.add(open.id)
-      cards.push(makeCard(open, "active", latestReplies.get(open.id), true))
+      cards.push(makeCard(open, "active", latestReplies.get(open.id), mediaByThread.get(open.id) ?? { ogImageUrl: null, video: null }, true))
     }
   }
 
@@ -206,7 +261,7 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
     || firstAvailable(ranked, used, (thread) => Boolean(thread.source_url))
   if (backchannel) {
     used.add(backchannel.id)
-    cards.push(makeCard(backchannel, "backchannel", latestReplies.get(backchannel.id)))
+    cards.push(makeCard(backchannel, "backchannel", latestReplies.get(backchannel.id), mediaByThread.get(backchannel.id) ?? { ogImageUrl: null, video: null }))
   }
 
   const configuredEditor = settings.editorThreadId ? firstAvailable(ranked, used, (thread) => thread.id === settings.editorThreadId) : null
@@ -214,7 +269,7 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   const editor = configuredEditor || fallbackEditor
   if (editor) {
     used.add(editor.id)
-    cards.push(makeCard(editor, "editor", latestReplies.get(editor.id)))
+    cards.push(makeCard(editor, "editor", latestReplies.get(editor.id), mediaByThread.get(editor.id) ?? { ogImageUrl: null, video: null }))
   }
 
   return { settings, cards }
