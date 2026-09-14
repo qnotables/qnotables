@@ -15,6 +15,7 @@ export interface GalleryImage {
   featured: boolean
   created_at: string
   updated_at: string
+  uploaderUsername?: string
 }
 
 export async function fetchApprovedGalleryImages(
@@ -92,7 +93,7 @@ export async function fetchMediaLibraryImages(
 
   const { data, error } = await admin
     .from('media_assets')
-    .select('id, file_name, file_url, alt_text, file_type, created_at')
+    .select('id, file_name, file_url, alt_text, file_type, uploaded_by, created_at')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
@@ -101,20 +102,51 @@ export async function fetchMediaLibraryImages(
     return []
   }
 
+  const rows = data ?? []
+  const legacyUrls = rows
+    .filter((row: any) => !row.uploaded_by)
+    .map((row: any) => row.file_url)
+  const { data: legacyGalleryRows } = legacyUrls.length
+    ? await admin.from('gallery_images').select('image_url, user_id').in('image_url', legacyUrls)
+    : { data: [] }
+  const legacyUploaderByUrl = new Map(
+    (legacyGalleryRows ?? []).map((row: any) => [row.image_url, row.user_id]),
+  )
+  const uploaderIds = Array.from(
+    new Set(
+      rows
+        .map((row: any) => row.uploaded_by || legacyUploaderByUrl.get(row.file_url))
+        .filter(Boolean),
+    ),
+  )
+  const { data: profiles } = uploaderIds.length
+    ? await admin.from('profiles').select('id, username, display_name').in('id', uploaderIds)
+    : { data: [] }
+  const uploaderNames = new Map<string, string>()
+
+  for (const profile of profiles ?? []) {
+    const username = profile.username || profile.display_name
+    if (username) uploaderNames.set(profile.id, username)
+  }
+
   // Map media_assets row → GalleryImage
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    user_id: '',
-    title: row.file_name ?? 'Untitled',
-    description: undefined,
-    alt_text: row.alt_text ?? row.file_name ?? 'Media item',
-    image_url: row.file_url,
-    file_type: row.file_type ?? 'image/jpeg',
-    approved: true,
-    featured: false,
-    created_at: row.created_at,
-    updated_at: row.created_at,
-  }))
+  return rows.map((row: any) => {
+    const uploaderId = row.uploaded_by || legacyUploaderByUrl.get(row.file_url)
+    return {
+      id: row.id,
+      user_id: uploaderId ?? '',
+      title: row.file_name ?? 'Untitled',
+      description: undefined,
+      alt_text: row.alt_text ?? row.file_name ?? 'Media item',
+      image_url: row.file_url,
+      file_type: row.file_type ?? 'image/jpeg',
+      approved: true,
+      featured: false,
+      created_at: row.created_at,
+      updated_at: row.created_at,
+      uploaderUsername: uploaderId ? uploaderNames.get(uploaderId) : undefined,
+    }
+  })
 }
 
 export async function deleteGalleryImage(

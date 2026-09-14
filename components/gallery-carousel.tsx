@@ -68,10 +68,11 @@ function Lightbox({ images, index, onClose, onPrev, onNext }: LightboxProps) {
             className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
           />
         )}
-        {item.title && (
-          <div className="mt-2 text-center font-mono text-sm text-white/70">
-            {item.title}
-            <span className="ml-3 text-white/40">{index + 1} / {images.length}</span>
+        {(item.title || item.uploaderUsername) && (
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center font-mono text-sm text-white/70">
+            {item.title && <span>{item.title}</span>}
+            {item.uploaderUsername && <span className="text-white/50">Uploaded by @{item.uploaderUsername}</span>}
+            <span className="text-white/40">{index + 1} / {images.length}</span>
           </div>
         )}
       </div>

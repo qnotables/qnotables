@@ -241,7 +241,7 @@ export function buildExcerpt(raw: string, maxLen = 180): string {
   // node attrs (e.g. embedBlock originalUrl) straight into the excerpt, so
   // extract the actual text runs first when the body looks like a Tiptap doc.
   const trimmed = raw.trim()
-  if (trimmed.startsWith("{") && trimmed.includes('"type":"doc"')) {
+  if (trimmed.startsWith("{") && /"type"\s*:\s*"doc"/.test(trimmed)) {
     try {
       const doc = JSON.parse(trimmed) as TiptapNode
       const plain = extractTiptapText(doc.content).replace(/\s+/g, " ").trim()
