@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { RefreshCw, Check, AlertCircle } from "lucide-react"
 import { triggerNotablesScrape } from "@/app/actions/notables-actions"
 import { cn } from "@/lib/utils"
@@ -14,6 +15,7 @@ interface ScrapeState {
 }
 
 export function NotablesRefreshButton() {
+  const router = useRouter()
   const [state, setState] = useState<ScrapeState>({ status: "idle", message: null })
 
   async function handleRun() {
@@ -30,6 +32,7 @@ export function NotablesRefreshButton() {
         skippedDupes: result.skippedDupes,
         errors: result.errors,
       })
+      router.refresh()
     } catch (err) {
       setState({
         status: "error",
