@@ -93,7 +93,6 @@ export function TownHallPulse({ pulse, isLoggedIn }: { pulse: TownHallPulse; isL
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/forum" className="label-mono inline-flex items-center gap-2 border border-primary px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{pulse.settings.enterLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
-          <Link href={isLoggedIn ? "/account/signals" : "/auth/login?next=/account/signals"} className="label-mono inline-flex items-center gap-2 border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">MY SIGNALS</Link>
           <Link href={isLoggedIn ? "/forum/new" : "/auth/login?next=/forum/new"} className="label-mono inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{isLoggedIn ? pulse.settings.startLabel : "SIGN IN TO PARTICIPATE"}<ScanSearch className="h-3.5 w-3.5" aria-hidden="true" /></Link>
         </div>
       </div>
