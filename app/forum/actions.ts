@@ -366,8 +366,20 @@ export async function updateThread(formData: FormData) {
   if (error) return { error: error.message }
   if (!updated) return { error: "This thread changed in another tab. Reload before saving.", conflict: true }
 
+  const mediaUrls = collectMediaUrls(richContent.contentJson)
+  if (mediaUrls.length > 0) {
+    const { error: attachmentError } = await supabase
+      .from("forum_attachments")
+      .update({ thread_id: id, status: "active", attached_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("owner_id", user.id)
+      .eq("status", "orphaned")
+      .in("url", mediaUrls)
+    if (attachmentError) return { error: "Thread was saved, but its uploaded media could not be attached." }
+  }
+
   revalidatePath(`/forum/${id}`)
   revalidatePath("/forum")
+  revalidatePath("/")
   return { error: null }
 }
 
