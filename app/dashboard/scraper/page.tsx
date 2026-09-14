@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { getScrapeLogs, getScrapedDrafts, getScraperSources } from "@/app/actions/scraper-actions"
+import { getNotables } from "@/app/actions/notables-actions"
 import { ScraperRunButton } from "@/components/scraper/scraper-run-button"
 import { ScraperDraftsTable } from "@/components/scraper/scraper-drafts-table"
 import { ScraperLogs } from "@/components/scraper/scraper-logs"
 import { NotablesRefreshButton } from "@/components/notables/notables-refresh-button"
+import { NotablesImportsTable } from "@/components/scraper/notables-imports-table"
 import { Rss, Globe, FileText, Clock, CheckCircle, AlertTriangle, Radio } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -18,7 +20,7 @@ export default async function ScraperPage() {
   const hasAccess = await validateDashboardAccess()
   if (!hasAccess) redirect("/dashboard/login")
 
-  const [logs, drafts, sources] = await Promise.all([
+  const [logs, drafts, sources, notablesResult] = await Promise.all([
     getScrapeLogs(30).catch((err) => {
       console.error("[scraper-page] getScrapeLogs failed:", err?.message ?? err)
       return []
@@ -30,6 +32,10 @@ export default async function ScraperPage() {
     getScraperSources().catch((err) => {
       console.error("[scraper-page] getScraperSources failed:", err?.message ?? err)
       return []
+    }),
+    getNotables({ page: 1, pageSize: 8 }).catch((err) => {
+      console.error("[scraper-page] getNotables failed:", err?.message ?? err)
+      return { items: [], total: 0, error: "The notables feed is temporarily unavailable." }
     }),
   ])
 
@@ -46,7 +52,7 @@ export default async function ScraperPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">SCRAPER</h1>
             <p className="label-mono mt-2 text-sm text-muted-foreground">
-              Ingest RSS feeds and public HTML sources. All content is saved as drafts only.
+              Ingest RSS and HTML sources as editorial drafts; QResearch notables use a separate feed.
             </p>
           </div>
           <ScraperRunButton sourceCount={sources.length} />
@@ -67,14 +73,14 @@ export default async function ScraperPage() {
           </div>
           <div className="border border-border bg-muted/30 p-4">
             <p className="label-mono text-xs font-semibold uppercase text-muted-foreground">
-              Pending Drafts
+              Editorial Drafts
             </p>
             <p className="mt-1 text-2xl font-bold text-foreground">{drafts.length}</p>
             <p className="label-mono text-xs text-muted-foreground">awaiting review</p>
           </div>
           <div className="border border-border bg-muted/30 p-4">
             <p className="label-mono text-xs font-semibold uppercase text-muted-foreground">
-              All-time Imported
+              Posts Created
             </p>
             <p className="mt-1 text-2xl font-bold text-foreground">{totalNewAllTime}</p>
             <p className="label-mono text-xs text-muted-foreground">posts created</p>
@@ -166,10 +172,31 @@ export default async function ScraperPage() {
         </div>
       </div>
 
+      {/* Notables imports */}
+      <div className="border-b border-border px-6 py-6">
+        <div className="mb-3 flex items-center gap-2">
+          <Radio className="h-4 w-4 text-primary" />
+          <h2 className="label-mono text-xs font-semibold uppercase text-muted-foreground">
+            Imported Notables
+          </h2>
+          <span className="label-mono border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            {notablesResult.total}
+          </span>
+        </div>
+        <p className="label-mono mb-4 text-xs text-muted-foreground">
+          Notables are stored in the notables feed, not as editorial blog drafts.
+        </p>
+        <NotablesImportsTable
+          items={notablesResult.items}
+          total={notablesResult.total}
+          error={notablesResult.error}
+        />
+      </div>
+
       {/* Tabs: Drafts / Logs */}
       <div className="px-6 py-6">
         <div className="flex flex-col gap-8">
-          {/* Scraped Drafts */}
+          {/* Editorial Drafts */}
           <section>
             <div className="mb-3 flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
