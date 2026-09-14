@@ -15,6 +15,7 @@ export interface GalleryImage {
   featured: boolean
   created_at: string
   updated_at: string
+  uploaderUsername?: string
 }
 
 export async function fetchApprovedGalleryImages(
@@ -92,7 +93,7 @@ export async function fetchMediaLibraryImages(
 
   const { data, error } = await admin
     .from('media_assets')
-    .select('id, file_name, file_url, alt_text, file_type, created_at')
+    .select('id, file_name, file_url, alt_text, file_type, uploaded_by, created_at')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
@@ -101,10 +102,23 @@ export async function fetchMediaLibraryImages(
     return []
   }
 
+  const uploaderIds = Array.from(
+    new Set((data ?? []).map((row: any) => row.uploaded_by).filter(Boolean)),
+  )
+  const { data: profiles } = uploaderIds.length
+    ? await admin.from('profiles').select('id, username, display_name').in('id', uploaderIds)
+    : { data: [] }
+  const uploaderNames = new Map<string, string>()
+
+  for (const profile of profiles ?? []) {
+    const username = profile.username || profile.display_name
+    if (username) uploaderNames.set(profile.id, username)
+  }
+
   // Map media_assets row → GalleryImage
   return (data || []).map((row: any) => ({
     id: row.id,
-    user_id: '',
+    user_id: row.uploaded_by ?? '',
     title: row.file_name ?? 'Untitled',
     description: undefined,
     alt_text: row.alt_text ?? row.file_name ?? 'Media item',
@@ -114,6 +128,7 @@ export async function fetchMediaLibraryImages(
     featured: false,
     created_at: row.created_at,
     updated_at: row.created_at,
+    uploaderUsername: row.uploaded_by ? uploaderNames.get(row.uploaded_by) : undefined,
   }))
 }
 
