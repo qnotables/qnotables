@@ -26,6 +26,8 @@ import { PostFeaturedMedia } from "@/components/post-featured-media"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+const DEFAULT_OPEN_SOURCE_IMAGE = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/forgodandcountry-TG0SrqwsHdBFJaZPEfCcnJbwsZRCTP.png"
+
 function RelativeTime({ iso }: { iso: string }) {
   const [hydrated, setHydrated] = useState(false)
 
@@ -376,8 +378,8 @@ function ForumHotCard({ item }: { item: SituationForumItem }) {
         </div>
       ) : (
         <Thumbnail
-          src={media?.kind === "image" ? media.src : null}
-          alt={item.title}
+          src={media?.kind === "image" ? media.src : DEFAULT_OPEN_SOURCE_IMAGE}
+          alt={media?.kind === "image" ? item.title : "Research for God and Country"}
           label={item.category ?? "FORUM"}
           badge={featuredBadge}
         />
