@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import {
   MessageSquare,
   MessageCircle,
@@ -266,12 +265,13 @@ function Thumbnail({ src, alt, label, badge }: ThumbnailProps) {
       style={{ aspectRatio: "16/7" }}
     >
       {src ? (
-        <Image
+        {/* Native img keeps remote fallback artwork working without Next image-domain configuration. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={src}
           alt={alt}
-          fill
-          className="object-cover object-center opacity-90 transition-opacity duration-300"
-          sizes="(max-width: 768px) 100vw, 640px"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-90 transition-opacity duration-300"
+          loading="lazy"
         />
       ) : (
         /* Fallback: textured dark plate with category label */
@@ -652,7 +652,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
   )
 }
 
-// ─── Empty state card ──�������─────────────────────────────────────────────────────
+// ─── Empty state card ──�������───────────────────────────────────────────────��─────
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
@@ -879,7 +879,7 @@ export function SituationFeedCycle({ items, heading, iconName, emptyLabel }: Sit
   )
 }
 
-// ─── Main cycle component ─────────���───────────────────────────────────────────
+// ─── Main cycle component ────────�����───────────────────────────────────────────
 
 interface SituationReportCycleProps {
   forumItems: SituationForumItem[]
