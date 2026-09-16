@@ -96,9 +96,9 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
   if (media.kind === "image") {
     if (failed) return <a href={media.src} target="_blank" rel="noopener noreferrer nofollow" className="label-mono flex min-h-24 w-28 shrink-0 items-center justify-center border-r border-border bg-muted/30 px-2 text-center text-[10px] text-primary hover:underline">Open image</a>
     return (
-      <div className="w-28 shrink-0 overflow-hidden border-r border-border sm:w-40">
+      <div className="aspect-video w-44 shrink-0 overflow-hidden border-r border-border sm:w-64">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={media.src} alt={media.alt ?? "Thread preview"} className="h-full min-h-24 w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" loading="lazy" onError={() => setFailed(true)} />
+        <img src={media.src} alt={media.alt ?? "Thread preview"} className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" loading="lazy" onError={() => setFailed(true)} />
       </div>
     )
   }
