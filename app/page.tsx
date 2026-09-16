@@ -11,7 +11,9 @@ import { HomeFeed } from "@/components/home-feed"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
-import { getRecentBlogPosts } from "@/lib/blog-posts"
+import { getAllPosts, getRecentBlogPosts } from "@/lib/blog-posts"
+import { getFeaturedRecords } from "@/lib/archives-utils"
+import { FeaturedRecords } from "@/components/featured-records"
 import { getRecentForumThreads } from "@/lib/forum"
 import { categories } from "@/lib/news-data"
 import { JsonLd } from "@/components/json-ld"
@@ -36,6 +38,7 @@ export default async function Page() {
     { featured, topStories, feed, trending, live },
     recentThreads,
     recentBlogs,
+    archivePosts,
     notables,
     isLoggedIn,
     activeSignalActions,
@@ -45,6 +48,7 @@ export default async function Page() {
     getNews(),
     getRecentForumThreads(5),
     getRecentBlogPosts(5),
+    getAllPosts(),
     getNotables({ pageSize: 5 }),
     getImportAccess(),
     getActiveSignalActions(),
@@ -92,6 +96,8 @@ export default async function Page() {
             NOTABLES DO NOT EQUAL ENDORSEMENTS
           </p>
         </div>
+
+        <FeaturedRecords records={getFeaturedRecords(archivePosts)} />
 
         <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
 
