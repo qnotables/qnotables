@@ -259,34 +259,23 @@ interface ThumbnailProps {
 }
 
 function Thumbnail({ src, alt, label, badge }: ThumbnailProps) {
+  const displaySrc = src || DEFAULT_OPEN_SOURCE_IMAGE
+
   return (
     <div
       className="relative w-full overflow-hidden bg-muted/60 border-b border-border"
       style={{ aspectRatio: "16/7" }}
     >
-      {src ? (
-        {/* Native img keeps remote fallback artwork working without Next image-domain configuration. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          className="absolute inset-0 h-full w-full object-cover object-center opacity-90 transition-opacity duration-300"
-          loading="lazy"
-        />
-      ) : (
-        /* Fallback: textured dark plate with category label */
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
-          {label && (
-            <span className="label-mono text-[11px] font-semibold text-muted-foreground tracking-widest uppercase opacity-50">
-              {label}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Native img keeps remote RSS artwork working without Next image-domain configuration. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={displaySrc}
+        alt={src ? alt : "Research for God and Country"}
+        className="absolute inset-0 h-full w-full object-cover object-center opacity-90 transition-opacity duration-300"
+        loading="eager"
+      />
       {/* Gradient overlay so badges are readable over any image */}
-      {src && (
-        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none" />
-      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent pointer-events-none" />
       {/* Optional badge slot (e.g. FEATURED) */}
       {badge && <div className="absolute left-2 top-2">{badge}</div>}
     </div>
@@ -652,7 +641,7 @@ function ArchiveHotCard({ item }: { item: SituationArchiveItem }) {
   )
 }
 
-// ─── Empty state card ──�������───────────────────────────────────────────────��─────
+// ─── Empty state card ──�������────��──────────────────────────────────────────��─────
 
 function EmptyCard({ label, icon: Icon }: { label: string; icon: React.ElementType }) {
   return (
