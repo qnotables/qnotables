@@ -57,12 +57,12 @@ function SelectControl({
   children: React.ReactNode
 }) {
   return (
-    <label className="relative flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+    <label className="relative flex min-w-0 w-full flex-1 flex-col gap-1 lg:w-auto lg:flex-none">
       <span className="sr-only">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="label-mono w-full appearance-none border border-border bg-background px-3 py-2.5 pr-8 text-xs text-foreground outline-none transition-colors focus:border-primary sm:min-w-36"
+        className="label-mono min-h-11 w-full min-w-0 appearance-none border border-border bg-background px-3 py-2.5 pr-8 text-xs text-foreground outline-none transition-colors focus:border-primary lg:min-w-36"
       >
         {children}
       </select>
@@ -94,9 +94,9 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
   const [failed, setFailed] = useState(false)
 
   if (media.kind === "image") {
-    if (failed) return <a href={media.src} target="_blank" rel="noopener noreferrer nofollow" className="label-mono flex min-h-24 w-28 shrink-0 items-center justify-center border-r border-border bg-muted/30 px-2 text-center text-[10px] text-primary hover:underline">Open image</a>
+    if (failed) return <a href={media.src} target="_blank" rel="noopener noreferrer nofollow" className="label-mono flex min-h-24 w-full shrink-0 items-center justify-center border-b border-border bg-muted/30 px-2 text-center text-[10px] text-primary hover:underline md:w-64 md:border-b-0 md:border-r lg:w-80">Open image</a>
     return (
-      <div className="aspect-video w-56 shrink-0 overflow-hidden border-r border-border sm:w-80 lg:w-96">
+      <div className="aspect-video w-full shrink-0 overflow-hidden border-b border-border md:w-64 md:border-b-0 md:border-r lg:w-80">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={media.src} alt={media.alt ?? "Thread preview"} className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" loading="lazy" onError={() => setFailed(true)} />
       </div>
@@ -141,13 +141,14 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
   const desk = FORUM_DESKS.find((item) => item.slug === (thread.desk ?? "other"))
 
   return (
-    <article className={`group flex gap-0 border bg-card transition-colors hover:border-primary ${thread.is_pinned ? "border-primary/60" : "border-border"}`}>
+    <article className={`group flex min-w-0 flex-col gap-0 border bg-card transition-colors hover:border-primary md:flex-row ${thread.is_pinned ? "border-primary/60" : "border-border"}`}>
       {media?.kind === "image" && <StructuredMediaPreview media={media} />}
-      <div className="flex w-14 shrink-0 flex-col items-center justify-center gap-1 border-r border-border bg-muted/30 px-2 py-4 text-center">
+      <div className="flex w-full shrink-0 flex-row items-center justify-start gap-2 border-b border-border bg-muted/30 px-3 py-2 text-left md:w-14 md:flex-col md:justify-center md:gap-1 md:border-b-0 md:border-r md:px-2 md:py-4 md:text-center">
         <span className="stencil text-lg leading-none text-primary">{thread.replyCount}</span>
         <span className="label-mono text-[9px] text-muted-foreground">{thread.replyCount === 1 ? "REPLY" : "REPLIES"}</span>
       </div>
       <div className="min-w-0 flex-1 p-4 md:p-5">
+
         <div className="flex flex-wrap items-center gap-1.5">
           {thread.is_pinned && <span className="label-mono inline-flex items-center gap-1 border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"><Pin className="h-2.5 w-2.5" /> PINNED</span>}
           {thread.is_featured && <span className="label-mono inline-flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"><Star className="h-2.5 w-2.5" /> FEATURED</span>}
@@ -158,13 +159,13 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
           <MediaBadges thread={thread} />
         </div>
         <Link href={href} className="mt-2 block">
-          <h3 className="stencil text-balance text-lg leading-snug text-foreground transition-colors group-hover:text-primary md:text-xl">{thread.title}</h3>
+          <h3 className="stencil break-words text-balance text-lg leading-snug text-foreground transition-colors group-hover:text-primary md:text-xl">{thread.title}</h3>
         </Link>
         {excerpt && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{excerpt}</p>}
         {media && media.kind !== "image" && <StructuredMediaPreview media={media} />}
-        {thread.sourceUrl && <a href={thread.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="label-mono mt-3 inline-flex max-w-full items-center gap-1 text-[10px] text-primary hover:underline" onClick={(event) => event.stopPropagation()}><Link2 className="h-3 w-3 shrink-0" /> <span className="truncate">Open primary source</span></a>}
+        {thread.sourceUrl && <a href={thread.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="label-mono mt-3 inline-flex max-w-full items-start gap-1 break-words text-[10px] text-primary hover:underline" onClick={(event) => event.stopPropagation()}><Link2 className="mt-0.5 h-3 w-3 shrink-0" /> <span className="break-words">Open primary source</span></a>}
         {tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1">{tags.map((tag) => <span key={tag} className="label-mono border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">#{tag}</span>)}</div>}
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+        <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3 border-t border-border pt-3">
           <ShareButtons title={thread.title} url={href} excerpt={excerpt} />
           {isSignedIn && <ForumThreadUpvote threadId={thread.id} initialUpVotes={thread.upVoteCount} userVote={thread.userVote} />}
           <div className="label-mono flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -173,8 +174,9 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
             {thread.replyCount > 0 && thread.last_activity_at !== thread.created_at && <span className="flex items-center gap-1 text-primary/80"><Activity className="h-3 w-3" /> active {timeAgo(thread.last_activity_at)}</span>}
           </div>
         </div>
+        <Link href={href} className="label-mono mt-3 flex min-h-11 w-full items-center justify-center border border-border px-3 py-2 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary md:hidden" aria-label={`Open thread: ${thread.title}`}>OPEN THREAD →</Link>
       </div>
-      <div className="hidden shrink-0 items-center pr-4 sm:flex"><Link href={href} className="label-mono border border-border px-3 py-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label={`Open thread: ${thread.title}`}>OPEN →</Link></div>
+      <div className="hidden shrink-0 items-center pr-4 md:flex"><Link href={href} className="label-mono border border-border px-3 py-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary" aria-label={`Open thread: ${thread.title}`}>OPEN →</Link></div>
     </article>
   )
 }
@@ -262,8 +264,8 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="border border-border bg-card p-3">
-        <div className="flex flex-col gap-2 lg:flex-row">
-          <label className="relative min-w-0 flex-1">
+        <div className="flex min-w-0 flex-col gap-2 lg:flex-row">
+          <label className="relative min-w-0 w-full flex-1">
             <span className="sr-only">Search threads</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search threads, sources, tags, or authors" className="label-mono w-full border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground outline-none transition-colors focus:border-primary placeholder:text-muted-foreground/60" />
@@ -277,7 +279,7 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
             {FORUM_DESKS.map((item) => <option key={item.slug} value={item.slug}>{item.label}</option>)}
           </SelectControl>
         </div>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:flex lg:flex-row">
           <SelectControl label="Origin" value={origin} onChange={(value) => setParam("origin", value)}>
             <option value="">All origins</option>
             <option value="community">Community</option>
@@ -290,10 +292,12 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
             <option value="links">Links</option>
             <option value="social">Social links</option>
           </SelectControl>
-          <SelectControl label="Sort" value={sort} onChange={(value) => setParam("sort", value)}>
+          <div className="min-w-0 min-[360px]:col-span-2 lg:col-span-1">
+            <SelectControl label="Sort" value={sort} onChange={(value) => setParam("sort", value)}>
             {SORT_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </SelectControl>
-          {(urlQuery || category || desk || origin || media || sort !== "latest") && <button type="button" onClick={clearFilters} className="label-mono border border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">Clear filters</button>}
+            </SelectControl>
+          </div>
+          {(urlQuery || category || desk || origin || media || sort !== "latest") && <button type="button" onClick={clearFilters} className="label-mono min-h-11 w-full border border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary lg:w-auto">Clear filters</button>}
         </div>
       </div>
 
