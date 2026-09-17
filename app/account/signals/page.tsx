@@ -6,7 +6,12 @@ import { getSavedSignals } from "@/app/actions/signal-actions"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "My Signals — QNotables" }
+export const metadata = {
+  title: "My Signals",
+  description: "Private saved signals for your QNotables account.",
+  robots: { index: false, follow: false },
+  alternates: { canonical: "https://www.qnotables.ai/account/signals" },
+}
 
 export default async function SavedSignalsPage() {
   const supabase = await createClient()

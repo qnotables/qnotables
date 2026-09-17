@@ -14,7 +14,7 @@ export function AuthShell({
     <div className="tactical-grid flex min-h-svh w-full flex-col items-center justify-center p-6">
       <Link href="/" className="mb-8 flex items-center gap-2">
         <Radio className="h-7 w-7 text-primary" aria-hidden="true" />
-        <span className="stencil text-3xl text-foreground">Hot and Fresh</span>
+        <span className="stencil text-3xl text-foreground">QNotables</span>
       </Link>
       <div className="w-full max-w-sm border border-border bg-card">
         <div className="border-b border-border bg-secondary px-5 py-4 text-secondary-foreground">

@@ -4,14 +4,16 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ContentSidebar } from "@/components/content-sidebar"
 import { getAllPosts } from "@/lib/blog-posts"
+import { pageMetadata } from "@/lib/seo"
 import { transformBlogPostToArchive, getAllArchiveRecords } from "@/lib/archives-utils"
 
 export const dynamic = "force-dynamic"
 
-export const metadata = {
-  title: "Document Archives — Hot and Fresh",
-  description: "Documents, PDFs, and research materials from Hot and Fresh archives",
-}
+export const metadata = pageMetadata({
+  title: "Document Archives",
+  description: "Browse documents, PDFs, and research materials preserved in the QNotables archive.",
+  path: "/archives/documents",
+})
 
 export default async function DocumentsPage() {
   const allPosts = await getAllPosts()

@@ -16,7 +16,8 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get("next") ?? "/forum"
+  const requestedNext = searchParams.get("next")
+  const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/forum"
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +37,7 @@ function LoginForm() {
   }
 
   return (
-    <AuthShell title="Sign In" subtitle="Access the forum to post and reply.">
+    <AuthShell title="Sign In" subtitle="Access protected QNotables features, including forum participation, saved signals, and account tools.">
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="label-mono text-muted-foreground">

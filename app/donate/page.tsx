@@ -6,16 +6,13 @@ import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
 import { CryptoWalletCard } from "@/components/crypto-wallet-card"
 import { CRYPTO_WALLETS } from "@/lib/crypto-wallets"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "Support Us with Crypto — HOT AND FRESH",
-  description: "Help keep HOT AND FRESH independent. Support the platform through Bitcoin, Ethereum, Monero, and other cryptocurrencies.",
-  openGraph: {
-    title: "Support HOT AND FRESH with Cryptocurrency",
-    description: "Donate via Bitcoin, Ethereum, Monero, and other cryptocurrencies to support independent research and news.",
-    type: "website",
-  },
-}
+export const metadata: Metadata = pageMetadata({
+  title: "Support Independent Research",
+  description: "Support QNotables independent research and public archive work through the available contribution options.",
+  path: "/donate",
+})
 
 export default function DonatePage() {
   return (

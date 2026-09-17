@@ -171,10 +171,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: clip;
   }
   html {
     @apply font-mono;
     scroll-padding-top: 4.5rem;
+    overflow-x: clip;
   }
 }
 

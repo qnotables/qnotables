@@ -132,7 +132,12 @@ function StructuredMediaPreview({ media }: { media: PostMedia }) {
   )
 }
 
-function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn: boolean }) {
+function stableDateLabel(value: string): string {
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : "date unknown"
+}
+
+function ThreadCard({ thread, isSignedIn, mounted }: { thread: ThreadListItem; isSignedIn: boolean; mounted: boolean }) {
   const media = resolveFirstPostMedia(thread.body)
   const href = `/forum/${thread.slug || thread.id}`
   const excerpt = thread.excerpt || buildExcerpt(thread.body)
@@ -141,13 +146,13 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
   const desk = FORUM_DESKS.find((item) => item.slug === (thread.desk ?? "other"))
 
   return (
-    <article className={`group flex min-w-0 flex-col gap-0 border bg-card transition-colors hover:border-primary md:flex-row ${thread.is_pinned ? "border-primary/60" : "border-border"}`}>
+    <article className={`group flex min-w-0 max-w-full flex-col gap-0 overflow-hidden border bg-card transition-colors hover:border-primary md:flex-row ${thread.is_pinned ? "border-primary/60" : "border-border"}`}>
       {media?.kind === "image" && <StructuredMediaPreview media={media} />}
       <div className="flex w-full shrink-0 flex-row items-center justify-start gap-2 border-b border-border bg-muted/30 px-3 py-2 text-left md:w-14 md:flex-col md:justify-center md:gap-1 md:border-b-0 md:border-r md:px-2 md:py-4 md:text-center">
         <span className="stencil text-lg leading-none text-primary">{thread.replyCount}</span>
         <span className="label-mono text-[9px] text-muted-foreground">{thread.replyCount === 1 ? "REPLY" : "REPLIES"}</span>
       </div>
-      <div className="min-w-0 flex-1 p-4 md:p-5">
+      <div className="min-w-0 max-w-full flex-1 overflow-hidden p-4 md:p-5">
 
         <div className="flex flex-wrap items-center gap-1.5">
           {thread.is_pinned && <span className="label-mono inline-flex items-center gap-1 border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"><Pin className="h-2.5 w-2.5" /> PINNED</span>}
@@ -159,7 +164,7 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
           <MediaBadges thread={thread} />
         </div>
         <Link href={href} className="mt-2 block">
-          <h3 className="stencil break-words text-balance text-lg leading-snug text-foreground transition-colors group-hover:text-primary md:text-xl">{thread.title}</h3>
+          <h3 className="stencil min-w-0 max-w-full break-words text-balance text-lg leading-snug [overflow-wrap:anywhere] text-foreground transition-colors group-hover:text-primary md:text-xl">{thread.title}</h3>
         </Link>
         {excerpt && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{excerpt}</p>}
         {media && media.kind !== "image" && <StructuredMediaPreview media={media} />}
@@ -170,8 +175,8 @@ function ThreadCard({ thread, isSignedIn }: { thread: ThreadListItem; isSignedIn
           {isSignedIn && <ForumThreadUpvote threadId={thread.id} initialUpVotes={thread.upVoteCount} userVote={thread.userVote} />}
           <div className="label-mono flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">{thread.authorName}</span>
-            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {timeAgo(thread.created_at)}</span>
-            {thread.replyCount > 0 && thread.last_activity_at !== thread.created_at && <span className="flex items-center gap-1 text-primary/80"><Activity className="h-3 w-3" /> active {timeAgo(thread.last_activity_at)}</span>}
+            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {mounted ? timeAgo(thread.created_at) : stableDateLabel(thread.created_at)}</span>
+            {thread.replyCount > 0 && thread.last_activity_at !== thread.created_at && <span className="flex items-center gap-1 text-primary/80"><Activity className="h-3 w-3" /> active {mounted ? timeAgo(thread.last_activity_at) : stableDateLabel(thread.last_activity_at)}</span>}
           </div>
         </div>
         <Link href={href} className="label-mono mt-3 flex min-h-11 w-full items-center justify-center border border-border px-3 py-2 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary md:hidden" aria-label={`Open thread: ${thread.title}`}>OPEN THREAD →</Link>
@@ -197,6 +202,9 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
   const [hasMore, setHasMore] = useState(initialResult.hasMore)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadMoreError, setLoadMoreError] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
 
   const requestParams = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
@@ -315,7 +323,7 @@ export function ForumList({ initialResult, isSignedIn }: ForumListProps) {
         </div>
       )}
 
-      {threads.length > 0 && <div className="flex flex-col gap-2">{threads.map((thread) => <ThreadCard key={thread.id} thread={thread} isSignedIn={isSignedIn} />)}</div>}
+      {threads.length > 0 && <div className="flex flex-col gap-2">{threads.map((thread) => <ThreadCard key={thread.id} thread={thread} isSignedIn={isSignedIn} mounted={mounted} />)}</div>}
 
       {hasMore && <div className="flex flex-col items-center gap-2 pt-2"><button type="button" onClick={loadMore} disabled={loadingMore} className="label-mono w-full border border-border bg-card py-3 text-sm text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-10">{loadingMore ? "Loading…" : "Load more threads"}</button>{loadMoreError && <p className="label-mono text-xs text-destructive">Could not load more threads. Try again.</p>}<span className="label-mono text-[10px] text-muted-foreground">Showing {threads.length} of {result.total}</span></div>}
     </div>

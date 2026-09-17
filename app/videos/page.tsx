@@ -6,13 +6,15 @@ import { getPublishedVideos } from "@/app/actions/video-actions"
 import { VideosClient } from "./videos-client"
 import { EmbedSwitcher, type EmbedItem } from "@/components/qnotables-embed"
 import { generateEmbedUrl, detectVideoPlatform } from "@/lib/video-embed-utils"
+import { pageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
-export const metadata = {
-  title: "Videos | Qnotables",
-  description: "Watch Qnotables video reports, updates, and featured media.",
-}
+export const metadata = pageMetadata({
+  title: "Videos",
+  description: "Watch current QNotables video reports, updates, and featured media.",
+  path: "/videos",
+})
 
 // ---------------------------------------------------------------------------
 // Page

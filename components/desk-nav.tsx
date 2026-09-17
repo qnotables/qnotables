@@ -8,12 +8,12 @@ export function DeskNav() {
   const allDesks = Array.from(new Set(["NOTABLES", ...categories]))
 
   return (
-    <div className="mb-6 flex flex-wrap gap-1 border border-border bg-card px-3 py-2">
+    <div className="mb-6 flex min-w-0 gap-1 overflow-x-auto border border-border bg-card px-3 py-2">
       {allDesks.map((desk) => (
         <button
           key={desk}
           onClick={() => setActive(desk)}
-          className={`label-mono px-3 py-2 transition-colors ${
+          className={`label-mono min-h-11 shrink-0 whitespace-nowrap px-3 py-2 transition-colors ${
             active === desk
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"

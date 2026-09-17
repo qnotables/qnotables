@@ -7,11 +7,13 @@ import { SiteFooter } from "@/components/site-footer"
 import { TeamMemberCard } from "@/components/team/team-member-card"
 import { TeamFilters } from "@/components/team/team-filters"
 import { getTeamMembers, getTeamGroups, getRoleLabel, type TeamRole } from "@/lib/team"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata = {
-  title: "Team — Qnotables",
-  description: "Meet the owners, admins, and moderators of Qnotables.",
-}
+export const metadata = pageMetadata({
+  title: "Team",
+  description: "Meet the QNotables owners, administrators, and moderators.",
+  path: "/team",
+})
 
 interface PageProps {
   searchParams: Promise<{ group?: string }>
