@@ -6,33 +6,14 @@ import { NewsletterSignupDialog } from "@/components/newsletter-signup-dialog"
 import { PageViewCounter } from "@/components/page-view-counter"
 import { ShareButtons } from "@/components/share-buttons"
 import { getNewToQViewCount } from "./actions"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "New to Q? | HOT AND FRESH",
-  description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
-  openGraph: {
-    title: "New to Q? | HOT AND FRESH",
-    description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
-    type: "website",
-    url: "/new-to-q",
-    images: [
-      {
-        url: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-iRxMWUcGACFCOjCdLia8Ipo0t3vyL6.png",
-        width: 1728,
-        height: 910,
-        alt: "QNotables New to Q research guide",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "New to Q? | HOT AND FRESH",
-    description: "You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself.",
-    images: [
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-iRxMWUcGACFCOjCdLia8Ipo0t3vyL6.png",
-    ],
-  },
-}
+export const metadata: Metadata = pageMetadata({
+  title: "New to Q?",
+  description: "A QNotables research guide for readers who are new to the subject, its references, and the archive.",
+  path: "/new-to-q",
+  image: "/images/og-default.png",
+})
 
 export default async function NewToQPage() {
   const initialViewCount = await getNewToQViewCount()

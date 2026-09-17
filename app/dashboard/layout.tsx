@@ -3,9 +3,10 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 
 export const metadata = {
-  title: "Control Room — QNotables",
+  title: "Control Room",
   description: "Administrative control room for QNotables.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "https://www.qnotables.ai/dashboard" },
 }
 
 export default async function DashboardLayout({

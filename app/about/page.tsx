@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Archive, Rss, Search, Shield, FileText, Users, Clock, LinkIcon, Mail } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
@@ -7,15 +8,15 @@ import { PillarCard } from "@/components/about/pillar-card"
 import { ResearchStep } from "@/components/about/research-step"
 import { DeskCard } from "@/components/about/desk-card"
 
-export const metadata = {
-  title: "About | HOT AND FRESH",
-  description:
-    "HOT AND FRESH is an independent research and media archive built to organize public information, source links, field notes, timelines, documents, videos, and story threads for review.",
+export const metadata: Metadata = {
+  title: "About | QNotables",
+  description: "QNotables is an independent research and media archive for public information, source links, timelines, documents, videos, and story threads.",
+  alternates: { canonical: "https://www.qnotables.ai/about" },
   openGraph: {
-    title: "About HOT AND FRESH",
-    description:
-      "An independent research platform organizing public information, sources, and developing stories into a searchable public record.",
+    title: "About | QNotables",
+    description: "An independent research platform organizing public information, sources, and developing stories into a searchable public record.",
     type: "website",
+    url: "https://www.qnotables.ai/about",
   },
 }
 

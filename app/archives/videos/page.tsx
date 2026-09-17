@@ -5,13 +5,15 @@ import { SiteFooter } from "@/components/site-footer"
 import { ContentSidebar } from "@/components/content-sidebar"
 import { getPublishedVideos } from "@/app/actions/video-actions"
 import { convertVideoToArchive } from "@/lib/archives-utils"
+import { pageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
-export const metadata = {
-  title: "Video Archives — Hot and Fresh",
-  description: "Video content, embeds, and multimedia from Hot and Fresh",
-}
+export const metadata = pageMetadata({
+  title: "Video Archives",
+  description: "Browse permanent video records, embeds, and multimedia preserved in the QNotables archive.",
+  path: "/archives/videos",
+})
 
 export default async function VideosPage() {
   const publishedVideos = await getPublishedVideos()

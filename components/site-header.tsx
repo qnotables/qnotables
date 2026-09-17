@@ -354,9 +354,9 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
 
           <div className="relative flex h-14 items-center justify-between gap-4 px-6">
             <div className="flex min-w-0 items-center gap-4">
-              <Link href="/" className="flex shrink-0 items-baseline gap-2" aria-label="Hot and Fresh home">
-                <Image src="/us-flag.png" alt="American flag" width={32} height={20} className="h-5 w-8" priority />
-                <span className="stencil text-2xl leading-none text-foreground lg:text-3xl">Hot and Fresh</span>
+              <Link href="/" className="flex shrink-0 items-baseline gap-2" aria-label="QNotables home">
+                <Image src="/us-flag.png" alt="American flag" width={32} height={20} className="h-5 w-auto" priority />
+                <span className="stencil text-2xl leading-none text-foreground lg:text-3xl">QNotables</span>
                 <span className="label-mono hidden text-primary xl:inline">/ NEWS DESK</span>
               </Link>
 
@@ -467,9 +467,9 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         }`}
       >
         <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between gap-3 px-4 md:px-6">
-          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="Hot and Fresh home">
-            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-7 shrink-0" />
-            <span className="stencil truncate text-xl leading-none text-foreground md:text-2xl">Hot and Fresh</span>
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="QNotables home">
+            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-auto shrink-0" />
+            <span className="stencil truncate text-xl leading-none text-foreground md:text-2xl">QNotables</span>
           </Link>
 
           <div className="hidden items-center gap-2 md:flex">
@@ -540,9 +540,9 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         }`}
       >
         <div className="flex h-14 min-w-0 items-center justify-between gap-2 px-3">
-          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="Hot and Fresh home">
-            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-7 shrink-0" />
-            <span className="stencil truncate text-xl leading-none text-foreground">Hot and Fresh</span>
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="QNotables home">
+            <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-auto shrink-0" />
+            <span className="stencil truncate text-xl leading-none text-foreground">QNotables</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={openSearch} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Search dispatches">

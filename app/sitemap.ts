@@ -4,9 +4,23 @@ import { getCategories, getTags, getAvailableMonths } from "@/lib/archives"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { absoluteUrl } from "@/lib/seo"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 3600
 
 type SitemapEntry = MetadataRoute.Sitemap[number]
+
+const VALID_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const INTERNAL_CATEGORIES = new Set(["site maintenance"])
+
+function normalizeTaxonomy(values: string[]): string[] {
+  const normalized = new Map<string, string>()
+  for (const value of values.flatMap((item) => item.split(","))) {
+    const clean = value.trim().toLowerCase().replace(/\s+/g, " ")
+    if (!clean || INTERNAL_CATEGORIES.has(clean)) continue
+    const slug = clean.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    if (slug && !normalized.has(slug)) normalized.set(slug, clean)
+  }
+  return [...normalized.keys()]
+}
 
 const staticRoutes: Array<[string, SitemapEntry["changeFrequency"], number]> = [
   ["/", "hourly", 1],
@@ -54,25 +68,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ])
 
   for (const post of posts) {
+    const slug = typeof post.slug === "string" ? post.slug.trim().toLowerCase() : ""
+    if (!VALID_SLUG.test(slug) || slug.length < 3 || new Set(["p", "w", "f"]).has(slug)) continue
     entries.push({
-      url: absoluteUrl(`/archives/${encodeURIComponent(post.slug)}`),
+      url: absoluteUrl(`/archives/${encodeURIComponent(slug)}`),
       lastModified: new Date(post.updated_at || post.published_at || post.created_at),
       changeFrequency: "weekly",
       priority: 0.7,
     })
   }
   for (const thread of threads) {
+    const slug = typeof thread.slug === "string" ? thread.slug.trim().toLowerCase() : ""
+    if (!slug || slug.startsWith("testing-") || !VALID_SLUG.test(slug)) continue
     entries.push({
-      url: absoluteUrl(`/forum/${encodeURIComponent(thread.slug || thread.id)}`),
+      url: absoluteUrl(`/forum/${encodeURIComponent(slug)}`),
       lastModified: new Date(thread.updated_at || thread.created_at),
       changeFrequency: "daily",
       priority: 0.6,
     })
   }
-  for (const category of categories) {
+  for (const category of normalizeTaxonomy(categories)) {
     entries.push({ url: absoluteUrl(`/archives/category/${encodeURIComponent(category)}`), changeFrequency: "weekly", priority: 0.5 })
   }
-  for (const tag of tags) {
+  for (const tag of normalizeTaxonomy(tags)) {
     entries.push({ url: absoluteUrl(`/archives/tag/${encodeURIComponent(tag)}`), changeFrequency: "weekly", priority: 0.4 })
   }
   for (const { year, month } of months) {
