@@ -375,7 +375,12 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           </nav>
         </div>
 
-        <div className="h-14 md:hidden" aria-hidden="true" />
+        <div className="md:hidden">
+          <div className="h-8 overflow-hidden border-b border-border/60">
+            <NewsTicker items={tickerItems} />
+          </div>
+          <div className="h-14" aria-hidden="true" />
+        </div>
       </header>
 
       <div
@@ -465,29 +470,25 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         onBlurCapture={handleHeaderBlur}
         aria-hidden={!mobileVisible}
         inert={!mobileVisible}
-        className={`fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
+        className={`fixed inset-x-0 top-8 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
           mobileVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <div className="flex h-14 items-center justify-between gap-2 px-3">
+        <div className="flex h-14 min-w-0 items-center justify-between gap-2 px-3">
           <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="Hot and Fresh home">
             <Image src="/us-flag.png" alt="American flag" width={28} height={18} className="h-4 w-7 shrink-0" />
             <span className="stencil truncate text-xl leading-none text-foreground">Hot and Fresh</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
-            <button type="button" onClick={(event) => togglePanel("sections", event.currentTarget)} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Open desks" aria-expanded={activePanel === "sections" && mobileVisible} aria-controls="mobile-desks-panel">
-              {activePanel === "sections" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
             <button type="button" onClick={openSearch} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Search dispatches">
               <Search className="h-4 w-4" />
             </button>
-            <button type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Open account and more menu" aria-expanded={activePanel === "more" && mobileVisible} aria-controls="mobile-more-panel">
-              <MoreHorizontal className="h-4 w-4" />
+            <button type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Open mobile menu" aria-expanded={activePanel === "more" && mobileVisible} aria-controls="mobile-more-panel">
+              {activePanel === "more" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
         </div>
-        {activePanel === "sections" && <div id="mobile-desks-panel" role="region" aria-label="Site desks" className="border-t border-border bg-background p-4">{renderDesks("")}</div>}
-        {activePanel === "more" && <div id="mobile-more-panel" role="region" aria-label="Account and more" className="absolute right-3 top-full w-[min(20rem,calc(100vw-1.5rem))] border border-border bg-popover text-popover-foreground shadow-xl">{renderMoreMenu()}</div>}
+        {activePanel === "more" && <div id="mobile-more-panel" role="region" aria-label="Mobile navigation and account" className="absolute right-3 top-full max-h-[calc(100dvh-5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto border border-border bg-popover text-popover-foreground shadow-xl"><div className="border-b border-border bg-background p-3">{renderDesks("")}</div>{renderMoreMenu()}</div>}
       </div>
 
       {mobileVisible && activePanel !== null && (
