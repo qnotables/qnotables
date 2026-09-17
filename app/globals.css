@@ -49,6 +49,9 @@
 }
 
 :root {
+  --ticker-height: 2rem;
+  --mobile-header-height: 3.5rem;
+  --mobile-nav-top: calc(var(--ticker-height) + var(--mobile-header-height));
   color-scheme: light;
   /* sand / field-paper base */
   --background: oklch(0.93 0.012 95);
