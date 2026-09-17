@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import type { FocusEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ChevronDown,
   Menu,
@@ -26,9 +26,8 @@ type Panel = "sections" | "more" | "live" | null
 
 const DESKTOP_COMPACT_AFTER = 160
 const DESKTOP_EXPANDED_UNTIL = 72
-const MOBILE_HIDE_DISTANCE = 56
-const MOBILE_REVEAL_DISTANCE = 20
-const SCROLL_JITTER = 3
+const MOBILE_SCROLL_THRESHOLD = 10
+const MOBILE_NEAR_TOP = 12
 
 const secondaryLinks = [
   { label: "TOWN HALL", href: "/forum" },
@@ -46,6 +45,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   const { active, setActive } = useDeskFilter()
   const [activePanel, setActivePanel] = useState<Panel>(null)
   const router = useRouter()
+  const pathname = usePathname()
   const [desktopCompactVisible, setDesktopCompactVisible] = useState(false)
   const [mobileCompactVisible, setMobileCompactVisible] = useState(true)
   const [mobileFocusVisible, setMobileFocusVisible] = useState(false)
@@ -54,6 +54,11 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   const accumulatedScrollRef = useRef(0)
   const tickingRef = useRef(false)
   const lastTriggerRef = useRef<HTMLElement | null>(null)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null)
+  const menuOpenRef = useRef(false)
+  const mobileFocusRef = useRef(false)
+  const savedScrollYRef = useRef<number | null>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,6 +68,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
       window.requestAnimationFrame(() => {
         const currentY = Math.max(0, window.scrollY)
         const delta = currentY - lastScrollYRef.current
+        const isMobile = window.matchMedia("(max-width: 767px)").matches
 
         if (currentY <= DESKTOP_EXPANDED_UNTIL) {
           setDesktopCompactVisible(false)
@@ -70,7 +76,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           setDesktopCompactVisible(true)
         }
 
-        if (Math.abs(delta) >= SCROLL_JITTER) {
+        if (isMobile && !menuOpenRef.current && !mobileFocusRef.current && Math.abs(delta) >= MOBILE_SCROLL_THRESHOLD) {
           const direction = delta > 0 ? "down" : "up"
           if (scrollDirectionRef.current !== direction) {
             scrollDirectionRef.current = direction
@@ -78,16 +84,16 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           }
           accumulatedScrollRef.current += Math.abs(delta)
 
-          if (currentY <= MOBILE_HIDE_DISTANCE) {
+          if (currentY <= MOBILE_NEAR_TOP) {
             setMobileCompactVisible(true)
             accumulatedScrollRef.current = 0
-          } else if (direction === "down" && accumulatedScrollRef.current >= MOBILE_HIDE_DISTANCE) {
-            setMobileCompactVisible(false)
-            accumulatedScrollRef.current = 0
-          } else if (direction === "up" && accumulatedScrollRef.current >= MOBILE_REVEAL_DISTANCE) {
-            setMobileCompactVisible(true)
+          } else if (accumulatedScrollRef.current >= MOBILE_SCROLL_THRESHOLD) {
+            setMobileCompactVisible(direction === "up")
             accumulatedScrollRef.current = 0
           }
+        } else if (isMobile && (menuOpenRef.current || mobileFocusRef.current || currentY <= MOBILE_NEAR_TOP)) {
+          setMobileCompactVisible(true)
+          accumulatedScrollRef.current = 0
         }
 
         lastScrollYRef.current = currentY
@@ -96,7 +102,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
     }
 
     lastScrollYRef.current = Math.max(0, window.scrollY)
-    setMobileCompactVisible(lastScrollYRef.current <= MOBILE_HIDE_DISTANCE)
+    setMobileCompactVisible(true)
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
@@ -138,38 +144,98 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
     fetchWireStories()
   }, [initialWireStories])
 
+  const mobileMenuOpen = activePanel === "more"
+
+  useEffect(() => {
+    const isMobile = window.matchMedia("(max-width: 767px)").matches
+    menuOpenRef.current = Boolean(mobileMenuOpen && isMobile)
+    if (!mobileMenuOpen || !isMobile) return
+
+    const scrollY = window.scrollY
+    savedScrollYRef.current = scrollY
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    const body = document.body
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+      paddingRight: body.style.paddingRight,
+    }
+
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.width = "100%"
+    body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`
+
+    window.requestAnimationFrame(() => mobileMenuRef.current?.querySelector<HTMLElement>("a, button, [tabindex='0']")?.focus())
+
+    return () => {
+      body.style.position = previous.position
+      body.style.top = previous.top
+      body.style.width = previous.width
+      body.style.overflow = previous.overflow
+      body.style.paddingRight = previous.paddingRight
+      const restoreY = savedScrollYRef.current
+      savedScrollYRef.current = null
+      menuOpenRef.current = false
+      if (restoreY !== null) window.scrollTo(0, restoreY)
+      window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus())
+    }
+  }, [mobileMenuOpen])
+
+  useEffect(() => {
+    if (!mobileMenuOpen || !window.matchMedia("(max-width: 767px)").matches || !mobileMenuRef.current) return
+    const menu = mobileMenuRef.current
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        closeMobileMenu()
+        return
+      }
+      if (event.key !== "Tab") return
+      const focusable = Array.from(menu.querySelectorAll<HTMLElement>("a, button, [tabindex='0']"))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    menu.addEventListener("keydown", handleKeyDown)
+    return () => menu.removeEventListener("keydown", handleKeyDown)
+  }, [mobileMenuOpen])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      if (activePanel) {
+      if (event.key !== "Escape" || !activePanel) return
+      if (mobileMenuOpen) closeMobileMenu()
+      else {
         setActivePanel(null)
         window.requestAnimationFrame(() => lastTriggerRef.current?.focus())
       }
     }
-
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Element | null
       if (target?.closest("[data-site-header]")) return
       setActivePanel(null)
     }
-
     document.addEventListener("keydown", handleKeyDown)
     document.addEventListener("pointerdown", handlePointerDown)
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
       document.removeEventListener("pointerdown", handlePointerDown)
     }
-  }, [activePanel])
+  }, [activePanel, mobileMenuOpen])
 
   useEffect(() => {
-    if (!activePanel || !window.matchMedia("(max-width: 767px)").matches) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [activePanel])
+    setActivePanel(null)
+  }, [pathname])
 
   useEffect(() => {
     if (!window.matchMedia("(min-width: 768px)").matches) return
@@ -181,7 +247,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   }, [desktopCompactVisible])
 
   const tickerItems = wireStories.map((story) => ({ headline: story.headline, url: story.url }))
-  const mobileVisible = mobileCompactVisible || mobileFocusVisible || activePanel !== null
+  const mobileVisible = mobileCompactVisible || mobileFocusVisible || mobileMenuOpen
 
   function togglePanel(panel: Exclude<Panel, null>, trigger: HTMLElement) {
     lastTriggerRef.current = trigger
@@ -261,7 +327,15 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
 
   function handleHeaderBlur(event: FocusEvent<HTMLElement>) {
     const next = event.relatedTarget as Node | null
-    if (!next || !event.currentTarget.contains(next)) setMobileFocusVisible(false)
+    if (!next || !event.currentTarget.contains(next)) {
+      mobileFocusRef.current = false
+      setMobileFocusVisible(false)
+    }
+  }
+
+  function handleHeaderFocus() {
+    mobileFocusRef.current = true
+    setMobileFocusVisible(true)
   }
 
   return (
@@ -379,7 +453,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           <div className="h-8 overflow-hidden border-b border-border/60">
             <NewsTicker items={tickerItems} />
           </div>
-          <div className="h-14" aria-hidden="true" />
+          <div className="h-[var(--mobile-header-height)]" aria-hidden="true" />
         </div>
       </header>
 
@@ -452,25 +526,16 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
           </div>
         </div>
 
-        {activePanel === "sections" && (
-          <div id="mobile-desks-panel" role="region" aria-label="Site desks" className="max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-t border-border bg-background p-4 md:hidden">
-            {renderDesks("")}
-          </div>
-        )}
-        {activePanel === "more" && (
-          <div id="mobile-more-panel" role="region" aria-label="Account and more" className="absolute right-3 top-full max-h-[calc(100dvh-4.5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto border border-border bg-popover text-popover-foreground shadow-xl md:hidden">
-            {renderMoreMenu()}
-          </div>
-        )}
+
       </div>
 
       <div
         data-site-header
-        onFocusCapture={() => setMobileFocusVisible(true)}
+        onFocusCapture={handleHeaderFocus}
         onBlurCapture={handleHeaderBlur}
         aria-hidden={!mobileVisible}
         inert={!mobileVisible}
-        className={`fixed inset-x-0 top-8 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
+        className={`fixed inset-x-0 top-[var(--ticker-height)] z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
           mobileVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
@@ -483,20 +548,26 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             <button type="button" onClick={openSearch} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Search dispatches">
               <Search className="h-4 w-4" />
             </button>
-            <button type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Open mobile menu" aria-expanded={activePanel === "more" && mobileVisible} aria-controls="mobile-more-panel">
+            <button ref={mobileMenuButtonRef} type="button" onClick={(event) => togglePanel("more", event.currentTarget)} className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={mobileMenuOpen ? "Close mobile menu" : "Open mobile menu"} aria-expanded={mobileMenuOpen} aria-controls="mobile-more-panel">
               {activePanel === "more" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
         </div>
-        {activePanel === "more" && <div id="mobile-more-panel" role="region" aria-label="Mobile navigation and account" className="absolute right-3 top-full max-h-[calc(100dvh-5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto border border-border bg-popover text-popover-foreground shadow-xl"><div className="border-b border-border bg-background p-3">{renderDesks("")}</div>{renderMoreMenu()}</div>}
       </div>
 
-      {mobileVisible && activePanel !== null && (
+      {mobileMenuOpen && (
+        <div ref={mobileMenuRef} data-site-header id="mobile-more-panel" role="dialog" aria-modal="true" aria-label="Mobile navigation and account" className="fixed inset-x-0 top-[var(--mobile-nav-top)] z-[60] h-[calc(100dvh-var(--mobile-nav-top)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain border-t border-border bg-popover text-popover-foreground shadow-xl md:hidden">
+          <div className="border-b border-border bg-background p-3">{renderDesks("")}</div>
+          {renderMoreMenu()}
+        </div>
+      )}
+
+      {mobileMenuOpen && (
         <button
           type="button"
           aria-label="Close menu"
           onClick={closeMobileMenu}
-          className="fixed inset-0 z-40 bg-background/60 md:hidden"
+          className="fixed inset-x-0 bottom-0 top-[var(--mobile-nav-top)] z-50 bg-background/60 md:hidden"
         />
       )}
     </>
