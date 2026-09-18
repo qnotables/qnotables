@@ -137,6 +137,7 @@ interface Thread {
   is_featured: boolean
   is_soft_deleted: boolean
   status: string | null
+  is_pending: boolean
   category: string | null
   desk: string | null
   tags: string | null
@@ -165,23 +166,36 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const column = UUID_RE.test(slug) ? "id" : "slug"
     const { data } = await supabase
       .from("forum_threads")
-      .select("slug, title, body, excerpt, category, status, is_soft_deleted")
+      .select("id, slug, title, body, content_json, excerpt, category, status, is_pending, is_soft_deleted")
       .eq(column, slug)
       .maybeSingle()
 
-    if (!data) return pageMetadata({ title: "Thread not found", path: `/forum/${slug}`, noIndex: true })
+    const isPublic = data?.status === "published" && data.is_pending === false && !data.is_soft_deleted
+    if (!data || !isPublic) return pageMetadata({ title: "Thread not found", path: `/forum/${slug}`, noIndex: true })
 
     const path = `/forum/${data.slug ?? slug}`
     const description = (data.excerpt ?? data.body ?? "QNotables community discussion.").slice(0, 160).replace(/\s+/g, " ")
-    const shouldIndex = data.status === "published" && !data.is_soft_deleted
+    const content = typeof data.content_json === "string" ? data.content_json : data.content_json ? JSON.stringify(data.content_json) : data.body
+    const [{ data: attachment }] = await Promise.all([
+      supabase
+        .from("forum_attachments")
+        .select("url")
+        .eq("thread_id", data.id)
+        .eq("status", "active")
+        .like("mime_type", "image/%")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ])
+    const image = attachment?.url ?? firstImageFromBody(content)
 
     return pageMetadata({
       title: data.title,
       description,
       path,
-      image: socialImageUrl(firstImageFromBody(data.body)),
+      image,
+      imageAlt: `${data.title} preview image`,
       type: "article",
-      noIndex: !shouldIndex,
     })
   } catch {
     return pageMetadata({ title: "Thread", path: "/forum", noIndex: true })
@@ -205,7 +219,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     const { data, error } = await supabase
       .from("forum_threads")
       .select(
-        "id, slug, title, body, content_version, excerpt, created_at, updated_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, status, category, desk, tags, view_count, reply_count, profiles(display_name)",
+        "id, slug, title, body, content_version, excerpt, created_at, updated_at, author_id, is_locked, is_pinned, is_featured, is_soft_deleted, is_pending, status, category, desk, tags, view_count, reply_count, profiles(display_name)",
       )
       .eq(column, slug)
       .maybeSingle()
@@ -239,10 +253,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
     ]),
   ]
 
-  // Drafts are only viewable by their author (or an admin). Everyone else 404s.
+  // Unpublished threads are only viewable by their author (or an admin). Everyone else 404s.
   const isDraft = t.status === "draft"
   const isOwner = user?.id === t.author_id
-  if (isDraft && !isOwner && !isAdmin) notFound()
+  const isPublic = t.status === "published" && !t.is_pending && !t.is_soft_deleted
+  if (!isPublic && !isOwner && !isAdmin) notFound()
 
   // --- Replies (non-fatal: degrade to empty list) ---
   let replies: Reply[] = []

@@ -323,7 +323,7 @@ export async function updateThread(formData: FormData) {
 
   const { data: current } = await supabase
     .from("forum_threads")
-    .select("body, content_json, content_format, content_version")
+    .select("slug, body, content_json, content_format, content_version")
     .eq("id", id)
     .eq("author_id", user.id)
     .maybeSingle()
@@ -378,6 +378,7 @@ export async function updateThread(formData: FormData) {
   }
 
   revalidatePath(`/forum/${id}`)
+  if (current.slug) revalidatePath(`/forum/${current.slug}`)
   revalidatePath("/forum")
   revalidatePath("/")
   return { error: null }
