@@ -12,6 +12,7 @@ export const metadata = {
 }
 
 const DEFAULTS: SiteSettings = {
+  embed_learn_more_url: null,
   site_name: "HOT AND FRESH",
   tagline: "Global News, Hot and Fresh",
   default_image_url: null,
@@ -60,6 +61,7 @@ export default async function SettingsPage() {
 
   const settings: SiteSettings = data
     ? {
+        embed_learn_more_url: data.embed_learn_more_url ?? null,
         site_name: data.site_name ?? DEFAULTS.site_name,
         tagline: data.tagline,
         default_image_url: data.default_image_url,

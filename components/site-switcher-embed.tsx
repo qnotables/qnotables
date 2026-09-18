@@ -61,7 +61,7 @@ const SITES: EmbedSite[] = [
   },
 ]
 
-function EmbedPanel({ site, active }: { site: EmbedSite; active: boolean }) {
+function EmbedPanel({ site, active, learnMoreUrl }: { site: EmbedSite; active: boolean; learnMoreUrl?: string }) {
   const [loaded, setLoaded] = useState(false)
   const [slow, setSlow] = useState(false)
 
@@ -91,9 +91,14 @@ function EmbedPanel({ site, active }: { site: EmbedSite; active: boolean }) {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs">
             <p role="status" className="text-muted-foreground">
-              {slow ? `${site.label} is taking longer than expected.` : `Loading ${site.label}…`}
+              {loaded ? site.label : slow ? `${site.label} is taking longer than expected.` : `Loading ${site.label}…`}
             </p>
-            {slow && (
+            {loaded && learnMoreUrl && (
+              <a href={learnMoreUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                click here to learn more
+              </a>
+            )}
+            {!loaded && slow && (
               <a href={site.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                 Open {site.label} directly →
               </a>
@@ -115,7 +120,7 @@ function EmbedPanel({ site, active }: { site: EmbedSite; active: boolean }) {
   )
 }
 
-export function SiteSwitcherEmbed() {
+export function SiteSwitcherEmbed({ learnMoreUrl }: { learnMoreUrl?: string } = {}) {
   const [activeId, setActiveId] = useState(SITES[0].id)
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({})
   const active = SITES.find((s) => s.id === activeId) ?? SITES[0]
@@ -176,7 +181,7 @@ export function SiteSwitcherEmbed() {
       {/* Iframes — all rendered at once to preserve navigation state, only active one is visible */}
       <div className="relative w-full" style={{ height: "800px" }}>
         {SITES.map((site) => (
-          <EmbedPanel key={`${site.id}-${refreshKeys[site.id] ?? 0}`} site={site} active={activeId === site.id} />
+          <EmbedPanel key={`${site.id}-${refreshKeys[site.id] ?? 0}`} site={site} active={activeId === site.id} learnMoreUrl={learnMoreUrl} />
         ))}
       </div>
     </div>
