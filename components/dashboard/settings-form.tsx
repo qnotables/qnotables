@@ -7,6 +7,7 @@ import { PulseSettingsPanel } from "@/components/dashboard/pulse-settings-panel"
 import type { PulseCard } from "@/lib/pulse"
 
 export interface SiteSettings {
+  embed_learn_more_url: string | null
   site_name: string
   tagline: string | null
   default_image_url: string | null
@@ -81,6 +82,26 @@ export function SettingsForm({ settings, pulsePreview }: { settings: SiteSetting
         <div className="flex flex-col gap-1">
           <label className="label-mono text-muted-foreground">Default Share Image URL</label>
           <input name="default_image_url" defaultValue={settings.default_image_url ?? ""} placeholder="https://…" className={inputClass} />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="stencil text-lg text-foreground">Embed help video</h2>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="embed_learn_more_url" className="label-mono text-muted-foreground">Video URL</label>
+          <input
+            id="embed_learn_more_url"
+            name="embed_learn_more_url"
+            type="url"
+            maxLength={2048}
+            defaultValue={settings.embed_learn_more_url ?? ""}
+            placeholder="https://…"
+            aria-describedby="embed-video-help"
+            className={inputClass}
+          />
+          <p id="embed-video-help" className="text-sm text-muted-foreground">
+            After an embed loads, its top bar shows “click here to learn more” and opens this video in a new tab. Leave blank to hide the link.
+          </p>
         </div>
       </section>
 

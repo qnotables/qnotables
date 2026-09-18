@@ -9,6 +9,7 @@ import { ContentSidebar } from "@/components/content-sidebar"
 import { LiveStreamButton } from "@/components/live-stream-button"
 import { HomeFeed } from "@/components/home-feed"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
+import { getEmbedLearnMoreUrl } from "@/lib/embed-settings"
 import { RssFeedCards } from "@/components/rss-feed-cards"
 import { getNews } from "@/lib/rss"
 import { getAllPosts, getRecentBlogPosts } from "@/lib/blog-posts"
@@ -44,6 +45,7 @@ export default async function Page() {
     activeSignalActions,
     approvedSignalItems,
     townHallPulse,
+    embedLearnMoreUrl,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(5),
@@ -54,6 +56,7 @@ export default async function Page() {
     getActiveSignalActions(),
     getApprovedSignalAnalysisItems(8),
     getTownHallPulse(),
+    getEmbedLearnMoreUrl(),
   ])
 
   const homeFeedItems = adaptHomeFeed({
@@ -86,7 +89,7 @@ export default async function Page() {
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
         {/* Site Switcher Embed */}
-        <SiteSwitcherEmbed />
+        <SiteSwitcherEmbed learnMoreUrl={embedLearnMoreUrl} />
 
         <div className="mb-8 mx-auto max-w-3xl text-center">
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">

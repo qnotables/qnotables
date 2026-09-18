@@ -6,6 +6,7 @@ import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
 import { compactSearchText, normalizeComparableText } from "@/lib/search-utils"
 import { categories } from "@/lib/news-data"
+import { normalizeEmbedVideoUrl } from "@/lib/embed-video-url"
 
 type Result = { success: boolean; error?: string }
 
@@ -439,6 +440,14 @@ export async function resolveFlag(id: string, status: string): Promise<Result> {
 
 export async function saveSettings(formData: FormData): Promise<Result> {
   if (!(await guard())) return { success: false, error: "Not authorized." }
+
+  let embedLearnMoreUrl: string | null
+  try {
+    embedLearnMoreUrl = normalizeEmbedVideoUrl(String(formData.get("embed_learn_more_url") ?? ""))
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Invalid video URL." }
+  }
+
   const db = createAdminClient()
   const rawMaxLinks = parseInt(String(formData.get("forum_max_links") ?? "8"), 10)
   const rawMaxEmbeds = parseInt(String(formData.get("forum_max_embeds") ?? "4"), 10)
@@ -453,6 +462,7 @@ export async function saveSettings(formData: FormData): Promise<Result> {
     .slice(0, 100)
   const payload = {
     id: 1,
+    embed_learn_more_url: embedLearnMoreUrl,
     site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
     tagline: String(formData.get("tagline") ?? "").trim() || null,
     default_image_url: String(formData.get("default_image_url") ?? "").trim() || null,
