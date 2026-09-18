@@ -291,7 +291,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-wrap gap-3">
               <a
-                href="mailto:contact@hotandfresh.news"
+                href="mailto:contact@qnotables.ai"
                 className="label-mono border border-primary bg-primary px-4 py-2 text-primary-foreground hover:opacity-90 transition-opacity"
               >
                 Contact
