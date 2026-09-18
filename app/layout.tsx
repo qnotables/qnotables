@@ -47,13 +47,13 @@ export const metadata: Metadata = {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
     url: SITE_URL,
-    images: [{ url: DEFAULT_OG_IMAGE, width: 1316, height: 877, alt: `${SITE_NAME} preview` }],
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${SITE_NAME} preview` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
-    images: [DEFAULT_OG_IMAGE],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: `${SITE_NAME} preview` }],
   },
 }
 
