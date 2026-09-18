@@ -105,13 +105,13 @@ export default function AboutPage() {
         <div className="border-b border-border bg-card">
           <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-20">
             <h1 className="stencil text-5xl md:text-6xl text-foreground text-balance">
-              About HOT AND FRESH
+              About Qnotables
             </h1>
             <p className="label-mono mt-4 text-lg text-primary">
               Fresh drops. Hot leads. Organized for the record.
             </p>
             <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              HOT AND FRESH is an independent research, media, and archive platform built to organize public information, source links, field notes, research threads, media clips, documents, and ongoing storylines into a searchable public record.
+              Qnotables is an independent research, media, and archive platform built to organize public information, source links, field notes, research threads, media clips, documents, and ongoing storylines into a searchable public record.
             </p>
 
             {/* Hero Buttons */}
@@ -150,7 +150,7 @@ export default function AboutPage() {
             <h2 className="stencil text-3xl md:text-4xl text-foreground">Mission</h2>
             <div className="mt-8 space-y-6 max-w-3xl">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                HOT AND FRESH exists to preserve the record, organize public information, and help readers track important stories through source links, field notes, archives, timelines, media, and disciplined research.
+                Qnotables exists to preserve the record, organize public information, and help readers track important stories through source links, field notes, archives, timelines, media, and disciplined research.
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Our mission is not to tell people what to think. Our mission is to organize the material clearly enough that readers can review it, compare sources, follow developments, and make informed judgments for themselves.
@@ -165,7 +165,7 @@ export default function AboutPage() {
             <h2 className="stencil text-3xl md:text-4xl text-foreground">Why This Exists</h2>
             <div className="mt-8 space-y-6 max-w-3xl">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                The modern information environment moves fast. Headlines disappear, sources change, posts get buried, and major stories are often scattered across platforms. HOT AND FRESH was built to slow that process down and organize the record.
+                The modern information environment moves fast. Headlines disappear, sources change, posts get buried, and major stories are often scattered across platforms. Qnotables was built to slow that process down and organize the record.
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 This platform brings together archive posts, research threads, field notes, source records, videos, documents, forum discussions, and RSS distribution so important information can be reviewed over time instead of lost in the daily noise.
@@ -204,7 +204,7 @@ export default function AboutPage() {
                 ))}
               </div>
               <p className="text-sm leading-relaxed text-muted-foreground mt-6">
-                Information is only useful when it is handled responsibly. HOT AND FRESH values strong research, clear sourcing, disciplined language, and the willingness to correct the record when needed.
+                Information is only useful when it is handled responsibly. Qnotables values strong research, clear sourcing, disciplined language, and the willingness to correct the record when needed.
               </p>
             </div>
           </div>
