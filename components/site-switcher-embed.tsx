@@ -80,15 +80,17 @@ function EmbedPanel({ site, active, learnMoreUrl }: { site: EmbedSite; active: b
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
         onLoad={() => setLoaded(true)}
       />
-      {!loaded && (
+      {(!loaded || learnMoreUrl) && (
         <div className="absolute inset-x-0 top-0 z-10 border-b border-border bg-card/95">
-          <div
-            role="progressbar"
-            aria-label={`Loading ${site.label}`}
-            className="h-1 overflow-hidden bg-primary/15"
-          >
-            <div className="embed-loading-bar h-full w-1/3 bg-primary" />
-          </div>
+          {!loaded && (
+            <div
+              role="progressbar"
+              aria-label={`Loading ${site.label}`}
+              className="h-1 overflow-hidden bg-primary/15"
+            >
+              <div className="embed-loading-bar h-full w-1/3 bg-primary" />
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs">
             <p role="status" className="text-muted-foreground">
               {loaded ? site.label : slow ? `${site.label} is taking longer than expected.` : `Loading ${site.label}…`}
