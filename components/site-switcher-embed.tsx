@@ -1,7 +1,7 @@
 "use client"
 
 import { RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 interface EmbedSite {
   id: string
@@ -61,9 +61,63 @@ const SITES: EmbedSite[] = [
   },
 ]
 
+function EmbedPanel({ site, active }: { site: EmbedSite; active: boolean }) {
+  const [loaded, setLoaded] = useState(false)
+  const [slow, setSlow] = useState(false)
+
+  useEffect(() => {
+    if (loaded) return
+    const timeout = window.setTimeout(() => setSlow(true), 15_000)
+    return () => window.clearTimeout(timeout)
+  }, [loaded])
+
+  return (
+    <div className="absolute inset-0" style={{ display: active ? "block" : "none" }}>
+      <iframe
+        src={site.url}
+        title={site.label}
+        className="h-full w-full border-0"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        onLoad={() => setLoaded(true)}
+      />
+      {!loaded && (
+        <div className="absolute inset-x-0 top-0 z-10 border-b border-border bg-card/95">
+          <div
+            role="progressbar"
+            aria-label={`Loading ${site.label}`}
+            className="h-1 overflow-hidden bg-primary/15"
+          >
+            <div className="embed-loading-bar h-full w-1/3 bg-primary" />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs">
+            <p role="status" className="text-muted-foreground">
+              {slow ? `${site.label} is taking longer than expected.` : `Loading ${site.label}…`}
+            </p>
+            {slow && (
+              <a href={site.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                Open {site.label} directly →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+      <style jsx>{`
+        .embed-loading-bar { animation: embed-loading 1.5s ease-in-out infinite; }
+        @keyframes embed-loading {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(300%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .embed-loading-bar { animation: none; width: 100%; opacity: 0.6; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export function SiteSwitcherEmbed() {
   const [activeId, setActiveId] = useState(SITES[0].id)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({})
   const active = SITES.find((s) => s.id === activeId) ?? SITES[0]
 
   return (
@@ -99,7 +153,7 @@ export function SiteSwitcherEmbed() {
         <div className="ml-auto flex items-center">
           <button
             type="button"
-            onClick={() => setRefreshKey((key) => key + 1)}
+            onClick={() => setRefreshKeys((keys) => ({ ...keys, [activeId]: (keys[activeId] ?? 0) + 1 }))}
             className="label-mono inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-xs text-primary transition-colors hover:bg-primary/10 hover:underline"
             aria-label={`Refresh ${active.label}`}
             title={`Refresh ${active.label}`}
@@ -122,14 +176,7 @@ export function SiteSwitcherEmbed() {
       {/* Iframes — all rendered at once to preserve navigation state, only active one is visible */}
       <div className="relative w-full" style={{ height: "800px" }}>
         {SITES.map((site) => (
-          <iframe
-            key={`${site.id}-${site.id === activeId ? refreshKey : 0}`}
-            src={site.url}
-            title={site.label}
-            className="absolute inset-0 h-full w-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-            style={{ display: activeId === site.id ? "block" : "none" }}
-          />
+          <EmbedPanel key={`${site.id}-${refreshKeys[site.id] ?? 0}`} site={site} active={activeId === site.id} />
         ))}
       </div>
     </div>
