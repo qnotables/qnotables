@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { CartProvider } from '@/lib/shop/cart-context'
 import { MusicPlayerProvider } from '@/lib/music-player-context'
 import { JsonLd } from '@/components/json-ld'
+import { CommunityAssistantWidget } from '@/components/community-assistant-widget'
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
@@ -74,23 +75,18 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${oswald.variable} ${plexMono.variable} bg-background`}
+      className={`${oswald.variable} ${plexMono.variable} dark bg-background`}
     >
       <body className="font-mono antialiased">
         <JsonLd data={organizationSchema} />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-          storageKey="theme"
-        >
+        <ThemeProvider>
           <MusicPlayerProvider>
             <CartProvider>
               {children}
             </CartProvider>
           </MusicPlayerProvider>
         </ThemeProvider>
+        <CommunityAssistantWidget />
         {process.env.NODE_ENV === 'production' && <Analytics />}
         {process.env.NODE_ENV === 'production' && <SpeedInsights />}
       </body>

@@ -1,27 +1,42 @@
 "use client"
 
-import * as React from "react"
-import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 
-export function ThemeProvider({
-  children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
-  const [mounted, setMounted] = React.useState(false)
+type Theme = "light" | "dark"
 
-  React.useEffect(() => {
-    setMounted(true)
+type ThemeContextValue = {
+  theme: Theme
+  resolvedTheme: Theme
+  setTheme: (theme: Theme) => void
+}
+
+const ThemeContext = createContext<ThemeContextValue | null>(null)
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>("dark")
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("theme")
+    const nextTheme: Theme = storedTheme === "light" ? "light" : "dark"
+    setThemeState(nextTheme)
+    document.documentElement.classList.toggle("dark", nextTheme === "dark")
   }, [])
 
-  // Prevent server-side rendering of next-themes to avoid script tag issues
-  if (!mounted) {
-    return <>{children}</>
+  const setTheme = (nextTheme: Theme) => {
+    setThemeState(nextTheme)
+    window.localStorage.setItem("theme", nextTheme)
+    document.documentElement.classList.toggle("dark", nextTheme === "dark")
   }
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <NextThemesProvider {...(props as any)}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme: theme, setTheme }}>
       {children}
-    </NextThemesProvider>
+    </ThemeContext.Provider>
   )
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext)
+  if (!context) throw new Error("useTheme must be used within ThemeProvider")
+  return context
 }
