@@ -3,7 +3,39 @@
 import { FormEvent, useState } from "react"
 import { ArrowUp, Bot, RotateCcw } from "lucide-react"
 import { useEveAgent } from "eve/react"
+import ReactMarkdown from "react-markdown"
+import rehypeExternalLinks from "rehype-external-links"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
+import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
+
+const assistantMarkdownSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    a: ["href", "title", "target", "rel"],
+  },
+  protocols: {
+    ...defaultSchema.protocols,
+    href: ["http", "https", "mailto"],
+  },
+}
+
+function AssistantMessage({ content }: { content: string }) {
+  return (
+    <div className="prose prose-sm max-w-none text-inherit prose-a:text-primary prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-primary/80 prose-p:my-0 prose-ul:my-2 prose-ol:my-2">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[
+          [rehypeSanitize, assistantMarkdownSchema],
+          [rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
+        ]}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 const suggestions = [
   "I’m new here. Where should I start?",
@@ -84,7 +116,7 @@ export function CommunityAssistantChat() {
               <article key={message.id} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[88%] border px-4 py-3 text-sm leading-relaxed", isUser ? "border-primary/50 bg-primary/10 text-foreground" : "border-border bg-background text-foreground")}>
                   <p className="mb-2 font-mono text-[9px] font-semibold tracking-[0.16em] text-primary">{isUser ? "YOU" : "COMMUNITY ASSISTANT"}</p>
-                  <div className="whitespace-pre-wrap">{text}</div>
+                  {isUser ? <div className="whitespace-pre-wrap">{text}</div> : <AssistantMessage content={text} />}
                 </div>
               </article>
             )
