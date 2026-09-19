@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { getProfileForEdit, profileThemes, profileTopics, type MockProfile } from "@/lib/mock-profile"
 
-export function EditProfileForm() {
-  const [profile, setProfile] = useState<MockProfile>(() => getProfileForEdit())
+export function EditProfileForm({ initialProfile }: { initialProfile?: MockProfile }) {
+  const [profile, setProfile] = useState<MockProfile>(() => initialProfile ?? getProfileForEdit())
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const avatarInput = useRef<HTMLInputElement>(null)
@@ -34,28 +35,59 @@ export function EditProfileForm() {
     return Object.keys(next).length === 0
   }
 
-  const save = () => {
+  const save = async () => {
     if (!validate()) return
+    setSaved(false)
+    setSaving(true)
+    const response = await fetch("/api/profile/update", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        displayName: profile.displayName,
+        username: profile.username,
+        bio: profile.bio,
+        pronouns: profile.pronouns,
+        location: profile.location,
+        website: profile.website,
+        socialLinks: profile.socialLinks.join(", "),
+        privacy: profile.privacy,
+      }),
+    })
+    if (!response.ok) {
+      const result = await response.json().catch(() => null)
+      setErrors({ form: result?.error ?? "Could not save your profile." })
+      setSaving(false)
+      return
+    }
     setDirty(false)
     setSaved(true)
+    setSaving(false)
   }
 
   const cancel = () => {
     if (dirty && !window.confirm("Discard your unsaved profile changes?")) return
-    setProfile(getProfileForEdit())
+    setProfile(initialProfile ?? getProfileForEdit())
     setErrors({})
     setDirty(false)
     setSaved(false)
   }
 
-  const handleImage = (key: "avatarUrl" | "bannerUrl", file?: File) => {
+  const handleImage = async (key: "avatarUrl" | "bannerUrl", file?: File) => {
     if (!file) return
     if (!file.type.startsWith("image/")) {
       setErrors((current) => ({ ...current, [key]: "Please choose an image file." }))
       return
     }
-    const url = URL.createObjectURL(file)
-    update(key, url)
+    const formData = new FormData()
+    formData.append("file", file)
+    const endpoint = key === "avatarUrl" ? "/api/profile/avatar" : "/api/profile/banner"
+    const response = await fetch(endpoint, { method: "POST", body: formData })
+    const result = await response.json().catch(() => null)
+    if (!response.ok) {
+      setErrors((current) => ({ ...current, [key]: result?.error ?? "Upload failed." }))
+      return
+    }
+    update(key, result.url)
     setErrors((current) => ({ ...current, [key]: "" }))
   }
 
@@ -64,9 +96,9 @@ export function EditProfileForm() {
   const canSave = useMemo(() => dirty && !saved, [dirty, saved])
 
   return <div className="min-h-screen bg-background"><main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="label-mono text-xs text-primary">PROFILE SETTINGS</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">Shape your corner of the Town Hall.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Choose what to share, how you want to be found, and what kind of presence feels useful.</p></div><div className="flex gap-2"><Button variant="outline" onClick={cancel}><RotateCcw data-icon="inline-start" /> Cancel</Button><Button onClick={save} disabled={!canSave}>{saved ? <Check data-icon="inline-start" /> : <Upload data-icon="inline-start" />} {saved ? "Saved" : "Save changes"}</Button></div></div>
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="label-mono text-xs text-primary">PROFILE SETTINGS</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">Shape your corner of the Town Hall.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Choose what to share, how you want to be found, and what kind of presence feels useful.</p></div><div className="flex gap-2"><Button variant="outline" onClick={cancel}><RotateCcw data-icon="inline-start" /> Cancel</Button><Button onClick={save} disabled={!canSave || saving}>{saved ? <Check data-icon="inline-start" /> : <Upload data-icon="inline-start" />} {saving ? "Saving…" : saved ? "Saved" : "Save changes"}</Button></div></div>
     {saved && <div role="status" className="mb-6 flex items-center gap-3 border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"><Check className="size-4 text-primary" /> Your profile preview is saved locally for this session.</div>}
-    {Object.keys(errors).length > 0 && <div role="alert" className="mb-6 flex items-start gap-3 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm"><AlertTriangle className="mt-0.5 size-4 text-destructive" /><div><p className="font-medium">A few details need another look.</p><p className="mt-1 text-muted-foreground">Fix the highlighted fields before saving.</p></div></div>}
+    {Object.keys(errors).length > 0 && <div role="alert" className="mb-6 flex items-start gap-3 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm"><AlertTriangle className="mt-0.5 size-4 text-destructive" /><div><p className="font-medium">A few details need another look.</p><p className="mt-1 text-muted-foreground">{errors.form ?? "Fix the highlighted fields before saving."}</p></div></div>}
 
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_330px]">
       <div className="flex flex-col gap-6">

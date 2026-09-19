@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import type { MockProfile, ProfileTab } from "@/lib/mock-profile"
 
-type ProfilePageProps = { profile: MockProfile; activeTab?: ProfileTab }
+type ProfilePageProps = { profile: MockProfile; activeTab?: ProfileTab; isOwner?: boolean }
 
 const tabLabels: Array<{ value: ProfileTab; label: string }> = [
   { value: "posts", label: "Posts" },
@@ -16,9 +16,9 @@ const tabLabels: Array<{ value: ProfileTab; label: string }> = [
   { value: "about", label: "About" },
 ]
 
-export function ProfilePage({ profile, activeTab = "posts" }: ProfilePageProps) {
+export function ProfilePage({ profile, activeTab = "posts", isOwner = false }: ProfilePageProps) {
   const isEmpty = activeTab === "saved"
-  const items = activeTab === "replies" ? profile.replies : profile.posts
+  const items: Array<{ title: string; excerpt: string; date: string; topic: string; replies?: number }> = activeTab === "replies" ? profile.replies : profile.posts
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,7 +28,7 @@ export function ProfilePage({ profile, activeTab = "posts" }: ProfilePageProps) 
             <p className="label-mono text-xs text-primary">COMMUNITY PROFILE</p>
             <p className="mt-1 text-sm text-muted-foreground">A quieter place to see what someone is contributing.</p>
           </div>
-          <Button asChild variant="outline" size="sm"><Link href="/profile/edit">Edit profile</Link></Button>
+          {isOwner && <Link href="/profile/edit" className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">Edit profile</Link>}
         </div>
 
         <Card className="overflow-hidden border-border bg-card">
@@ -57,15 +57,15 @@ export function ProfilePage({ profile, activeTab = "posts" }: ProfilePageProps) 
             <div className="mt-6 max-w-2xl">
               <p className="text-base leading-7 text-foreground/90">{profile.bio}</p>
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                {profile.privacy.showLocation && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" />{profile.location}</span>}
+                {profile.privacy.showLocation && profile.location && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" />{profile.location}</span>}
                 <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />{profile.joined}</span>
-                <a href={`https://${profile.website}`} className="inline-flex items-center gap-1.5 text-primary hover:underline"><ExternalLink className="size-4" />{profile.website}</a>
+                {profile.website && <a href={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline"><ExternalLink className="size-4" />{profile.website}</a>}
                 {profile.privacy.hiddenDetails.length > 0 && <span className="inline-flex items-center gap-1.5 text-xs"><ShieldCheck className="size-4" />Some details are private</span>}
               </div>
             </div>
 
             <div className="mt-7 grid grid-cols-2 gap-3 border-t border-border pt-5 sm:grid-cols-5">
-              {[[profile.stats.posts, "Posts"], [profile.stats.replies, "Replies"], [profile.stats.helpful, "Helpful"], [profile.stats.topics, "Topics"], [profile.stats.views, "Views"]].map(([value, label]) => <div key={label as string}><p className="font-serif text-2xl font-semibold text-foreground">{value}</p><p className="label-mono mt-1 text-[10px] text-muted-foreground">{label}</p></div>)}
+              {([[profile.stats.posts, "Posts"], [profile.stats.replies, "Replies"], [profile.stats.helpful, "Helpful"], [profile.stats.topics, "Topics"], [profile.stats.views, "Views"]] as Array<[number, string]>).map(([value, label]) => <div key={label}><p className="font-serif text-2xl font-semibold text-foreground">{value}</p><p className="label-mono mt-1 text-[10px] text-muted-foreground">{label}</p></div>)}
             </div>
           </CardContent>
         </Card>
@@ -95,7 +95,7 @@ export function ProfilePage({ profile, activeTab = "posts" }: ProfilePageProps) 
 }
 
 function AboutPanel({ profile }: { profile: MockProfile }) {
-  return <div className="flex flex-col gap-4 pt-5"><Card><CardHeader><CardTitle className="font-serif text-xl">About {profile.displayName}</CardTitle><CardDescription>A little more context, shared on their terms.</CardDescription></CardHeader><CardContent className="grid gap-5 sm:grid-cols-2"><div><p className="label-mono text-[10px] text-muted-foreground">PRONOUNS</p><p className="mt-1 text-sm">{profile.pronouns}</p></div><div><p className="label-mono text-[10px] text-muted-foreground">MEMBER SINCE</p><p className="mt-1 text-sm">{profile.joined.replace("Joined ", "")}</p></div><div className="sm:col-span-2"><Separator className="mb-5" /><p className="label-mono text-[10px] text-muted-foreground">ELSEWHERE</p><div className="mt-2 flex flex-wrap gap-3">{profile.socialLinks.map((link) => <a key={link} href={`https://${link}`} className="text-sm text-primary hover:underline">{link}</a>)}</div></div></CardContent></Card></div>
+  return <div className="flex flex-col gap-4 pt-5"><Card><CardHeader><CardTitle className="font-serif text-xl">About {profile.displayName}</CardTitle><CardDescription>A little more context, shared on their terms.</CardDescription></CardHeader><CardContent className="grid gap-5 sm:grid-cols-2"><div><p className="label-mono text-[10px] text-muted-foreground">PRONOUNS</p><p className="mt-1 text-sm">{profile.pronouns}</p></div><div><p className="label-mono text-[10px] text-muted-foreground">MEMBER SINCE</p><p className="mt-1 text-sm">{profile.joined.replace("Joined ", "")}</p></div><div className="sm:col-span-2"><Separator className="mb-5" /><p className="label-mono text-[10px] text-muted-foreground">ELSEWHERE</p>            {profile.socialLinks.length > 0 ? <div className="mt-2 flex flex-wrap gap-3">{profile.socialLinks.map((link) => <a key={link} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{link}</a>)}</div> : <p className="mt-2 text-sm text-muted-foreground">No public links yet.</p>}</div></CardContent></Card></div>
 }
 
 function EmptyProfileState({ icon: Icon, title, body }: { icon: typeof Bookmark; title: string; body: string }) {
