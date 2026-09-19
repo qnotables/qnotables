@@ -75,17 +75,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${oswald.variable} ${plexMono.variable} bg-background`}
+      className={`${oswald.variable} ${plexMono.variable} dark bg-background`}
     >
       <body className="font-mono antialiased">
         <JsonLd data={organizationSchema} />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-          storageKey="theme"
-        >
+        <ThemeProvider>
           <MusicPlayerProvider>
             <CartProvider>
               {children}
