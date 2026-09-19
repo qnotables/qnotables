@@ -66,7 +66,22 @@ export async function getRecord(id: string) {
   return data ? toRecord(data as ProjectionRow) : null
 }
 
-export function citations(records: ResearchRecord[]) { return records.map((record, index) => `[${index + 1}] [${record.title}](${record.qnotablesUrl}) — ${record.sourceName ?? "QNotables"}; ${record.sourceType}.${record.originalSourceUrl ? ` Original Source: ${record.originalSourceUrl}` : ""}`).join("\n") }
+function citationUrl(value: string): string {
+  const trimmed = value.trim()
+  if (/^\/(?:archives?|forum|documents?|videos?|sources|news)(?:[/?#]|$)/i.test(trimmed)) return trimmed
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return "/"
+}
+
+export function citations(records: ResearchRecord[]) {
+  return records
+    .map((record, index) => {
+      const qnotablesUrl = citationUrl(record.qnotablesUrl)
+      const original = record.originalSourceUrl ? ` Original Source: [open source](${record.originalSourceUrl})` : ""
+      return `[${index + 1}] [${record.title}](${qnotablesUrl}) — ${record.sourceName ?? "QNotables"}; ${record.sourceType}.${original}`
+    })
+    .join("\n")
+}
 export function agentRecords(records: ResearchRecord[]) { return records.map(({ body, ...record }) => ({ ...record, body: body.slice(0, 6000) })) }
 export function output(records: ResearchRecord[]) { return { count: records.length, records: agentRecords(records), citations: citations(records) } }
 export async function executeSearch(query: string, kind?: string) { try { return output((await searchRecords(query, kind)).records) } catch (error) { console.error("[v0] research tool error", error instanceof Error ? error.message : "unknown error"); return { error: "The public QNotables search index could not be reached.", records: [], citations: "" } } }

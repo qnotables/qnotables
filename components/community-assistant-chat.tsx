@@ -21,6 +21,20 @@ const assistantMarkdownSchema = {
   },
 }
 
+function linkifyResearchUrls(content: string) {
+  const markdownLinks: string[] = []
+  const protectedContent = content.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match) => {
+    markdownLinks.push(match)
+    return `\u0000${markdownLinks.length - 1}\u0000`
+  })
+  const withExternalLinks = protectedContent.replace(/(?<![\]([\("'=])https?:\/\/[^\s<>)]+/g, (url) => {
+    const cleanUrl = url.replace(/[.,;:!?]+$/, "")
+    return `[${cleanUrl}](${cleanUrl})${url.slice(cleanUrl.length)}`
+  })
+  const withInternalLinks = withExternalLinks.replace(/(\/(?:archives?|forum|documents?|videos?|sources|news)(?:\/[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]+)?)/g, (url) => `[${url}](${url})`)
+  return withInternalLinks.replace(/\u0000(\d+)\u0000/g, (_, index) => markdownLinks[Number(index)])
+}
+
 function AssistantMessage({ content }: { content: string }) {
   return (
     <div className="prose prose-sm max-w-none text-inherit prose-a:text-primary prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-primary/80 prose-p:my-0 prose-ul:my-2 prose-ol:my-2">
@@ -31,7 +45,7 @@ function AssistantMessage({ content }: { content: string }) {
           [rehypeExternalLinks, { target: "_blank", rel: ["noopener", "noreferrer"] }],
         ]}
       >
-        {content}
+        {linkifyResearchUrls(content)}
       </ReactMarkdown>
     </div>
   )
@@ -117,7 +131,7 @@ export function CommunityAssistantChat() {
             return (
               <article key={message.id} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[88%] border px-4 py-3 text-sm leading-relaxed", isUser ? "border-primary/50 bg-primary/10 text-foreground" : "border-border bg-background text-foreground")}>
-                  <p className="mb-2 font-mono text-[9px] font-semibold tracking-[0.16em] text-primary">{isUser ? "YOU" : "COMMUNITY ASSISTANT"}</p>
+                  <p className="mb-2 font-mono text-[9px] font-semibold tracking-[0.16em] text-primary">{isUser ? "YOU" : "RESEARCH AGENT"}</p>
                   {isUser ? <div className="whitespace-pre-wrap">{text}</div> : <AssistantMessage content={text} />}
                 </div>
               </article>
