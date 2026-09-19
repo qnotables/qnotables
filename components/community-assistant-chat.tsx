@@ -38,9 +38,11 @@ function AssistantMessage({ content }: { content: string }) {
 }
 
 const suggestions = [
-  "I’m new here. Where should I start?",
-  "Where do I ask a community question?",
-  "How can I submit a notable or source?",
+  "Search the archive",
+  "Find primary sources",
+  "Build a timeline",
+  "Search Town Hall",
+  "Compare records",
 ]
 
 function messageText(message: { parts: ReadonlyArray<{ type: string; text?: string }> }) {
@@ -71,17 +73,17 @@ export function CommunityAssistantChat() {
   }
 
   return (
-    <section className="overflow-hidden border border-border bg-card/70 shadow-[0_18px_60px_rgba(0,0,0,0.18)]" aria-label="QNotables community assistant">
+    <section className="overflow-hidden border border-border bg-card/70 shadow-[0_18px_60px_rgba(0,0,0,0.18)]" aria-label="QNotables Research Agent">
       <div className="border-b border-border bg-muted/40 px-4 py-4 sm:px-6">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center border border-primary/50 bg-primary/10 text-primary">
             <Bot className="size-4" aria-hidden="true" />
           </div>
           <div>
-            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">QNOTABLES / COMMUNITY DESK</p>
-            <h1 className="stencil mt-1 text-2xl text-foreground sm:text-3xl">Ask the community assistant</h1>
+            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-primary">QNOTABLES / RESEARCH AGENT</p>
+            <h1 className="stencil mt-1 text-2xl text-foreground sm:text-3xl">QNotables Research Agent</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              A quick guide to Town Hall, the archives, submissions, and finding your way around QNotables.
+              Ask the archive. Follow the source. Examine the record.
             </p>
           </div>
         </div>
@@ -91,7 +93,7 @@ export function CommunityAssistantChat() {
         {agent.data.messages.length === 0 ? (
           <div className="flex min-h-[270px] flex-col items-center justify-center text-center">
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              Ask a question about the site or the community. The assistant will point you toward the right public page and explain the next step.
+              Search public QNotables records, documents, The Wire, and Town Hall. Answers include traceable citations when evidence is available.
             </p>
             <div className="mt-6 flex max-w-xl flex-wrap justify-center gap-2">
               {suggestions.map((suggestion) => (
@@ -128,7 +130,7 @@ export function CommunityAssistantChat() {
 
       <div className="border-t border-border bg-muted/20 p-4 sm:p-6">
         <form onSubmit={submit} className="flex items-end gap-2">
-          <label className="sr-only" htmlFor="community-assistant-message">Ask the community assistant</label>
+          <label className="sr-only" htmlFor="community-assistant-message">QNotables Research Agent</label>
           <textarea
             id="community-assistant-message"
             value={input}
@@ -139,7 +141,7 @@ export function CommunityAssistantChat() {
                 event.currentTarget.form?.requestSubmit()
               }
             }}
-            placeholder="Ask about QNotables…"
+            placeholder="Search the QNotables record…"
             rows={2}
             disabled={isResuming}
             className="min-h-12 flex-1 resize-none border border-border bg-background px-3 py-3 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary disabled:opacity-50"
@@ -149,7 +151,7 @@ export function CommunityAssistantChat() {
           </button>
         </form>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">AI-generated guidance. Verify important information with the linked public pages.</p>
+          <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">AI-generated research. Follow every citation back to the public record.</p>
           {agent.data.messages.length > 0 && (
             <button type="button" onClick={agent.reset} className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-muted-foreground hover:text-foreground" aria-label="Start a new conversation">
               <RotateCcw className="size-3" aria-hidden="true" /> NEW CHAT
