@@ -29,7 +29,7 @@ export function CommunityAssistantWidget() {
       </DialogTrigger>
       <DialogContent
         showCloseButton
-        className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto border-border bg-background p-0 shadow-2xl sm:max-h-[min(760px,calc(100dvh-3rem))]"
+        className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto border-border bg-background p-0 shadow-2xl sm:max-h-[min(760px,calc(100dvh-3rem))] sm:max-w-4xl"
       >
         <DialogTitle className="sr-only">QNotables community assistant</DialogTitle>
         <DialogDescription className="sr-only">
