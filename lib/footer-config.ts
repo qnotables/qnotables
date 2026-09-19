@@ -50,8 +50,8 @@ type FooterRow = {
 }
 
 const DEFAULT_CONFIG: FooterConfig = {
-  siteName: "HOT AND FRESH",
-  eyebrow: "QNOTABLES / INDEPENDENT SIGNAL",
+  siteName: "QNOTABLES",
+  eyebrow: "INDEPENDENT SIGNAL",
   mission:
     "An independent aggregator ranking verified reporting from trusted wire services and publications worldwide.",
   newsletterTitle: "Keep the signal close.",
@@ -72,6 +72,7 @@ const DEFAULT_CONFIG: FooterConfig = {
     { id: "forum", label: "The Town Hall", href: "/forum", description: "A moderated forum for considered argument.", category: "Community", placement: "footer", icon: "MessagesSquare", enabled: true, openInNewTab: false, sortOrder: 80 },
     { id: "friends", label: "Submit a Friend", href: "/friends/submit", description: "Recommend a person, project, or place.", category: "Community", placement: "footer", icon: "Handshake", enabled: true, openInNewTab: false, sortOrder: 90 },
     { id: "about", label: "About", href: "/about", description: "Why QNotables exists.", category: "Access", placement: "footer", icon: "Info", enabled: true, openInNewTab: false, sortOrder: 100 },
+    { id: "sources", label: "Sources", href: "/sources", description: "Browse the monitored source directory.", category: "Access", placement: "footer", icon: "Radio", enabled: true, openInNewTab: false, sortOrder: 105 },
     { id: "briefing", label: "Daily Briefing", href: "/new-to-q", description: "Start with the essentials.", category: "Access", placement: "footer", icon: "Mail", enabled: true, openInNewTab: false, sortOrder: 110 },
     { id: "shop", label: "Shop", href: "https://shop.qnotables.ai", description: "Objects for the signal-minded.", category: "Access", placement: "footer", icon: "ShoppingBag", enabled: true, openInNewTab: true, sortOrder: 120 },
     { id: "donate", label: "Donate", href: "/donate", description: "Support independent research.", category: "Access", placement: "footer", icon: "HeartHandshake", enabled: true, openInNewTab: false, sortOrder: 130 },

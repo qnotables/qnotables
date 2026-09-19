@@ -39,7 +39,7 @@ export function ImportForm() {
         posts = rows.map((row) => ({
           title: row.title || "",
           excerpt: row.excerpt || "",
-          author: row.author || "HOT AND FRESH",
+          author: row.author || "QNOTABLES",
           content: row.content || row.body || "",
           tag: row.tag || "News",
           category: row.category || "General",
@@ -53,7 +53,7 @@ export function ImportForm() {
         posts = parsed.map((p) => ({
           title: p.title || "",
           excerpt: p.excerpt || "",
-          author: p.author || "HOT AND FRESH",
+          author: p.author || "QNOTABLES",
           content: p.content || "",
           tag: p.tag || "News",
           category: p.category,
@@ -69,7 +69,7 @@ export function ImportForm() {
           return {
             title: extractTitle(md) || frontmatter.title || "Untitled",
             excerpt: extractExcerpt(md) || frontmatter.excerpt || "",
-            author: frontmatter.author || "HOT AND FRESH",
+            author: frontmatter.author || "QNOTABLES",
             content: body || md,
             tag: frontmatter.tag || "News",
             category: frontmatter.category,
@@ -83,7 +83,7 @@ export function ImportForm() {
         posts = parseRSSItems(content).map((p) => ({
           title: p.title || "",
           excerpt: p.excerpt || "",
-          author: p.author || "HOT AND FRESH",
+          author: p.author || "QNOTABLES",
           content: p.content || "",
           tag: p.tag || "News",
           category: p.category,

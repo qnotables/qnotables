@@ -26,10 +26,10 @@ export const dynamic = "force-dynamic"
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPost(slug)
-  if (!post) return { title: "Not found — HOT AND FRESH" }
+  if (!post) return { title: "Not found — QNOTABLES" }
   const site = getSiteUrl()
   const canonical = `${site}/archives/${post.slug}`
-  const description = post.subtitle || post.excerpt || "Archived HOT AND FRESH record."
+  const description = post.subtitle || post.excerpt || "Archived QNOTABLES record."
   
   const ogImage = resolveSocialImage({
     content: post.content,
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   })
   
   return {
-    title: `${post.title} — HOT AND FRESH`,
+    title: `${post.title} — QNOTABLES`,
     description,
     alternates: { canonical },
     openGraph: {

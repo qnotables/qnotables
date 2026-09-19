@@ -86,7 +86,7 @@ export async function importPosts(posts: ImportPostInput[]): Promise<ImportResul
           title: post.title.trim(),
           excerpt: post.excerpt?.trim() || "",
           body: post.content,
-          author_name: post.author || "HOT AND FRESH",
+          author_name: post.author || "QNOTABLES",
           tag: post.tag || "News",
           category: post.category || "General",
           read_minutes: Math.ceil(post.content.split(/\s+/).length / 200),
@@ -251,7 +251,7 @@ export async function batchImportPosts(posts: ImportedPost[]): Promise<BatchImpo
       source_name: post.source_name,
       original_source_url: post.original_source_url,
       cover_image: post.cover_image_url || null,
-      author_name: post.author_name || "HOT AND FRESH",
+      author_name: post.author_name || "QNOTABLES",
       imported_at: new Date().toISOString(),
       read_minutes: Math.ceil(post.body.split(/\s+/).length / 200),
     }))

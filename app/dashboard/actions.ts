@@ -463,7 +463,7 @@ export async function saveSettings(formData: FormData): Promise<Result> {
   const payload = {
     id: 1,
     embed_learn_more_url: embedLearnMoreUrl,
-    site_name: String(formData.get("site_name") ?? "").trim() || "HOT AND FRESH",
+    site_name: String(formData.get("site_name") ?? "").trim() || "QNOTABLES",
     tagline: String(formData.get("tagline") ?? "").trim() || null,
     default_image_url: String(formData.get("default_image_url") ?? "").trim() || null,
     rss_title: String(formData.get("rss_title") ?? "").trim() || null,

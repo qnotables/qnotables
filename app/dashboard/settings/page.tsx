@@ -13,11 +13,11 @@ export const metadata = {
 
 const DEFAULTS: SiteSettings = {
   embed_learn_more_url: null,
-  site_name: "HOT AND FRESH",
-  tagline: "Global News, Hot and Fresh",
+  site_name: "QNOTABLES",
+  tagline: "Independent Signal, Organized for the Record",
   default_image_url: null,
-  rss_title: "HOT AND FRESH",
-  rss_description: "Latest dispatches from HOT AND FRESH",
+  rss_title: "QNOTABLES",
+  rss_description: "Latest dispatches from QNOTABLES",
   shop_preview_mode: true,
   public_registration: true,
   maintenance_mode: false,

@@ -30,7 +30,7 @@ export default function DonatePage() {
                 Support Independent Research
               </h1>
               <p className="mt-2 text-lg text-muted-foreground">
-                HOT AND FRESH is an independent research platform. Help us maintain editorial independence and continue building the permanent record.
+                QNOTABLES is an independent research platform. Help us maintain editorial independence and continue building the permanent record.
               </p>
             </div>
           </div>
@@ -109,7 +109,7 @@ export default function DonatePage() {
             <li className="flex gap-3">
               <span className="shrink-0 text-primary">•</span>
               <span>
-                <strong>Spread the word:</strong> Share HOT AND FRESH with others who value independent research.
+                <strong>Spread the word:</strong> Share QNOTABLES with others who value independent research.
               </span>
             </li>
           </ul>
@@ -119,7 +119,7 @@ export default function DonatePage() {
         <div className="border border-border bg-card p-6 md:p-8">
           <h2 className="mb-4 label-mono text-xl font-bold text-foreground">Our Mission</h2>
           <p className="mb-4 text-sm text-muted-foreground">
-            HOT AND FRESH exists to preserve public information, organize developing stories, and build a permanent searchable record. We believe in:
+            QNOTABLES exists to preserve public information, organize developing stories, and build a permanent searchable record. We believe in:
           </p>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex gap-3">

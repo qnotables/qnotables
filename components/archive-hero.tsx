@@ -32,8 +32,8 @@ export function ArchiveHero({ totalRecords = 0, featuredRecords = 0, videoArchiv
 
         <p className="text-sm leading-relaxed text-muted-foreground max-w-3xl mb-4">
           {currentPage === "timeline" && "Browse archives organized chronologically. Filter by date, category, source, and media type."}
-          {currentPage === "documents" && "Research materials, PDFs, and documents from Hot and Fresh archives."}
-          {currentPage === "videos" && "Video archives and multimedia content from Hot and Fresh."}
+          {currentPage === "documents" && "Research materials, PDFs, and documents from QNotables archives."}
+          {currentPage === "videos" && "Video archives and multimedia content from QNotables."}
         </p>
 
         {/* Navigation buttons */}

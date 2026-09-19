@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { ArrowUpRight } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { TrendingPanel } from "@/components/trending-panel"
 import { GallerySection } from "@/components/gallery-section"
@@ -10,8 +12,7 @@ import { LiveStreamButton } from "@/components/live-stream-button"
 import { HomeFeed } from "@/components/home-feed"
 import { SiteSwitcherEmbed } from "@/components/site-switcher-embed"
 import { getEmbedLearnMoreUrl } from "@/lib/embed-settings"
-import { RssFeedCards } from "@/components/rss-feed-cards"
-import { getNews } from "@/lib/rss"
+import { getConfiguredRssSources, getNews } from "@/lib/rss"
 import { getAllPosts, getRecentBlogPosts } from "@/lib/blog-posts"
 import { getFeaturedRecords } from "@/lib/archives-utils"
 import { FeaturedRecords } from "@/components/featured-records"
@@ -46,6 +47,7 @@ export default async function Page() {
     approvedSignalItems,
     townHallPulse,
     embedLearnMoreUrl,
+    monitoredSources,
   ] = await Promise.all([
     getNews(),
     getRecentForumThreads(5),
@@ -57,6 +59,7 @@ export default async function Page() {
     getApprovedSignalAnalysisItems(8),
     getTownHallPulse(),
     getEmbedLearnMoreUrl(),
+    getConfiguredRssSources(),
   ])
 
   const homeFeedItems = adaptHomeFeed({
@@ -91,6 +94,17 @@ export default async function Page() {
         {/* Site Switcher Embed */}
         <SiteSwitcherEmbed learnMoreUrl={embedLearnMoreUrl} />
 
+        <section className="mb-10 border-y border-border py-8 md:py-10">
+          <p className="label-mono text-primary">QNOTABLES / INDEPENDENT SIGNAL</p>
+          <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <h1 className="stencil text-4xl leading-none text-foreground md:text-6xl">The record, organized.</h1>
+              <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground">Research, reporting, public records, and community discussion brought together for careful review.</p>
+            </div>
+            <Link href="/about" className="label-mono inline-flex items-center text-primary underline underline-offset-4">How QNotables works <ArrowUpRight className="ml-2 size-4" aria-hidden="true" /></Link>
+          </div>
+        </section>
+
         <div className="mb-8 mx-auto max-w-3xl text-center">
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             We are researchers who deal in open-source information, reasoned argument, and dank memes. We do battle in the sphere of ideas and ideas only. We neither need nor condone the use of force in our work here.
@@ -101,8 +115,6 @@ export default async function Page() {
         </div>
 
         <FeaturedRecords records={getFeaturedRecords(archivePosts)} />
-
-        <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
 
         {/* Media Library */}
         <div className="mb-8">
@@ -146,27 +158,19 @@ export default async function Page() {
         </div>
 
         {/* wire feed, grouped by desk (client-filtered via nav) */}
-        <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
+        <div id="the-wire">
+          <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
+        </div>
 
-        {/* RSS source directory */}
-        <details className="group mt-6 border-y border-border">
-          <summary className="flex cursor-pointer list-none items-center gap-3 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background [&::-webkit-details-marker]:hidden">
-            <span className="h-2 w-2 bg-primary" />
-            <h2 className="stencil text-xl text-foreground">RSS Sources</h2>
-            <span className="h-px flex-1 bg-border" />
-            <span className="label-mono text-xs text-muted-foreground group-open:hidden">Show sources</span>
-            <span className="label-mono hidden text-xs text-muted-foreground group-open:inline">Hide sources</span>
-            <span
-              aria-hidden="true"
-              className="text-lg leading-none text-primary transition-transform group-open:rotate-45"
-            >
-              +
-            </span>
-          </summary>
-          <div className="pb-6">
-            <RssFeedCards />
+        <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
+
+        <section className="mt-8 flex flex-col gap-4 border-y border-border py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="label-mono text-xs text-primary">MONITORED SOURCES</p>
+            <p className="mt-2 text-sm text-muted-foreground">Tracking reporting, public records, government releases, and independent media across {monitoredSources.length} active sources.</p>
           </div>
-        </details>
+          <Link href="/sources" className="label-mono inline-flex shrink-0 items-center text-primary underline underline-offset-4">View all sources <ArrowUpRight className="ml-2 size-4" aria-hidden="true" /></Link>
+        </section>
       </main>
 
       <BottomAd />

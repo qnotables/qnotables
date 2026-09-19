@@ -10,9 +10,9 @@ import { SiteFooter } from "@/components/site-footer"
 import { TopAd, BottomAd } from "@/components/ad-display"
 
 export const metadata: Metadata = {
-  title: "Shop & Membership — HOT AND FRESH",
+  title: "Shop & Membership — QNOTABLES",
   description:
-    "Support independent news with HOT AND FRESH memberships and branded gear. Ad-free reading, FLASH alerts, and analyst tools.",
+    "Support independent news with QNOTABLES memberships and branded gear. Ad-free reading, FLASH alerts, and analyst tools.",
 }
 
 export default function ShopPage() {
@@ -21,7 +21,7 @@ export default function ShopPage() {
       {/* sticky header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
-          <Link href="/" className="flex items-baseline gap-2" aria-label="Back to HOT AND FRESH home">
+          <Link href="/" className="flex items-baseline gap-2" aria-label="Back to QNOTABLES home">
             <Image
               src="/us-flag.png"
               alt="American flag"
@@ -30,7 +30,7 @@ export default function ShopPage() {
               className="h-5 w-8"
             />
             <span className="stencil text-2xl leading-none text-foreground md:text-3xl">
-              HOT AND FRESH
+              QNOTABLES
             </span>
             <span className="label-mono hidden text-primary sm:inline">/ SHOP</span>
           </Link>

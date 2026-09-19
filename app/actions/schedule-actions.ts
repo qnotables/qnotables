@@ -115,13 +115,13 @@ export async function updateRSSFeed(): Promise<{ success: boolean; itemCount: nu
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>HOT AND FRESH — Archives</title>
+    <title>QNOTABLES — Archives</title>
     <link>${baseUrl}/archives</link>
     <description>Research threads, field notes, source records, media embeds, and public records organized for review.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <image>
-      <title>HOT AND FRESH</title>
+      <title>QNOTABLES</title>
       <url>${baseUrl}/og-image.png</url>
       <link>${baseUrl}</link>
     </image>

@@ -1,5 +1,5 @@
 /**
- * Forum utilities for HOT AND FRESH Town Hall.
+ * Forum utilities for QNOTABLES Town Hall.
  * Shared between server components, actions, and client helpers.
  */
 
