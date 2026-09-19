@@ -82,7 +82,7 @@ export function ShareButtons({
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const shareTitle = title || headline || "HOT AND FRESH"
+  const shareTitle = title || headline || "QNOTABLES"
   const shareExcerpt = excerpt || source
 
   useEffect(() => {

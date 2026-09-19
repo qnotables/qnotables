@@ -24,7 +24,7 @@ import { StatusBadge } from "@/components/dashboard/ui"
 
 export const metadata = {
   title: "Overview — Control Room",
-  description: "Admin overview for HOT AND FRESH.",
+  description: "Admin overview for QNOTABLES.",
 }
 
 const QUICK_ACTIONS = [
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Overview"
-        description="Control room for the entire HOT AND FRESH operation."
+        description="Control room for the entire QNOTABLES operation."
       />
 
       {/* Stat cards */}

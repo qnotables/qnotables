@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { data } = await supabase.from("profiles").select("display_name").eq("id", id).maybeSingle()
   const name = data?.display_name ?? "Operator"
   return {
-    title: `${name} — Hot and Fresh`,
+    title: `${name} — QNotables`,
     description: `Profile and activity for ${name}.`,
   }
 }

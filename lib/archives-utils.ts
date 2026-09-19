@@ -53,7 +53,7 @@ export function transformBlogPostToArchive(post: BlogPost): ArchiveRecord {
     readMinutes: post.readMinutes,
     media_type: post.postType,
     featured: post.featured || false,
-    author: post.author || "HOT AND FRESH",
+    author: post.author || "QNOTABLES",
     cover_image: coverImage,
     type: "blog",
     video_preview: videoMedia
@@ -84,7 +84,7 @@ export function convertVideoToArchive(video: Video): ArchiveRecord {
     readMinutes: 0,
     media_type: "Video",
     featured: false,
-    author: "HOT AND FRESH",
+    author: "QNOTABLES",
     cover_image: video.thumbnail_url,
     type: "video",
     video_url: video.video_url,

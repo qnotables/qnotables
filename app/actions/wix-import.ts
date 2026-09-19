@@ -45,7 +45,7 @@ export async function fetchWixRssFeed(url: string): Promise<WixFetchResult> {
     }
 
     const res = await fetch(url, {
-      headers: { "User-Agent": "HOT AND FRESH RSS Importer/1.0" },
+      headers: { "User-Agent": "QNOTABLES RSS Importer/1.0" },
       next: { revalidate: 0 },
     })
 
@@ -187,7 +187,7 @@ export async function runWixImport(
         source_name: post.source_name ?? "Wix Blog Archive",
         original_source_url: post.original_source_url ?? post.source_url ?? null,
         cover_image: post.cover_image_url ?? null,
-        author_name: post.author_name ?? "HOT AND FRESH",
+        author_name: post.author_name ?? "QNOTABLES",
         read_minutes: Math.max(1, Math.ceil((post.body ?? "").split(/\s+/).length / 200)),
         include_in_rss: opts.includeInRss && opts.defaultStatus === "published",
         created_at: importedAt,

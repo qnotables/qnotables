@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { NewThreadForm } from "@/components/new-thread-form"
 import { createClient } from "@/lib/supabase/server"
 
-export const metadata = { title: "New Thread — Hot and Fresh" }
+export const metadata = { title: "New Thread — QNotables" }
 
 type ImportedDraft = {
   title?: string

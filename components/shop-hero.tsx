@@ -11,7 +11,7 @@ export function ShopHero() {
         <div className="text-center">
           <div className="mb-4 flex justify-center">
             <span className="label-mono inline-block bg-primary/10 px-3 py-1 text-primary">
-              HOT AND FRESH STORE
+              QNOTABLES STORE
             </span>
           </div>
 

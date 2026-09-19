@@ -13,7 +13,7 @@ export const PULSE_DEFAULTS = {
   backchannelMaxAgeDays: 14,
 }
 
-export type PulseSlot = "active" | "backchannel" | "editor"
+export type PulseSlot = "active" | "backchannel" | "editor" | "signal"
 
 export interface PulseCard {
   slot: PulseSlot
@@ -146,7 +146,7 @@ function makeCard(
   const slug = thread.slug || thread.id
   return {
     slot,
-    eyebrow: isOpenDiscussion ? "OPEN DISCUSSION" : slot === "active" ? "ACTIVE DISCUSSION" : slot === "backchannel" ? "NEW FROM THE BACKCHANNEL" : "EDITOR'S NOTABLE",
+    eyebrow: isOpenDiscussion ? "OPEN DISCUSSION" : slot === "active" ? "ACTIVE DISCUSSION" : slot === "backchannel" ? "NEW FROM THE BACKCHANNEL" : slot === "editor" ? "EDITOR'S NOTABLE" : "COMMUNITY SIGNAL",
     title: thread.title.trim(),
     excerpt: buildExcerpt(latestReply?.body || thread.excerpt || thread.body || "", 190) || "Open the thread to examine the record.",
     category: category === "Other" && thread.desk ? getDeskLabel(thread.desk) : category,
@@ -403,6 +403,13 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
   if (editor) {
     used.add(editor.id)
     cards.push(makeCard(editor, "editor", latestReplies.get(editor.id), mediaByThread.get(editor.id) ?? { ogImageUrl: null, video: null }))
+  }
+
+  for (const thread of ranked) {
+    if (cards.length >= 6) break
+    if (used.has(thread.id)) continue
+    used.add(thread.id)
+    cards.push(makeCard(thread, "signal", latestReplies.get(thread.id), mediaByThread.get(thread.id) ?? { ogImageUrl: null, video: null }))
   }
 
   return { settings, cards }

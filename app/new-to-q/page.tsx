@@ -29,7 +29,7 @@ export default async function NewToQPage() {
           <p className="label-mono text-primary">Q - THE PLAN TO SAVE THE WORLD</p>
           <div className="flex items-center gap-4">
             <PageViewCounter initialCount={initialViewCount} />
-            <ShareButtons title="New to Q? | HOT AND FRESH" excerpt="You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself." />
+            <ShareButtons title="New to Q? | QNOTABLES" excerpt="You’ve heard the name. You’ve seen the references. But what exactly is Q—and where did it begin and why? Enter the archive. Examine the record. Decide for yourself." />
           </div>
         </div>
          {/* Featured video */}

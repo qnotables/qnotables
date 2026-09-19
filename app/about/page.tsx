@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "QNotables is an independent research and media archive for public information, source links, timelines, documents, videos, and story threads.",
   alternates: { canonical: "https://www.qnotables.ai/about" },
   openGraph: {
-    title: "About | QNotables",
+title: "About QNotables | QNotables",
     description: "An independent research platform organizing public information, sources, and developing stories into a searchable public record.",
     type: "website",
     url: "https://www.qnotables.ai/about",
@@ -105,10 +105,10 @@ export default function AboutPage() {
         <div className="border-b border-border bg-card">
           <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-20">
             <h1 className="stencil text-5xl md:text-6xl text-foreground text-balance">
-              About Qnotables
+              About QNotables
             </h1>
             <p className="label-mono mt-4 text-lg text-primary">
-              Fresh drops. Hot leads. Organized for the record.
+              Independent signal. Organized for the record.
             </p>
             <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               Qnotables is an independent research, media, and archive platform built to organize public information, source links, field notes, research threads, media clips, documents, and ongoing storylines into a searchable public record.

@@ -55,7 +55,7 @@ export function DashboardShell({
           <Radio className="h-4 w-4" />
         </span>
         <div className="leading-tight">
-          <p className="stencil text-sm text-foreground">HOT AND FRESH</p>
+          <p className="stencil text-sm text-foreground">QNOTABLES</p>
           <p className="label-mono text-[10px] text-muted-foreground">CONTROL ROOM</p>
         </div>
       </div>

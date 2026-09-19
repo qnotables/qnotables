@@ -1,26 +1,26 @@
 /**
- * RSS / Feed core utilities for HOT AND FRESH.
+ * RSS / Feed core utilities for QNOTABLES.
  *
  * Everything here is defensive: a single bad record, missing image, or
  * unset environment variable must never crash the feed. Functions fail
  * safely and fall back to sane defaults.
  *
- * Public branding is ALWAYS "HOT AND FRESH". No internal project names
+ * Public branding is ALWAYS "QNOTABLES". No internal project names
  * are ever exposed in feed output, metadata, or share links.
  */
 
 /* ----------------------------- Branding ----------------------------- */
 
-export const FEED_TITLE = "HOT AND FRESH"
+export const FEED_TITLE = "QNOTABLES"
 export const FEED_DESCRIPTION = "Fresh drops. Hot leads. Organized for the record."
 export const FEED_LANGUAGE = "en-us"
 export const DEFAULT_FEED_IMAGE = "/images/hot-and-fresh-default-feed.png"
 
 /* Field fallbacks */
 export const FALLBACK_TITLE = "Untitled Archive Record"
-export const FALLBACK_DESCRIPTION = "Archived HOT AND FRESH record."
+export const FALLBACK_DESCRIPTION = "Archived QNOTABLES record."
 export const FALLBACK_CATEGORY = "Archive"
-export const FALLBACK_AUTHOR = "HOT AND FRESH Desk"
+export const FALLBACK_AUTHOR = "QNOTABLES Desk"
 
 /* ----------------------------- Site URL ----------------------------- */
 
@@ -617,7 +617,7 @@ export function generateRssXml(items: FeedItem[], options: GenerateRssOptions = 
     <description>${escapeXml(FEED_DESCRIPTION)}</description>
     <language>${FEED_LANGUAGE}</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
-    <generator>HOT AND FRESH Research Wire</generator>
+    <generator>QNOTABLES Research Wire</generator>
 ${optionalEditor}${optionalWebMaster}    <image>
       <title>${escapeXml(FEED_TITLE)}</title>
       <url>${escapeXml(feedImage)}</url>

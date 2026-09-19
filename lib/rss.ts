@@ -549,7 +549,7 @@ function blogPostToStory(post: Awaited<ReturnType<typeof getLatestPost>>): Story
     id: post.id || post.slug,
     headline: post.title,
     summary: post.excerpt,
-    source: "HOT AND FRESH",
+    source: "QNOTABLES",
     category: (post.category?.toUpperCase() as Category) || "OTHER",
     minutesAgo: Math.floor((Date.now() - new Date(post.publishedAt || post.date).getTime()) / 60000),
     readMinutes: post.readMinutes,

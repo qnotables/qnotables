@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ year: str
   const yearNum = parseInt(year)
   const monthName = new Date(yearNum, monthNum - 1).toLocaleString("default", { month: "long" })
   return {
-    title: `${monthName} ${year} — HOT AND FRESH`,
+    title: `${monthName} ${year} — QNOTABLES`,
   }
 }
 

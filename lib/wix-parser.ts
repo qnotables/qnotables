@@ -243,7 +243,7 @@ export function parseWixRss(
       source_name: "Wix Blog Archive",
       original_source_url: sourceUrl,
       cover_image_url: coverImageUrl ?? undefined,
-      author_name: "HOT AND FRESH",
+      author_name: "QNOTABLES",
     }
 
     rows.push({
@@ -354,7 +354,7 @@ function normalizeWixJsonPost(
     source_name: "Wix Blog Archive",
     original_source_url: sourceUrl,
     cover_image_url: coverImageUrl ?? undefined,
-    author_name: "HOT AND FRESH",
+    author_name: "QNOTABLES",
   }
 
   return {
