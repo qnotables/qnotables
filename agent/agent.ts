@@ -1,6 +1,6 @@
 import { defineAgent } from "eve"
 
 export default defineAgent({
-  model: "openai/gpt-oss-120b",
-  reasoning: "low",
+  model: "anthropic/claude-sonnet-4.6",
+  reasoning: "medium",
 })

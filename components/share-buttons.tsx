@@ -3,7 +3,7 @@
 import { Share2, Mail, MessageCircle, Link2, Check } from "lucide-react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { createShareUrl, type SharePlatform } from "@/lib/rss-utils"
+import { createShareUrl, getSiteUrl, type SharePlatform } from "@/lib/rss-utils"
 
 export interface ShareButtonsProps {
   /** Post title used in share text. */
@@ -87,10 +87,11 @@ export function ShareButtons({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      let finalUrl = url || window.location.href
-      // Convert relative paths to absolute URLs
-      if (finalUrl && !finalUrl.startsWith("http")) {
-        finalUrl = `${window.location.origin}${finalUrl}`
+      const publicSiteUrl = getSiteUrl()
+      let finalUrl = url || `${publicSiteUrl}${window.location.pathname}${window.location.search}${window.location.hash}`
+      // Internal paths must resolve to the public site, never the protected preview host.
+      if (finalUrl && !/^https?:\/\//i.test(finalUrl)) {
+        finalUrl = `${publicSiteUrl}${finalUrl.startsWith("/") ? finalUrl : `/${finalUrl}`}`
       }
       setShareUrl(finalUrl)
     }
@@ -118,7 +119,7 @@ export function ShareButtons({
   )
 
   const copyLink = useCallback(async () => {
-    const target = shareUrl || (typeof window !== "undefined" ? window.location.href : "")
+    const target = shareUrl || (typeof window !== "undefined" ? `${getSiteUrl()}${window.location.pathname}${window.location.search}${window.location.hash}` : getSiteUrl())
     try {
       await navigator.clipboard.writeText(target)
       setCopied(true)
@@ -149,7 +150,7 @@ export function ShareButtons({
       await navigator.share({
         title: shareTitle,
         text: shareExcerpt || shareTitle,
-        url: shareUrl || window.location.href,
+        url: shareUrl || `${getSiteUrl()}${window.location.pathname}${window.location.search}${window.location.hash}`,
       })
       setShowMenu(false)
     } catch {
