@@ -24,7 +24,7 @@ export default async function MediaPage() {
   const rows = (data || []) as MediaRow[]
   const urls = rows.map((asset) => asset.file_url)
   const { data: analyses } = urls.length
-    ? await admin.from("media_ai_analysis").select("id, media_url, status, summary, description, visible_text, topics, tags, media_type, locations, organizations, error_message").in("media_url", urls)
+    ? await admin.from("media_ai_analysis").select("id, media_url, status, summary, description, visible_text, topics, tags, media_type, locations, organizations, objects, people_mentioned, visual_style, error_message, reviewed, reviewed_by, reviewed_at, review_status, review_notes").in("media_url", urls)
     : { data: [] }
   const analysisByUrl = new Map((analyses || []).map((analysis) => [analysis.media_url, analysis]))
   const assets = rows.map((asset) => ({ ...asset, analysis: analysisByUrl.get(asset.file_url) ?? null }))
