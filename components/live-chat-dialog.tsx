@@ -35,18 +35,27 @@ function formatTime(value: string) {
 }
 
 function MessageBody({ body }: { body: string }) {
-  const parts = body.split(/(https?:\/\/[^\s]+)/g)
+  const parts = body.split(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi)
+
   return (
     <p className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
-      {parts.map((part, index) =>
-        /^https?:\/\//.test(part) ? (
-          <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer noopener" className="text-primary underline underline-offset-2 hover:text-primary/80">
-            {part}
-          </a>
-        ) : (
-          <span key={`${part}-${index}`}>{part}</span>
-        ),
-      )}
+      {parts.map((part, index) => {
+        const match = part.match(/^(https?:\/\/[^\s<]+|www\.[^\s<]+)$/i)
+        if (!match) return <span key={`${part}-${index}`}>{part}</span>
+
+        const trailing = match[1].match(/[),.!?:;]+$/)?.[0] ?? ""
+        const label = trailing ? match[1].slice(0, -trailing.length) : match[1]
+        const href = label.startsWith("www.") ? `https://${label}` : label
+
+        return (
+          <span key={`${part}-${index}`}>
+            <a href={href} target="_blank" rel="noreferrer noopener" className="text-primary underline underline-offset-2 hover:text-primary/80">
+              {label}
+            </a>
+            {trailing}
+          </span>
+        )
+      })}
     </p>
   )
 }
@@ -167,9 +176,9 @@ function LiveChatDialog({
       return
     }
     let mounted = true
-    void supabaseRef.current.from("profiles").select("role, status").eq("id", userId).maybeSingle().then(({ data }) => {
+    void Promise.resolve(supabaseRef.current.from("profiles").select("role, status").eq("id", userId).maybeSingle().then(({ data }) => {
       if (mounted) setIsModerator(Boolean(data && data.status === "active" && ["moderator", "admin"].includes(data.role)))
-    }).catch(() => {
+    })).catch(() => {
       if (mounted) setIsModerator(false)
     })
     const channel = supabaseRef.current
@@ -206,7 +215,7 @@ function LiveChatDialog({
 
     return () => {
       mounted = false
-      void supabaseRef.current.removeChannel(channel).catch(() => undefined)
+      void Promise.resolve(supabaseRef.current.removeChannel(channel)).catch(() => undefined)
     }
   }, [onIncoming, userId])
 
@@ -303,7 +312,7 @@ function LiveChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="w-[calc(100%-1rem)] max-w-3xl gap-0 overflow-hidden border border-border bg-background p-0 shadow-2xl sm:w-[calc(100%-2rem)]">
+      <DialogContent showCloseButton={false} className="w-[calc(100%-1rem)] max-w-4xl gap-0 overflow-hidden border border-border bg-background p-0 shadow-2xl sm:w-[calc(100%-2rem)]">
         <DialogHeader className="flex-row items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
           <div>
             <DialogTitle className="stencil flex items-center gap-2 text-lg text-foreground"><Radio className="h-4 w-4 text-primary" aria-hidden="true" /> QNotables Live Chat</DialogTitle>
