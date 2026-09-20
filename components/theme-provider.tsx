@@ -10,7 +10,11 @@ type ThemeContextValue = {
   setTheme: (theme: Theme) => void
 }
 
-const ThemeContext = createContext<ThemeContextValue | null>(null)
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: "dark",
+  resolvedTheme: "dark",
+  setTheme: () => undefined,
+})
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark")
@@ -36,7 +40,5 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) throw new Error("useTheme must be used within ThemeProvider")
-  return context
+  return useContext(ThemeContext)
 }

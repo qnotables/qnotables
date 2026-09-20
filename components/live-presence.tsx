@@ -45,17 +45,21 @@ export function useLivePresence() {
       const now = Date.now()
       if (!force && now - lastTrackedAt < ACTIVITY_THROTTLE_MS) return
       lastTrackedAt = now
-      await channel.track({ active: true })
-      updateCount()
+      try {
+        await channel.track({ active: true })
+        updateCount()
+      } catch {
+        setOnlineCount(null)
+      }
     }
 
     const handleActivity = () => {
-      void trackActivity()
+      void trackActivity().catch(() => undefined)
     }
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") void trackActivity(true)
-      else void channel.untrack()
+      if (document.visibilityState === "visible") void trackActivity(true).catch(() => undefined)
+      else void channel.untrack().catch(() => undefined)
     }
 
     channel
@@ -64,8 +68,8 @@ export function useLivePresence() {
       .on("presence", { event: "leave" }, updateCount)
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          void trackActivity(true)
-          heartbeat = window.setInterval(() => void trackActivity(true), HEARTBEAT_MS)
+          void trackActivity(true).catch(() => undefined)
+          heartbeat = window.setInterval(() => void trackActivity(true).catch(() => undefined), HEARTBEAT_MS)
         }
       })
 
@@ -77,8 +81,8 @@ export function useLivePresence() {
       if (heartbeat) window.clearInterval(heartbeat)
       events.forEach((event) => window.removeEventListener(event, handleActivity))
       document.removeEventListener("visibilitychange", handleVisibility)
-      void channel.untrack()
-      void supabase.removeChannel(channel)
+      void channel.untrack().catch(() => undefined)
+      void supabase.removeChannel(channel).catch(() => undefined)
     }
   }, [])
 

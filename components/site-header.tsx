@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { HeaderMusicPlayer } from "@/components/header-music-player"
+import { LiveChatButton } from "@/components/live-chat-dialog"
 import { LivePresenceLabel, useLivePresence } from "@/components/live-presence"
 import { NewsTicker } from "@/components/news-ticker"
 import { categories } from "@/lib/news-data"
@@ -319,8 +320,9 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </Link>
           ))}
         </div>
-        <div className="flex min-w-0 flex-col items-stretch gap-2 border-t border-border pt-2">
-          <HeaderAuth menu />
+  <div className="flex min-w-0 flex-col items-stretch gap-2 border-t border-border pt-2">
+  <LiveChatButton onlineCount={onlineCount} />
+  <HeaderAuth menu />
           <ThemeToggle />
         </div>
       </div>
@@ -417,6 +419,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                 <ShoppingBag className="h-4 w-4" />
                 <span className="label-mono hidden font-semibold lg:inline">Shop</span>
               </Link>
+              <LiveChatButton onlineCount={onlineCount} />
               <HeaderAuth />
               <ThemeToggle />
             </div>
