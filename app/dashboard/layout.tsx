@@ -2,6 +2,8 @@ import type React from "react"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Control Room",
   description: "Administrative control room for QNotables.",

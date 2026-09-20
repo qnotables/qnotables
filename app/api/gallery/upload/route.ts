@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { analyzeMedia } from '@/lib/media-analysis'
 
 export const runtime = 'nodejs'
 
@@ -101,6 +102,12 @@ export async function POST(request: NextRequest) {
     if (mediaError) {
       // Non-fatal — gallery image is saved; just log the media library write failure
       console.error('[gallery] Failed to mirror to media_assets:', mediaError)
+    }
+
+    try {
+      await analyzeMedia({ mediaUrl: blob.url, mimeType: file.type, fileSize: file.size, sourceKind: 'gallery', sourceId: galleryRow.id })
+    } catch (analysisError) {
+      console.error('[v0] gallery media analysis failed', analysisError instanceof Error ? analysisError.message : 'unknown error')
     }
 
     return NextResponse.json({

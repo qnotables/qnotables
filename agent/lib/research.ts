@@ -6,6 +6,8 @@ export type ResearchRecord = {
   title: string
   excerpt: string
   body: string
+  mediaUrl?: string
+  mediaAnalysis?: { visibleText: string[]; tags: string[]; topics: string[]; locations: string[]; organizations: string[]; mediaType: string[] }
   recordType: string
   sourceType: string
   sourceName: string | null
@@ -47,13 +49,19 @@ export async function searchRecords(query: string, kind?: string) {
   const db = createAdminClient()
   let request = db.from("search_documents").select("source_kind, source_id, title, excerpt, body, href, date_value, source, source_url, author, category, tags, content_type, primary_source").or(`normalized_search.ilike.%${value.replace(/[\\%_]/g, "\\$&")}%,compact_search.ilike.%${value.replace(/[\\%_]/g, "\\$&")}%`).limit(100)
   if (kind) request = request.eq("source_kind", sourceKindMap[kind] ?? kind)
-  const { data, error } = await request
-  if (error) throw error
+  const [indexedResponse, mediaResponse] = await Promise.all([
+    request,
+    kind && sourceKindMap[kind] !== "media" ? { data: [], error: null } : db.from("media_ai_analysis").select("id, media_url, summary, description, visible_text, topics, locations, organizations, media_type, tags, search_text, analyzed_at").eq("status", "complete").ilike("search_text", `%${value.replace(/[\\%_]/g, "\\$&")}%`).limit(100),
+  ])
+  if (indexedResponse.error) throw indexedResponse.error
+  if (mediaResponse.error) throw mediaResponse.error
   const searchQuery = createSearchQuery(value)
-  const records = ((data ?? []) as ProjectionRow[]).map(toRecord).filter((record) => {
+  const indexedRecords = ((indexedResponse.data ?? []) as ProjectionRow[]).map(toRecord).filter((record) => {
     const haystack = `${record.title} ${record.excerpt} ${record.body} ${record.sourceName ?? ""} ${record.category ?? ""} ${record.tags.join(" ")}`
     return haystack.toLowerCase().includes(searchQuery.readable)
-  }).sort((a, b) => getSearchScore(value, b.title, b.excerpt, b.body) - getSearchScore(value, a.title, a.excerpt, a.body)).slice(0, MAX_RESULTS)
+  })
+  const mediaRecords = ((mediaResponse.data ?? []) as Array<{ id: string; media_url: string; summary: string | null; description: string | null; visible_text: string[]; topics: string[]; locations: string[]; organizations: string[]; media_type: string[]; tags: string[]; search_text: string; analyzed_at: string | null }>).filter((row) => row.search_text.toLowerCase().includes(searchQuery.readable)).map((row) => ({ id: `media:${row.id}`, title: row.summary || "Analyzed image", excerpt: buildSearchExcerpt(row.description || row.search_text, 360), body: buildSearchExcerpt(row.search_text, 6000), recordType: "media", sourceType: "image analysis", sourceName: "QNotables media", author: null, publishedAt: row.analyzed_at, createdAt: row.analyzed_at, tags: normalizeTagList([...row.tags, ...row.topics, ...row.locations, ...row.organizations]), category: row.media_type[0] || "image", qnotablesUrl: row.media_url, originalSourceUrl: row.media_url, verificationStatus: "unknown" as const, primarySource: false, mediaUrl: row.media_url, mediaAnalysis: { visibleText: row.visible_text, tags: row.tags, topics: row.topics, locations: row.locations, organizations: row.organizations, mediaType: row.media_type } }))
+  const records = [...indexedRecords, ...mediaRecords].sort((a, b) => getSearchScore(value, b.title, b.excerpt, b.body) - getSearchScore(value, a.title, a.excerpt, a.body)).slice(0, MAX_RESULTS)
   console.info("[v0] research search", { query: value, kind: kind ?? "all", count: records.length, elapsedMs: Math.round(performance.now() - startedAt) })
   return { query: value, records }
 }
