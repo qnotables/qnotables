@@ -5,7 +5,7 @@ export const SITE_NAME = "QNotables"
 export const DEFAULT_TITLE = "QNotables — News, Research, and Public Records"
 export const DEFAULT_DESCRIPTION =
   "QNotables aggregates important headlines and organizes research, public records, and community discussion in one searchable archive."
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/images/og-default.png`
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/images/qresearch-og-default.png`
 
 export function absoluteUrl(path = "/"): string {
   const cleanPath = path.split(/[?#]/, 1)[0] || "/"

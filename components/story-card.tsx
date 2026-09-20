@@ -7,7 +7,7 @@ import { RssImportButton } from "@/components/rss-import-button"
 import { SignalActionMenu } from "@/components/signal-action-menu"
 import { signalFromStory, type SignalActionType } from "@/lib/signals"
 
-const DEFAULT_STORY_IMAGE = "/images/og-default.png"
+const DEFAULT_STORY_IMAGE = "/images/qresearch-og-default.png"
 
 export function StoryCard({
   story,

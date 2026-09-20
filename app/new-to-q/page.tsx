@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   title: "New to Q?",
   description: "A QNotables research guide for readers who are new to the subject, its references, and the archive.",
   path: "/new-to-q",
-  image: "/images/og-default.png",
+  image: "/images/qresearch-og-default.png",
 })
 
 export default async function NewToQPage() {

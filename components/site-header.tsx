@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { HeaderMusicPlayer } from "@/components/header-music-player"
+import { LivePresenceLabel, useLivePresence } from "@/components/live-presence"
 import { NewsTicker } from "@/components/news-ticker"
 import { categories } from "@/lib/news-data"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -41,6 +42,7 @@ const allCategories = Array.from(new Set(["NOTABLES", ...categories]))
 
 export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: WireStory[] }) {
   const [now, setNow] = useState("")
+  const onlineCount = useLivePresence()
   const [wireStories, setWireStories] = useState<WireStory[]>(initialWireStories || [])
   const { active, setActive } = useDeskFilter()
   const [activePanel, setActivePanel] = useState<Panel>(null)
@@ -373,13 +375,17 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                   </span>
                   <span className="label-mono text-foreground">Live</span>
+                  <LivePresenceLabel onlineCount={onlineCount} />
                   <ChevronDown className={`h-3 w-3 transition-transform ${activePanel === "live" ? "rotate-180" : ""}`} />
                 </button>
                 {activePanel === "live" && !desktopCompactVisible && (
                   <div id="header-live-panel" className="absolute left-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] border border-border bg-popover p-3 text-popover-foreground shadow-xl">
                     <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
                       <div>
-                        <p className="label-mono text-primary">Live desk</p>
+                        <div className="flex items-center gap-2">
+                          <p className="label-mono text-primary">Live desk</p>
+                          <LivePresenceLabel onlineCount={onlineCount} />
+                        </div>
                         <p className="text-xs text-muted-foreground">{now || "--:--:-- EST"} · 17 sources monitored</p>
                       </div>
                       <Radio className="h-4 w-4 text-primary" aria-hidden="true" />
