@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/dashboard-data"
 import { compactSearchText, normalizeComparableText } from "@/lib/search-utils"
 import { categories } from "@/lib/news-data"
 import { normalizeEmbedVideoUrl } from "@/lib/embed-video-url"
+import { analyzeMedia } from "@/lib/media-analysis"
 
 type Result = { success: boolean; error?: string }
 
@@ -329,17 +330,25 @@ export async function saveMediaAsset(input: {
   fileType?: string
   fileSize?: number
   altText?: string
+  mediaHash?: string
 }): Promise<Result> {
   if (!(await guard())) return { success: false, error: "Not authorized." }
   const db = createAdminClient()
-  const { error } = await db.from("media_assets").insert({
+  const { data: asset, error } = await db.from("media_assets").insert({
     file_name: input.fileName,
     file_url: input.fileUrl,
     file_type: input.fileType ?? null,
     file_size: input.fileSize ?? null,
     alt_text: input.altText ?? null,
-  })
+  }).select("id").single()
   if (error) return { success: false, error: error.message }
+  if (input.fileType?.startsWith("image/")) {
+    try {
+      await analyzeMedia({ mediaUrl: input.fileUrl, mimeType: input.fileType, fileSize: input.fileSize, mediaHash: input.mediaHash, sourceKind: "media", sourceId: asset.id })
+    } catch (analysisError) {
+      console.error("[v0] automatic media analysis failed", analysisError instanceof Error ? analysisError.message : "unknown error")
+    }
+  }
   await logActivity({ action: "uploaded media", targetType: "media_asset", details: input.fileName })
   revalidatePath("/dashboard/media")
   return { success: true }

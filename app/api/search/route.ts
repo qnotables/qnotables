@@ -50,6 +50,7 @@ type ProjectionRow = {
 
 type AliasGroupRow = { id: string; slug: string; enabled: boolean }
 type AliasTermRow = { term: string; normalized_term: string; compact_term: string; group_id: string }
+type MediaAnalysisRow = { id: string; media_url: string; source_id: string | null; summary: string | null; description: string | null; visible_text: string[]; topics: string[]; locations: string[]; organizations: string[]; media_type: string[]; tags: string[]; search_text: string; analyzed_at: string | null }
 
 function cleanParam(value: string | null): string {
   return (value ?? "").trim().slice(0, 120)
@@ -157,8 +158,9 @@ export async function GET(request: Request) {
   }
 
   const db = createAdminClient()
-  const [groupResponse, documentsResponse] = await Promise.all([
+  const [groupResponse, mediaAnalysisResponse, documentsResponse] = await Promise.all([
     db.from("search_alias_groups").select("id, slug, enabled").eq("enabled", true),
+    db.from("media_ai_analysis").select("id, media_url, source_id, summary, description, visible_text, topics, locations, organizations, media_type, tags, search_text, analyzed_at").eq("status", "complete").ilike("search_text", `%${escapeLike(query)}%`).limit(CANDIDATE_LIMIT),
     (async () => {
       const groups = await db.from("search_alias_groups").select("id, slug, enabled").eq("enabled", true)
       const aliases = groups.data?.length
@@ -185,13 +187,40 @@ export async function GET(request: Request) {
 
   if (groupResponse.error) partial.push("aliases")
   if (documentsResponse.error) partial.push("index")
+  if (mediaAnalysisResponse.error) partial.push("media-analysis")
 
   const searchQueries = documentsResponse.searchQueries ?? expandSearchQueries(createSearchQuery(query))
   const rows = (documentsResponse.data ?? []) as ProjectionRow[]
-  const allResults = rows
+  const indexedResults = rows
     .filter((row) => matchesAnyQuery(row, searchQueries))
     .map((row) => resultFromProjection(row, query))
     .filter((result) => matchesFilter(result, searchParams))
+  const mediaResults = ((mediaAnalysisResponse.data ?? []) as MediaAnalysisRow[]).filter((row) => searchTextMatches(query, row.search_text)).map((row) => {
+    const tags = normalizeTagList([...row.tags, ...row.topics, ...row.locations, ...row.organizations, ...row.media_type])
+    const excerpt = buildSearchExcerpt(row.summary || row.description || row.search_text)
+    return {
+      id: `media:${row.id}`,
+      type: "media" as const,
+      title: row.summary || "Analyzed image",
+      excerpt,
+      href: safeExternalUrl(row.media_url) || row.media_url,
+      date: row.analyzed_at,
+      source: "QNotables media analysis",
+      sourceUrl: null,
+      author: null,
+      category: row.media_type[0] || "Image",
+      desk: null,
+      tags,
+      contentType: row.media_type[0] || "image",
+      replies: null,
+      readMinutes: null,
+      image: safeExternalUrl(row.media_url),
+      external: true,
+      primarySource: false,
+      score: getSearchScore(query, row.summary || "", row.description || "", row.search_text, tags.join(" ")) + 8,
+    }
+  }).filter((result) => matchesFilter(result, searchParams))
+  const allResults = [...indexedResults, ...mediaResults]
 
   const counts = {
     all: allResults.length,
