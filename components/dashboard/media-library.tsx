@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react"
 import { UploadCloud, Trash2, Loader2, Copy, Check } from "lucide-react"
 import { saveMediaAsset, deleteMediaAsset } from "@/app/dashboard/actions"
 import { EmptyState } from "@/components/dashboard/ui"
-import { MediaAnalysisPanel, type AnalysisPanelData } from "@/components/dashboard/media-analysis-panel"
+import { MediaAnalysisPanel, type AnalysisPanelData, type SourceMetadata } from "@/components/dashboard/media-analysis-panel"
 
 export interface MediaRow {
   id: string
@@ -136,7 +136,7 @@ export function MediaLibrary({ assets }: { assets: MediaRow[] }) {
                     {busyId === asset.id && pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                   </button>
                 </div>
-                <MediaAnalysisPanel id={asset.id} mediaUrl={asset.file_url} mimeType={asset.file_type} fileSize={asset.file_size} initial={asset.analysis ?? null} />
+                <MediaAnalysisPanel id={asset.id} mediaUrl={asset.file_url} mimeType={asset.file_type} fileSize={asset.file_size} source={{ fileName: asset.file_name, fileType: asset.file_type, fileSize: asset.file_size, createdAt: asset.created_at, mediaUrl: asset.file_url } satisfies SourceMetadata} initial={asset.analysis ?? null} />
               </div>
             </div>
           ))}
