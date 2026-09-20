@@ -65,8 +65,10 @@ export function LiveChatButton({ onlineCount }: ChatButtonProps) {
   useEffect(() => {
     const supabase = createClient()
     let mounted = true
-    supabase.auth.getUser().then(({ data }) => {
+    void supabase.auth.getUser().then(({ data }) => {
       if (mounted) setUserId(data.user?.id ?? null)
+    }).catch(() => {
+      if (mounted) setUserId(null)
     })
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) setUserId(session?.user?.id ?? null)
@@ -135,16 +137,21 @@ function LiveChatDialog({
     if (!userId) return
     setLoading(true)
     setError(null)
-    const response = await fetch("/api/chat/messages?limit=50", { cache: "no-store" })
-    const payload = await response.json()
-    if (!response.ok) {
-      setError(payload.error || "Chat history is temporarily unavailable.")
-    } else {
-      setMessages(payload.messages || [])
-      setHasMore(Boolean(payload.hasMore))
-      hasLoadedRef.current = true
+    try {
+      const response = await fetch("/api/chat/messages?limit=50", { cache: "no-store" })
+      const payload = await response.json()
+      if (!response.ok) {
+        setError(payload.error || "Chat history is temporarily unavailable.")
+      } else {
+        setMessages(payload.messages || [])
+        setHasMore(Boolean(payload.hasMore))
+        hasLoadedRef.current = true
+      }
+    } catch {
+      setError("Chat history is temporarily unavailable.")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [userId])
 
   useEffect(() => {
@@ -160,8 +167,10 @@ function LiveChatDialog({
       return
     }
     let mounted = true
-    supabaseRef.current.from("profiles").select("role, status").eq("id", userId).maybeSingle().then(({ data }) => {
+    void supabaseRef.current.from("profiles").select("role, status").eq("id", userId).maybeSingle().then(({ data }) => {
       if (mounted) setIsModerator(Boolean(data && data.status === "active" && ["moderator", "admin"].includes(data.role)))
+    }).catch(() => {
+      if (mounted) setIsModerator(false)
     })
     const channel = supabaseRef.current
       .channel("town-hall-live-chat")
@@ -197,7 +206,7 @@ function LiveChatDialog({
 
     return () => {
       mounted = false
-      void supabaseRef.current.removeChannel(channel)
+      void supabaseRef.current.removeChannel(channel).catch(() => undefined)
     }
   }, [onIncoming, userId])
 
@@ -213,13 +222,20 @@ function LiveChatDialog({
     const oldest = messages[0]
     if (!oldest || loadingEarlier || !hasMore) return
     setLoadingEarlier(true)
-    const response = await fetch(`/api/chat/messages?limit=50&before=${encodeURIComponent(oldest.createdAt)}`, { cache: "no-store" })
-    const payload = await response.json()
-    if (response.ok) {
-      setMessages((current) => [...(payload.messages || []), ...current.filter((message: ChatMessage) => !(payload.messages || []).some((older: ChatMessage) => older.id === message.id))])
-      setHasMore(Boolean(payload.hasMore))
+    try {
+      const response = await fetch(`/api/chat/messages?limit=50&before=${encodeURIComponent(oldest.createdAt)}`, { cache: "no-store" })
+      const payload = await response.json()
+      if (response.ok) {
+        setMessages((current) => [...(payload.messages || []), ...current.filter((message: ChatMessage) => !(payload.messages || []).some((older: ChatMessage) => older.id === message.id))])
+        setHasMore(Boolean(payload.hasMore))
+      } else {
+        setError(payload.error || "Unable to load earlier messages.")
+      }
+    } catch {
+      setError("Unable to load earlier messages.")
+    } finally {
+      setLoadingEarlier(false)
     }
-    setLoadingEarlier(false)
   }
 
   async function sendMessage() {
@@ -227,40 +243,54 @@ function LiveChatDialog({
     if (!body || sending || !userId) return
     setSending(true)
     setError(null)
-    const response = await fetch("/api/chat/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    })
-    const payload = await response.json()
-    if (!response.ok) {
-      setError(payload.error || "Unable to send that message.")
-    } else {
-      setComposer("")
-      if (payload.message) setMessages((current) => current.some((message) => message.id === payload.message.id) ? current : [...current, payload.message])
+    try {
+      const response = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        setError(payload.error || "Unable to send that message.")
+      } else {
+        setComposer("")
+        if (payload.message) setMessages((current) => current.some((message) => message.id === payload.message.id) ? current : [...current, payload.message])
+      }
+    } catch {
+      setError("Unable to send that message.")
+    } finally {
+      setSending(false)
     }
-    setSending(false)
   }
 
   async function reportMessage(id: string) {
     const reason = window.prompt("Why are you reporting this message?", "Spam or harassment")?.trim()
     if (!reason || reportingId) return
     setReportingId(id)
-    const response = await fetch("/api/chat/reports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId: id, reason }),
-    })
-    if (response.ok) setReportedIds((current) => new Set(current).add(id))
-    else setError("Unable to submit that report.")
-    setReportingId(null)
+    try {
+      const response = await fetch("/api/chat/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: id, reason }),
+      })
+      if (response.ok) setReportedIds((current) => new Set(current).add(id))
+      else setError("Unable to submit that report.")
+    } catch {
+      setError("Unable to submit that report.")
+    } finally {
+      setReportingId(null)
+    }
   }
 
   async function deleteMessage(id: string) {
-    const response = await fetch(`/api/chat/messages/${id}`, { method: "DELETE" })
-    if (!response.ok) {
-      const payload = await response.json().catch(() => null)
-      setError(payload?.error || "Unable to delete that message.")
+    try {
+      const response = await fetch(`/api/chat/messages/${id}`, { method: "DELETE" })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        setError(payload?.error || "Unable to delete that message.")
+      }
+    } catch {
+      setError("Unable to delete that message.")
     }
   }
 

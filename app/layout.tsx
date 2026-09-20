@@ -85,8 +85,8 @@ export default function RootLayout({
               {children}
             </CartProvider>
           </MusicPlayerProvider>
+          <CommunityAssistantWidget />
         </ThemeProvider>
-        <CommunityAssistantWidget />
         {process.env.NODE_ENV === 'production' && <Analytics />}
         {process.env.NODE_ENV === 'production' && <SpeedInsights />}
       </body>
