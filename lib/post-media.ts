@@ -192,5 +192,5 @@ export function toAbsoluteMediaUrl(url: string | null | undefined, siteUrl: stri
 export function resolveSocialImage(options: { content?: string | null; customImage?: string | null; coverImage?: string | null; siteUrl: string }): string {
   const media = resolveFirstPostMedia(options.content)
   const automatic = media?.kind === "image" ? media.src : media?.poster
-  return toAbsoluteMediaUrl(options.customImage || automatic || options.coverImage || "/images/og-default.png", options.siteUrl)!
+  return toAbsoluteMediaUrl(options.customImage || automatic || options.coverImage || "/images/qresearch-og-default.png", options.siteUrl)!
 }

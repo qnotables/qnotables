@@ -10,7 +10,7 @@ import { timeAgo } from "@/lib/time"
 import { buildExcerpt } from "@/lib/forum-utils"
 import { resolveFirstPostMedia, type PostMedia } from "@/lib/post-media"
 
-const DEFAULT_DISPATCH_IMAGE = "/images/og-default.png"
+const DEFAULT_DISPATCH_IMAGE = "/images/qresearch-og-default.png"
 
 function decodeHtmlEntities(value: string): string {
   return value
