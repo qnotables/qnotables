@@ -69,7 +69,33 @@ export async function searchRecords(query: string, kind?: string) {
 export async function getRecord(id: string) {
   const [kind, sourceId] = id.trim().split(":", 2)
   if (!kind || !sourceId) return null
-  const { data, error } = await createAdminClient().from("search_documents").select("source_kind, source_id, title, excerpt, body, href, date_value, source, source_url, author, category, tags, content_type, primary_source").eq("source_kind", kind).eq("source_id", sourceId).maybeSingle()
+  const db = createAdminClient()
+  if (kind === "media") {
+    const { data, error } = await db.from("media_ai_analysis").select("id, media_url, summary, description, visible_text, topics, locations, organizations, media_type, tags, search_text, analyzed_at").eq("id", sourceId).eq("status", "complete").maybeSingle()
+    if (error) throw error
+    if (!data) return null
+    return {
+      id: `media:${data.id}`,
+      title: data.summary || "Analyzed image",
+      excerpt: buildSearchExcerpt(data.description || data.search_text, 360),
+      body: buildSearchExcerpt(data.search_text, 6000),
+      recordType: "media",
+      sourceType: "image analysis",
+      sourceName: "QNotables media",
+      author: null,
+      publishedAt: data.analyzed_at,
+      createdAt: data.analyzed_at,
+      tags: normalizeTagList([...data.tags, ...data.topics, ...data.locations, ...data.organizations]),
+      category: data.media_type[0] || "image",
+      qnotablesUrl: data.media_url,
+      originalSourceUrl: data.media_url,
+      verificationStatus: "unknown" as const,
+      primarySource: false,
+      mediaUrl: data.media_url,
+      mediaAnalysis: { visibleText: data.visible_text, tags: data.tags, topics: data.topics, locations: data.locations, organizations: data.organizations, mediaType: data.media_type },
+    }
+  }
+  const { data, error } = await db.from("search_documents").select("source_kind, source_id, title, excerpt, body, href, date_value, source, source_url, author, category, tags, content_type, primary_source").eq("source_kind", kind).eq("source_id", sourceId).maybeSingle()
   if (error) throw error
   return data ? toRecord(data as ProjectionRow) : null
 }

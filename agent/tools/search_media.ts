@@ -7,6 +7,11 @@ export default defineTool({
   inputSchema: z.object({ query: z.string().min(1).max(160), tag: z.string().optional(), mediaType: z.string().optional() }),
   async execute({ query, tag, mediaType }) {
     const result = await executeSearch(query, "media")
-    return { ...result, filters: { tag, mediaType } }
+    const records = result.records.filter((record) => {
+      const tagMatches = !tag || record.tags.some((value) => value.toLowerCase() === tag.toLowerCase())
+      const typeMatches = !mediaType || record.category?.toLowerCase() === mediaType.toLowerCase()
+      return tagMatches && typeMatches
+    })
+    return { ...result, count: records.length, records, filters: { tag, mediaType } }
   },
 })
