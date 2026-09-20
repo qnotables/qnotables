@@ -31,6 +31,11 @@ export type MediaAnalysis = z.infer<typeof analysisSchema> & {
   error_message: string | null
   model: string | null
   analyzed_at: string | null
+  reviewed: boolean
+  reviewed_by: string | null
+  reviewed_at: string | null
+  review_status: "pending" | "approved" | "needs_edit" | "rejected"
+  review_notes: string | null
 }
 
 function canonicalTags(values: string[]) {
