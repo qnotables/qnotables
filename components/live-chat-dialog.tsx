@@ -297,6 +297,9 @@ function LiveChatDialog({
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
         setError(payload?.error || "Unable to delete that message.")
+      } else {
+        setMessages((current) => current.filter((message) => message.id !== id))
+        setError(null)
       }
     } catch {
       setError("Unable to delete that message.")

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   }
 
   const { id } = await params
-  const { error } = await supabase
+  const { error } = await createAdminClient()
     .from("chat_messages")
     .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
     .eq("id", id)
