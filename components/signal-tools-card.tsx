@@ -48,15 +48,15 @@ const SIGNAL_TOOLS = [
     icon: Rss,
     href: "/feed.xml",
   },
+]
+
+const SIGNAL_TOOLS_SECONDARY = [
   {
     label: "White House Live",
     description: "Watch the live feed",
     icon: Popcorn,
     href: "https://whitehouse.gov/live",
   },
-]
-
-const SIGNAL_TOOLS_SECONDARY = [
   {
     label: "bookmarks",
     description: "Share a resource",
