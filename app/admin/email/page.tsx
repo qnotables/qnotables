@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Inbox } from "lucide-react"
 import { getAdminUser } from "@/lib/admin"
 import { isResendConfigured } from "@/lib/resend"
 import { EmailSenderForm } from "@/components/admin/email-sender-form"
@@ -26,12 +26,17 @@ export default async function AdminEmailPage() {
               <h1 className="stencil text-3xl text-foreground">Send Email</h1>
               <p className="label-mono mt-1 text-muted-foreground">// TRANSACTIONAL DISPATCH</p>
             </div>
-            <Link
-              href="/admin"
-              className="label-mono flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/admin/email/inbox" className="label-mono flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                <Inbox className="h-4 w-4" /> Read Email
+              </Link>
+              <Link
+                href="/admin"
+                className="label-mono flex items-center gap-2 border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Link>
+            </div>
           </div>
         </div>
       </header>
