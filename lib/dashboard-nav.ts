@@ -39,6 +39,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
   { label: "Subscribers", href: "/dashboard/subscribers", icon: Mail, adminOnly: true },
   { label: "Send Email", href: "/admin/email", icon: Send, adminOnly: true },
+  { label: "Read Email", href: "/admin/email/inbox", icon: Mail, adminOnly: true },
   { label: "RSS Feed", href: "/dashboard/rss", icon: Rss },
   { label: "Media Library", href: "/dashboard/media", icon: ImageIcon },
   { label: "Videos", href: "/dashboard/videos", icon: Video },
