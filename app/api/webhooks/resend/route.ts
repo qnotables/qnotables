@@ -14,11 +14,11 @@ export async function POST(request: Request) {
     event = getResendClient().webhooks.verify({
       payload,
       headers: {
-        "svix-id": request.headers.get("svix-id") ?? "",
-        "svix-timestamp": request.headers.get("svix-timestamp") ?? "",
-        "svix-signature": request.headers.get("svix-signature") ?? "",
+        id: request.headers.get("svix-id") ?? "",
+        timestamp: request.headers.get("svix-timestamp") ?? "",
+        signature: request.headers.get("svix-signature") ?? "",
       },
-      secret,
+      webhookSecret: secret,
     }) as typeof event
   } catch (error) {
     console.error("[v0] resend webhook verification failed", error)
