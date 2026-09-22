@@ -3,7 +3,7 @@ import type { BlogPost } from "@/lib/blog-posts"
 import type { ForumThread } from "@/lib/forum"
 import type { Story } from "@/lib/news-data"
 import type { SignalAnalysisItem } from "@/lib/signal-analysis"
-import { buildExcerpt } from "@/lib/forum-utils"
+import { buildExcerpt, extractFirstVideo } from "@/lib/forum-utils"
 import { normalizeSignal, type Signal } from "@/lib/signals"
 
 export type HomeFeedKind = "editorial" | "forum" | "wire" | "notable" | "analysis"
@@ -51,6 +51,18 @@ function safeImageUrl(value: string | null | undefined): string | undefined {
   if (!value) return undefined
   if (value.startsWith("/")) return value
   return validExternalUrl(value) ?? undefined
+}
+
+/**
+ * Derive a YouTube poster frame from a forum body that only embeds a video
+ * (no attached image), so the Open Source Stream card shows the stream still
+ * instead of the blank fallback plate.
+ */
+function youtubeThumbFromBody(body: string | null | undefined): string | undefined {
+  if (!body) return undefined
+  const video = extractFirstVideo(body)
+  if (video?.type === "youtube") return `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`
+  return undefined
 }
 
 function makeItem(input: Omit<HomeFeedItem, "signal">): HomeFeedItem {
@@ -109,7 +121,10 @@ export function adaptHomeFeed({
       publishedAt: validDate(thread.lastActivityAt || thread.latestReply?.createdAt || thread.createdAt),
       href: thread.slug ? `/forum/${encodeURIComponent(thread.slug)}` : `/forum/thread/${encodeURIComponent(thread.id)}`,
       external: false,
-      image: safeImageUrl(thread.latestImageUrl),
+      image:
+        safeImageUrl(thread.latestImageUrl) ??
+        youtubeThumbFromBody(thread.latestReply?.body) ??
+        youtubeThumbFromBody(thread.body),
     }),
   )
 

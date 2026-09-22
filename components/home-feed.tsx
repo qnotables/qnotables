@@ -41,7 +41,7 @@ function FeedCard({ item, isLoggedIn, activeActions }: { item: HomeFeedItem; isL
   const timestamp = Date.parse(item.publishedAt) > 0 ? timeAgo(item.publishedAt) : "date unknown"
 
   return (
-    <article className="group grid grid-cols-1 border border-border bg-card transition-colors hover:border-primary sm:grid-cols-[minmax(0,1fr)_13rem]">
+    <article className="group grid grid-cols-1 border border-border bg-card transition-colors hover:border-primary sm:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="flex min-w-0 flex-col p-5">
         <div className="flex items-center gap-2 text-primary">
           <Icon className="h-3.5 w-3.5" aria-hidden="true" />
