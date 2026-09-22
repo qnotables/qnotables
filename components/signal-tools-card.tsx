@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, Handshake } from "lucide-react"
+import { Archive, Rss, MessageSquare, Radio, ShoppingBag, Clock, LayoutDashboard, Shield, ShieldPlus, Mail, AtSignIcon, Bookmark, FormInput, FolderPlusIcon, Heart, Clapperboard, Handshake, Popcorn } from "lucide-react"
 import { getAdminUser } from "@/lib/admin"
 import { BakerToolsButton } from "@/components/baker-tools-button"
 import { FullchanButton } from "@/components/fullchan-button"
@@ -51,6 +51,12 @@ const SIGNAL_TOOLS = [
 ]
 
 const SIGNAL_TOOLS_SECONDARY = [
+  {
+    label: "White House Live",
+    description: "Watch the live feed",
+    icon: Popcorn,
+    href: "https://whitehouse.gov/live",
+  },
   {
     label: "bookmarks",
     description: "Share a resource",
