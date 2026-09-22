@@ -395,7 +395,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
                     <HeaderMusicPlayer />
                     <button
                       type="button"
-                      onClick={() => window.open("https://whitehouse.gov/live", "whitehouse_live_popout", "width=1000,height=700,resizable=yes,scrollbars=yes")}
+                      onClick={() => window.open("https://rumble.com/c/Qnotables", "rumble_popout", "width=1000,height=700,resizable=yes,scrollbars=yes")}
                       className="mt-3 w-full border border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                     >
                       Open live feed in a new window
