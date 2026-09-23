@@ -129,6 +129,8 @@ export default async function Page() {
           <span className="ml-auto h-px flex-1 bg-border" />
         </div>
 
+        <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* primary column */}
           <div className="lg:col-span-2">
@@ -161,8 +163,6 @@ export default async function Page() {
         <div id="the-wire">
           <WireFeed desks={desks} isLoggedIn={isLoggedIn} />
         </div>
-
-        <TownHallPulse pulse={townHallPulse} isLoggedIn={isLoggedIn} />
 
         <section className="mt-8 flex flex-col gap-4 border-y border-border py-6 sm:flex-row sm:items-center sm:justify-between">
           <div>

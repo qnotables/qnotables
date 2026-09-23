@@ -8,6 +8,8 @@ import { timeAgo } from "@/lib/time"
 import type { SignalActionState } from "@/lib/signals"
 import type { HomeFeedItem } from "@/lib/home-feed"
 
+const DEFAULT_OPEN_SOURCE_IMAGE = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/forgodandcountry-TG0SrqwsHdBFJaZPEfCcnJbwsZRCTP.png"
+
 const KIND_LABELS = {
   editorial: "EDITORIAL",
   forum: "FORUM",
@@ -69,7 +71,12 @@ function FeedCard({ item, isLoggedIn, activeActions }: { item: HomeFeedItem; isL
       </div>
 
       <FeedDestination item={item}>
-        <CardImage src={item.image} alt="" aspectRatio="video" className="h-full min-h-40 sm:min-h-0" />
+        <CardImage
+          src={item.image || DEFAULT_OPEN_SOURCE_IMAGE}
+          alt={item.image ? "" : "Research for God and Country"}
+          aspectRatio="video"
+          className="h-full min-h-40 sm:min-h-0"
+        />
         <span className="sr-only">Open {item.title}</span>
       </FeedDestination>
     </article>

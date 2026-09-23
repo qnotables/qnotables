@@ -1,5 +1,10 @@
+"use client"
+
+import { useState } from "react"
 import { ExternalLink, Play } from "lucide-react"
 import { VideoEmbed } from "@/lib/video-embed-utils"
+
+const DEFAULT_VIDEO_POSTER = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/forgodandcountry-TG0SrqwsHdBFJaZPEfCcnJbwsZRCTP.png"
 
 interface VideoEmbedBlockProps {
   embed: VideoEmbed
@@ -7,7 +12,10 @@ interface VideoEmbedBlockProps {
 }
 
 export function VideoEmbedBlock({ embed, showBadge = true }: VideoEmbedBlockProps) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [poster, setPoster] = useState(embed.thumbnailUrl || DEFAULT_VIDEO_POSTER)
   const isDirectVideo = embed.platform === "direct"
+  const isRumble = embed.platform === "rumble"
   const isX = embed.platform === "x"
   const isExternal = embed.platform === "external"
 
@@ -26,6 +34,27 @@ export function VideoEmbedBlock({ embed, showBadge = true }: VideoEmbedBlockProp
               preload="metadata"
               className="h-full w-full object-cover"
             />
+          ) : isRumble && !isPlaying ? (
+            <button
+              type="button"
+              onClick={() => setIsPlaying(true)}
+              aria-label={`Play video preview: ${embed.title || "Rumble video"}`}
+              className="group relative flex h-full w-full items-center justify-center overflow-hidden bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={poster}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onError={() => setPoster((currentPoster) => currentPoster === DEFAULT_VIDEO_POSTER ? currentPoster : DEFAULT_VIDEO_POSTER)}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              />
+              <span aria-hidden="true" className="relative inline-flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
+                <Play className="ml-0.5 size-6 fill-current" />
+              </span>
+              <span className="sr-only">Play Rumble video preview</span>
+            </button>
           ) : isX ? (
             // X/Twitter embed - show thumbnail with link
             <a

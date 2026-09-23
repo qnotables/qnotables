@@ -21,9 +21,11 @@ export function PulseImagePreview({ src, alt }: { src: string; alt: string }) {
   )
 }
 
+const DEFAULT_VIDEO_POSTER = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/forgodandcountry-TG0SrqwsHdBFJaZPEfCcnJbwsZRCTP.png"
+
 export function PulseVideoPreview({ video, title }: { video: PostVideoMedia; title: string }) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const poster = video.poster
+  const [poster, setPoster] = useState(video.poster || DEFAULT_VIDEO_POSTER)
 
   if (!isPlaying) {
     return (
@@ -36,10 +38,15 @@ export function PulseVideoPreview({ video, title }: { video: PostVideoMedia; tit
         >
           {poster ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={poster} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-          ) : (
-            <div aria-hidden="true" className="absolute inset-0 bg-muted" />
-          )}
+            <img
+              src={poster}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              onError={() => setPoster((currentPoster) => currentPoster === DEFAULT_VIDEO_POSTER ? currentPoster : DEFAULT_VIDEO_POSTER)}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            />
+          ) : null}
           <span aria-hidden="true" className="relative inline-flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
             <Play className="ml-0.5 size-5 fill-current" />
           </span>
