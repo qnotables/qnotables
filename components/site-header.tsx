@@ -300,14 +300,14 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
   function renderMoreMenu() {
     return (
       <div className="grid min-w-0 gap-2 p-3">
-        <Link
+        <a
           href="https://shop.qnotables.ai"
           onClick={closePanel}
           className="flex min-w-0 w-full items-center gap-2 border border-primary bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90"
         >
           <ShoppingBag className="h-4 w-4" />
           <span className="label-mono font-semibold">Shop</span>
-        </Link>
+        </a>
         <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border pt-2">
           {secondaryLinks.map((link) => (
             <Link
