@@ -2,7 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { CalendarDays, ExternalLink, Flag, ImageIcon, MapPin, MessageCircle, Pin, ShieldCheck, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { MockProfile, ProfileTab } from "@/lib/mock-profile"
 
@@ -27,7 +27,7 @@ export function ProfilePage({ profile, activeTab = "overview", isOwner = false }
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div><p className="label-mono text-xs text-primary">COMMUNITY PROFILE</p><p className="mt-1 text-sm text-muted-foreground">A member identity and contribution record.</p></div>
-          {isOwner && <Button asChild variant="outline"><Link href="/profile/edit">Edit profile</Link></Button>}
+          {isOwner && <Link href="/profile/edit" className={buttonVariants({ variant: "outline" })}>Edit profile</Link>}
         </div>
 
         <Card className="overflow-hidden border-border bg-card">
