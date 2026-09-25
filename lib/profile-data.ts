@@ -8,7 +8,6 @@ type ProfileRow = {
   avatar_url: string | null
   banner_url: string | null
   bio: string | null
-  pronouns: string | null
   location: string | null
   website_url: string | null
   social_links: Record<string, string> | string[] | null
@@ -37,7 +36,6 @@ export function toProfileView(row: ProfileRow, activity?: Partial<MockProfile>):
     avatarUrl: row.avatar_url || mockProfile.avatarUrl,
     bannerUrl: row.banner_url || mockProfile.bannerUrl,
     bio: row.bio || "Sharing useful notes with the community.",
-    pronouns: row.pronouns || "",
     location: row.location || "",
     joined: `Joined ${new Date(row.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}`,
     website: row.website_url || "",
@@ -55,7 +53,7 @@ export function toProfileView(row: ProfileRow, activity?: Partial<MockProfile>):
 export async function getProfileHub(profileId: string) {
   const supabase = await createClient()
   const [{ data: profile }, { data: threads }, { data: replies }, { data: media }, { data: featured }] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, username, avatar_url, banner_url, bio, pronouns, location, website_url, social_links, privacy, created_at, karma").eq("id", profileId).maybeSingle(),
+    supabase.from("profiles").select("id, display_name, username, avatar_url, banner_url, bio, location, website_url, social_links, privacy, created_at, karma").eq("id", profileId).maybeSingle(),
     supabase.from("forum_threads").select("id, slug, title, body, created_at").eq("author_id", profileId).eq("is_soft_deleted", false).order("created_at", { ascending: false }).limit(24),
     supabase.from("forum_replies").select("id, body, created_at, thread_id, forum_threads(title)").eq("author_id", profileId).order("created_at", { ascending: false }).limit(24),
     supabase.from("gallery_images").select("id, image_url, title, alt_text, file_type, created_at").eq("user_id", profileId).eq("approved", true).order("created_at", { ascending: false }).limit(24),

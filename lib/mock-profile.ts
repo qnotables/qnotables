@@ -12,7 +12,6 @@ export type MockProfile = {
   avatarUrl: string
   bannerUrl: string
   bio: string
-  pronouns: string
   location: string
   joined: string
   website: string
@@ -58,7 +57,6 @@ export const mockProfile: MockProfile = {
   avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop&auto=format",
   bannerUrl: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1600&h=500&fit=crop&auto=format",
   bio: "Following the paper trail, sharing the useful bits, and making room for better questions.",
-  pronouns: "she / her",
   location: "Portland, OR",
   joined: "Joined March 2024",
   website: "maravance.notes",
