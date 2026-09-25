@@ -66,15 +66,15 @@ export async function getProfileHub(profileId: string) {
   const mediaRows = (media ?? []) as MediaRow[]
   const view = toProfileView(profile as ProfileRow, {
     stats: { ...mockProfile.stats, posts: threadRows.length, replies: replyRows.length, views: 0 },
-    posts: threadRows.map((thread) => ({ id: thread.id, title: thread.title, excerpt: thread.body?.slice(0, 180) ?? "", date: new Date(thread.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), replies: 0, topic: "Community" })),
-    replies: replyRows.map((reply) => ({ id: reply.id, title: reply.forum_threads?.title ?? "Community discussion", excerpt: reply.body.slice(0, 180), date: new Date(reply.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), topic: "Reply" })),
+    posts: threadRows.map((thread) => ({ id: thread.id, title: thread.title, excerpt: thread.body ?? "", date: new Date(thread.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), replies: 0, topic: "Community" })),
+    replies: replyRows.map((reply) => ({ id: reply.id, title: reply.forum_threads?.title ?? "Community discussion", excerpt: reply.body, date: new Date(reply.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), topic: "Reply" })),
     media: mediaRows.map((item) => ({ id: item.id, title: item.title || "Untitled upload", altText: item.alt_text || item.title || "Community upload", imageUrl: item.image_url, date: item.created_at, href: `/u/${profileId}`, isVideo: item.file_type?.startsWith("video/") })),
     featured: [],
   })
 
   const featuredItems = (featured ?? []) as FeaturedRow[]
   const featuredThreads = featuredItems.filter((item) => item.source_type === "thread").map((item) => threadRows.find((thread) => thread.id === item.source_id)).filter(Boolean)
-  view.featured = featuredThreads.map((thread) => ({ id: thread!.id, type: "thread", title: thread!.title, excerpt: thread!.body?.slice(0, 180) ?? "", date: thread!.created_at, href: `/forum/${thread!.slug || thread!.id}` }))
+  view.featured = featuredThreads.map((thread) => ({ id: thread!.id, type: "thread", title: thread!.title, excerpt: thread!.body ?? "", date: thread!.created_at, href: `/forum/${thread!.slug || thread!.id}` }))
   return view
 }
 
