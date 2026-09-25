@@ -29,6 +29,10 @@ export interface PulseCard {
   isOpenDiscussion: boolean
   ogImageUrl: string | null
   video: PostVideoMedia | null
+  authorName: string
+  authorUsername: string | null
+  authorAvatarUrl: string | null
+  authorProfileHref: string | null
 }
 
 export interface PulseMedia {
@@ -73,6 +77,8 @@ interface PulseThread {
   is_soft_deleted: boolean | null
   is_pending: boolean | null
   status: string | null
+  author_id: string | null
+  profiles?: { display_name: string | null; username: string | null; avatar_url: string | null } | Array<{ display_name: string | null; username: string | null; avatar_url: string | null }> | null
 }
 
 interface PulseReply {
@@ -135,6 +141,11 @@ function isEligible(thread: PulseThread, excludedIds: Set<string>): boolean {
   )
 }
 
+function getThreadProfile(thread: PulseThread): { display_name: string | null; username: string | null; avatar_url: string | null } | null {
+  if (!thread.profiles) return null
+  return Array.isArray(thread.profiles) ? thread.profiles[0] ?? null : thread.profiles
+}
+
 function makeCard(
   thread: PulseThread,
   slot: PulseSlot,
@@ -144,6 +155,7 @@ function makeCard(
 ): PulseCard {
   const category = normalizeCategoryName(thread.category || thread.desk)
   const slug = thread.slug || thread.id
+  const profile = getThreadProfile(thread)
   return {
     slot,
     eyebrow: isOpenDiscussion ? "OPEN DISCUSSION" : slot === "active" ? "ACTIVE DISCUSSION" : slot === "backchannel" ? "NEW FROM THE BACKCHANNEL" : slot === "editor" ? "EDITOR'S NOTABLE" : "COMMUNITY SIGNAL",
@@ -158,6 +170,10 @@ function makeCard(
     isOpenDiscussion,
     ogImageUrl: media.ogImageUrl,
     video: media.video,
+    authorName: profile?.display_name?.trim() || profile?.username?.trim() || "Anonymous",
+    authorUsername: profile?.username?.trim() || null,
+    authorAvatarUrl: profile?.avatar_url || null,
+    authorProfileHref: thread.author_id ? `/u/${encodeURIComponent(thread.author_id)}` : null,
   }
 }
 
@@ -237,7 +253,7 @@ export async function getTownHallPulse(includeDisabled = false): Promise<TownHal
       .maybeSingle(),
     admin
       .from("forum_threads")
-      .select("id, slug, title, body, content_json, excerpt, category, desk, source_url, created_at, last_activity_at, reply_count, is_pinned, is_featured, is_soft_deleted, is_pending, status")
+      .select("id, slug, title, body, content_json, excerpt, category, desk, source_url, created_at, last_activity_at, reply_count, is_pinned, is_featured, is_soft_deleted, is_pending, status, author_id, profiles:author_id(display_name, username, avatar_url)")
       .eq("is_soft_deleted", false)
       .eq("is_pending", false)
       .eq("status", "published")
