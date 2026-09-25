@@ -1,4 +1,4 @@
-export type ProfileTab = "posts" | "replies" | "saved" | "about"
+export type ProfileTab = "overview" | "threads" | "replies" | "media" | "about"
 
 export type ProfileTheme = {
   name: string
@@ -30,9 +30,11 @@ export type MockProfile = {
     excerpt: string
     date: string
   }
-  posts: Array<{ title: string; excerpt: string; date: string; replies: number; topic: string }>
-  replies: Array<{ title: string; excerpt: string; date: string; topic: string }>
+  posts: Array<{ id?: string; title: string; excerpt: string; date: string; replies: number; topic: string }>
+  replies: Array<{ id?: string; title: string; excerpt: string; date: string; topic: string }>
   badges: Array<{ label: string; detail: string }>
+  featured?: Array<{ id: string; type: "thread" | "media" | "asset"; title: string; excerpt: string; date: string; href: string; imageUrl?: string }>
+  media?: Array<{ id: string; title: string; altText: string; imageUrl: string; date: string; href?: string; isVideo?: boolean }>
   privacy: {
     hiddenDetails: string[]
     showActivity: boolean
