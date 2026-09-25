@@ -1,5 +1,6 @@
+import Image from "next/image"
 import Link from "next/link"
-import { ArrowUpRight, MessageSquare, Radio, ScanSearch } from "lucide-react"
+import { ArrowUpRight, MessageSquare, Radio, ScanSearch, UserRound } from "lucide-react"
 import type { PulseCard, PulseSettings, TownHallPulse } from "@/lib/pulse"
 import { PulseImagePreview, PulseVideoPreview } from "@/components/pulse-video-preview"
 
@@ -50,6 +51,22 @@ function PulseCardView({ card }: { card: PulseCard }) {
         </div>
       </div>
       <p className="relative mt-4 line-clamp-3 text-sm leading-6 text-muted-foreground">{card.excerpt}</p>
+      <div className="relative mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+        {card.authorProfileHref ? (
+          <Link href={card.authorProfileHref} className="flex min-w-0 items-center gap-2 text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`View ${card.authorName}'s profile`}>
+            <span className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/50">
+              {card.authorAvatarUrl ? <Image src={card.authorAvatarUrl} alt="" fill sizes="24px" className="object-cover" /> : <UserRound className="size-3.5" aria-hidden="true" />}
+            </span>
+            <span className="label-mono truncate text-[10px] font-semibold">{card.authorName}</span>
+          </Link>
+        ) : (
+          <span className="label-mono flex min-w-0 items-center gap-2 truncate text-[10px] text-muted-foreground">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50"><UserRound className="size-3.5" aria-hidden="true" /></span>
+            {card.authorName}
+          </span>
+        )}
+        <span className="label-mono shrink-0 text-[9px] text-muted-foreground">{card.authorUsername ? `@${card.authorUsername}` : "COMMUNITY MEMBER"}</span>
+      </div>
       <div className="relative mt-auto flex items-end justify-between gap-3 pt-5">
         <span className="label-mono inline-flex items-center gap-2 text-[10px] text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
