@@ -320,11 +320,6 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
             </Link>
           ))}
         </div>
-  <div className="flex min-w-0 flex-col items-stretch gap-2 border-t border-border pt-2">
-  <LiveChatButton onlineCount={onlineCount} />
-  <HeaderAuth menu />
-          <ThemeToggle />
-        </div>
       </div>
     )
   }
