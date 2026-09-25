@@ -19,8 +19,7 @@ export async function POST(request: NextRequest) {
     display_name: displayName,
     username,
     bio: String(body.bio ?? "").trim().slice(0, 160),
-    pronouns: String(body.pronouns ?? "").trim().slice(0, 40),
-    location: String(body.location ?? "").trim().slice(0, 80),
+      location: String(body.location ?? "").trim().slice(0, 80),
     website_url: String(body.website ?? "").trim().slice(0, 2048),
     social_links: Object.fromEntries(
       String(body.socialLinks ?? "").split(",").map((item: string) => item.trim()).filter(Boolean).slice(0, 6).map((item: string, index: number) => [`link_${index}`, item]),
