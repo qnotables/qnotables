@@ -539,7 +539,7 @@ export function SiteHeader({ wireStories: initialWireStories }: { wireStories?: 
         onBlurCapture={handleHeaderBlur}
         aria-hidden={!mobileVisible}
         inert={!mobileVisible}
-        className={`fixed inset-x-0 top-[var(--ticker-height)] z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
+        className={`fixed inset-x-0 top-0 z-50 border-b border-border bg-background/95 shadow-lg backdrop-blur transition-transform duration-[220ms] ease-out motion-reduce:transition-none md:hidden ${
           mobileVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
