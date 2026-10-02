@@ -15,7 +15,7 @@ const SITES: EmbedSite[] = [
     id: "qresearch",
     label: "QResearch",
     tag: "",
-    url: "https://8kun.top/mod.php?/qresearch/res/25066551.html#bottom",
+    url: "https://8kun.top/qresearch/res/25066551.html#bottom",
   },
   {
     id: "qresearch-catalog",
