@@ -140,6 +140,22 @@ export default async function Page() {
               <InFeedAd index={4} />
             </div>
 
+            <div className="my-6 flex w-full justify-center overflow-hidden">
+              <a
+                href="https://www.stickermule.com/unlock?ref_id=3301205801&utm_medium=embed&utm_source=invite&utm_content=728x90"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  alt="Custom Stickers, Die Cut Stickers, Bumper Stickers - Sticker Mule"
+                  height={90}
+                  width={728}
+                  src="https://cdn.stickermule.com/content/core/assets/banners/stickermule-invite-friends-large.png"
+                  className="h-auto max-w-full"
+                />
+              </a>
+            </div>
+
             <div className="w-full">
               <iframe
                 src="https://discord.com/widget?id=1521130800676995225&theme=dark"
