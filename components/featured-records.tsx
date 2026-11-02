@@ -93,25 +93,21 @@ export function FeaturedRecords({ records, carousel = false }: FeaturedRecordsPr
         <Star className="h-4 w-4 text-primary fill-primary" />
         <h2 className="stencil text-2xl md:text-3xl text-foreground">FEATURED RECORDS</h2>
         <span className="ml-auto label-mono text-xs text-muted-foreground">{records.length} ITEMS</span>
-        {carousel && records.length > 1 && (
-          <div className="flex shrink-0 gap-2">
-            <button type="button" aria-label="Previous featured story" aria-controls={trackId} onClick={() => scrollStories(-1)} className="flex size-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </button>
-            <button type="button" aria-label="Next featured story" aria-controls={trackId} onClick={() => scrollStories(1)} className="flex size-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-        )}
       </div>
 
+      <div className={cn(carousel && "flex items-center gap-2 md:gap-3")}>
+        {carousel && records.length > 1 && (
+          <button type="button" aria-label="Previous featured story" aria-controls={trackId} onClick={() => scrollStories(-1)} className="flex size-10 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <ChevronLeft className="size-4" aria-hidden="true" />
+          </button>
+        )}
       <div
         ref={trackRef}
         id={trackId}
         role={carousel ? "region" : undefined}
         aria-label={carousel ? "Featured stories, scroll horizontally for more" : undefined}
         tabIndex={carousel ? 0 : undefined}
-        className={carousel ? "flex snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "grid grid-cols-1 md:grid-cols-3 gap-6"}
+        className={carousel ? "flex min-w-0 flex-1 snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "grid grid-cols-1 md:grid-cols-3 gap-6"}
       >
         {(carousel ? records : records.slice(0, 3)).map((record) => (
           <article key={record.id} className={cn("group border border-border rounded overflow-hidden hover:border-primary/50 transition-colors", carousel && "min-w-0 shrink-0 basis-[85%] snap-start sm:basis-[calc((100%_-_1.5rem)/2)] md:basis-[calc((100%_-_3rem)/3)]")}>
@@ -193,6 +189,12 @@ export function FeaturedRecords({ records, carousel = false }: FeaturedRecordsPr
             </div>
           </article>
         ))}
+      </div>
+        {carousel && records.length > 1 && (
+          <button type="button" aria-label="Next featured story" aria-controls={trackId} onClick={() => scrollStories(1)} className="flex size-10 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </section>
   )
