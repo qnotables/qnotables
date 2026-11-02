@@ -1,14 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink, Play } from "lucide-react"
+import { useId, useRef } from "react"
+import { Clock, Star, Video, FileText, Image as ImageIcon, ExternalLink, Play, ChevronLeft, ChevronRight } from "lucide-react"
 import { ArchiveRecord } from "@/lib/archives-utils"
 import { CardImage } from "@/components/card-image"
 import { ShareButtons } from "@/components/share-buttons"
 import { getSiteUrl } from "@/lib/rss-utils"
+import { cn } from "@/lib/utils"
 
 interface FeaturedRecordsProps {
   records: ArchiveRecord[]
+  carousel?: boolean
 }
 
 function getMediaIcon(mediaType?: string) {
@@ -70,20 +73,44 @@ function VideoPreview({ record }: { record: ArchiveRecord }) {
   )
 }
 
-export function FeaturedRecords({ records }: FeaturedRecordsProps) {
+export function FeaturedRecords({ records, carousel = false }: FeaturedRecordsProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const trackId = useId()
+
+  function scrollStories(direction: number) {
+    const track = trackRef.current
+    const card = track?.firstElementChild
+    if (!track || !card) return
+    const step = card.getBoundingClientRect().width + Number.parseFloat(getComputedStyle(track).columnGap || "0")
+    track.scrollBy({ left: direction * step, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
+  }
+
   if (records.length === 0) return null
 
   return (
     <section id="featured" className="mb-16">
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
+      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <Star className="h-4 w-4 text-primary fill-primary" />
         <h2 className="stencil text-2xl md:text-3xl text-foreground">FEATURED RECORDS</h2>
         <span className="ml-auto label-mono text-xs text-muted-foreground">{records.length} ITEMS</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {records.slice(0, 3).map((record) => (
-          <article key={record.id} className="group border border-border rounded overflow-hidden hover:border-primary/50 transition-colors">
+      <div className={cn(carousel && "flex items-center gap-2 md:gap-3")}>
+        {carousel && records.length > 1 && (
+          <button type="button" aria-label="Previous featured story" aria-controls={trackId} onClick={() => scrollStories(-1)} className="flex size-10 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <ChevronLeft className="size-4" aria-hidden="true" />
+          </button>
+        )}
+      <div
+        ref={trackRef}
+        id={trackId}
+        role={carousel ? "region" : undefined}
+        aria-label={carousel ? "Featured stories, scroll horizontally for more" : undefined}
+        tabIndex={carousel ? 0 : undefined}
+        className={carousel ? "flex min-w-0 flex-1 snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "grid grid-cols-1 md:grid-cols-3 gap-6"}
+      >
+        {(carousel ? records : records.slice(0, 3)).map((record) => (
+          <article key={record.id} className={cn("group border border-border rounded overflow-hidden hover:border-primary/50 transition-colors", carousel && "min-w-0 shrink-0 basis-[85%] snap-start sm:basis-[calc((100%_-_1.5rem)/2)] md:basis-[calc((100%_-_3rem)/3)]")}>
             {/* Video preview or cover image */}
             {record.video_preview ? (
               <VideoPreview record={record} />
@@ -162,6 +189,12 @@ export function FeaturedRecords({ records }: FeaturedRecordsProps) {
             </div>
           </article>
         ))}
+      </div>
+        {carousel && records.length > 1 && (
+          <button type="button" aria-label="Next featured story" aria-controls={trackId} onClick={() => scrollStories(1)} className="flex size-10 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </section>
   )

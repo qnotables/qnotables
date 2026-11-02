@@ -114,7 +114,7 @@ export default async function Page() {
           </p>
         </div>
 
-        <FeaturedRecords records={getFeaturedRecords(archivePosts)} />
+        <FeaturedRecords records={getFeaturedRecords(archivePosts)} carousel />
 
         {/* Media Library */}
         <div className="mb-8">
