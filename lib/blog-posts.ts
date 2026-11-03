@@ -29,6 +29,7 @@ export interface BlogPost {
   publishedAt?: string
   updatedAt?: string
   published?: boolean
+  viewCount?: number
   source: "db" | "mdx"
 }
 
@@ -91,6 +92,7 @@ export interface BlogRow {
   published_at?: string
   updated_at?: string
   blog_post_tags?: Array<{ tag: string }>
+  blog_post_views?: Array<{ count: number }>
 }
 
 export function rowToPost(row: BlogRow): BlogPost {
@@ -120,6 +122,7 @@ export function rowToPost(row: BlogRow): BlogPost {
     seoDescription: row.seo_description,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
+    viewCount: row.blog_post_views?.[0]?.count,
     source: "db",
   }
 }
@@ -189,7 +192,7 @@ export async function getAllPostsAdmin(): Promise<BlogPost[]> {
   const { data, error } = await admin
     .from("blog_posts")
     .select(
-      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, og_image_url, created_at, published_at, updated_at, blog_post_tags(tag)",
+      "id, slug, title, subtitle, excerpt, cover_image, body, author_name, tag, category, post_type, read_minutes, published, status, featured, source_url, source_name, seo_title, seo_description, og_image_url, created_at, published_at, updated_at, blog_post_tags(tag), blog_post_views(count)",
     )
     .order("published_at", { ascending: false, nullsFirst: false })
 
