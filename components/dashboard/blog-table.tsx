@@ -108,6 +108,7 @@ export function BlogTable({ posts }: { posts: BlogPost[] }) {
                 <th className="label-mono px-3 py-2 text-left text-xs uppercase text-muted-foreground">Status</th>
                 <th className="label-mono px-3 py-2 text-left text-xs uppercase text-muted-foreground">Category</th>
                 <th className="label-mono px-3 py-2 text-left text-xs uppercase text-muted-foreground">Published</th>
+                <th scope="col" className="label-mono px-3 py-2 text-right text-xs uppercase text-muted-foreground">Views</th>
                 <th className="label-mono px-3 py-2 text-right text-xs uppercase text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -131,6 +132,9 @@ export function BlogTable({ posts }: { posts: BlogPost[] }) {
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{post.category || "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{formatDate(post.publishedAt)}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
+                      {(post.viewCount ?? 0).toLocaleString("en-US")}
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-1">
                         <Link
