@@ -11,6 +11,7 @@ import {
 import { classifyStory } from "@/lib/classifier"
 import { getLatestPost } from "@/lib/blog-posts"
 import { isSafeImageUrl, normalizeAbsoluteUrl } from "@/lib/rss-utils"
+import { deduplicateStories } from "@/lib/story-deduplication"
 
 import crypto from "crypto"
 
@@ -754,13 +755,14 @@ export async function getNews(): Promise<NewsBundle> {
   const blogPostStory = blogPostToStory(latestBlogPost)
   
   const [sources, policy] = await Promise.all([getConfiguredRssSources(), getRssPolicy()])
-  const stories = await fetchAllRSSSources(sources, policy)
+  const stories = deduplicateStories(await fetchAllRSSSources(sources, policy))
   const homepageFeedLimit = Math.max(30, sources.filter((source) => source.enabled).length)
 
   // If we have a blog post, use it as featured; otherwise fall back to RSS or static data
   if (blogPostStory && blogPostStory.image) {
+    const rssStories = deduplicateStories([blogPostStory, ...stories]).slice(1)
     const used = new Set<string>([blogPostStory.id])
-    let topStories = stories.slice(0, 2)
+    let topStories = rssStories.slice(0, 2)
     topStories.forEach((s) => used.add(s.id))
     
     // Ensure topStories have images - use fallback if needed
@@ -770,9 +772,9 @@ export async function getNews(): Promise<NewsBundle> {
       image: s.image || topFallbackImages[i],
     }))
 
-    const feed = stories.filter((s) => !used.has(s.id)).slice(0, homepageFeedLimit)
+    const feed = rssStories.filter((s) => !used.has(s.id)).slice(0, homepageFeedLimit)
 
-    const allStories = [blogPostStory, ...stories]
+    const allStories = [blogPostStory, ...rssStories]
     const trending = allStories
       .sort((a, b) => b.reports - a.reports)
       .slice(0, 5)
@@ -797,14 +799,7 @@ export async function getNews(): Promise<NewsBundle> {
     }
   }
 
-  // Dedupe while preserving the source-balanced order from the aggregator.
-  const seen = new Set<string>()
-  const unique = stories.filter((s) => {
-    const key = s.headline.toLowerCase()
-    if (!key || seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
+  const unique = stories
   const withImages = unique.filter((s) => s.image)
   const featured: Story = withImages[0]
     ? { ...withImages[0], image: withImages[0].image ?? fallbackFeatured.image, priority: "FLASH" }
