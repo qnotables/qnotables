@@ -257,14 +257,10 @@ export function isNewUser(profile: MinimalProfile): boolean {
  */
 export function flagBodyAutomatic(
   body: string,
-  maxLinks = SPAM_LIMITS.MAX_LINKS_PER_POST,
   maxEmbeds = SPAM_LIMITS.MAX_EMBEDS_PER_POST,
 ): string | null {
   if (containsScriptTags(body)) return "Contains script tags or JavaScript injection"
   if (containsUnsafeHtml(body)) return "Contains unsafe HTML elements or event handlers"
-
-  const links = hasTooManyLinks(body, maxLinks)
-  if (!links.ok) return `Too many links (${links.count}/${links.max})`
 
   const embeds = hasTooManyEmbeds(body, maxEmbeds)
   if (!embeds.ok) return `Too many embeds (${embeds.count}/${embeds.max})`
