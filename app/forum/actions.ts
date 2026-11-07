@@ -19,7 +19,6 @@ import {
   sanitizeBody,
   containsScriptTags,
   containsUnsafeHtml,
-  hasTooManyLinks,
   hasTooManyEmbeds,
   isNewUser,
   flagBodyAutomatic,
@@ -198,14 +197,9 @@ export async function createThread(formData: FormData) {
     .eq("id", 1)
     .maybeSingle()
 
-  const maxLinks = settings?.forum_max_links ?? SPAM_LIMITS.MAX_LINKS_PER_POST
   const maxEmbeds = settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST
   const moderationMode = settings?.forum_moderation_mode ?? false
 
-  const linkCheck = hasTooManyLinks(rawBody, maxLinks)
-  if (!linkCheck.ok) {
-    return { error: `Too many links (${linkCheck.count}). Maximum allowed: ${linkCheck.max}.` }
-  }
   const embedCheck = hasTooManyEmbeds(rawBody, maxEmbeds)
   if (!embedCheck.ok) {
     return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
@@ -264,7 +258,7 @@ export async function createThread(formData: FormData) {
   }
 
   // Auto-flag if body looks spammy (even if not hard-rejected)
-  const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
+  const flagReason = flagBodyAutomatic(body, maxEmbeds)
   if (flagReason) {
     await admin.from("moderation_flags").insert({
       content_type: "forum_thread",
@@ -500,14 +494,9 @@ export async function createReply(formData: FormData) {
     .eq("id", 1)
     .maybeSingle()
 
-  const maxLinks = settings?.forum_max_links ?? SPAM_LIMITS.MAX_LINKS_PER_POST
   const maxEmbeds = settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST
   const moderationMode = settings?.forum_moderation_mode ?? false
 
-  const linkCheck = hasTooManyLinks(rawBody, maxLinks)
-  if (!linkCheck.ok) {
-    return { error: `Too many links (${linkCheck.count}). Maximum allowed: ${linkCheck.max}.` }
-  }
   const embedCheck = hasTooManyEmbeds(rawBody, maxEmbeds)
   if (!embedCheck.ok) {
     return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
@@ -554,7 +543,7 @@ export async function createReply(formData: FormData) {
   }
 
   // Auto-flag
-  const flagReason = flagBodyAutomatic(body, maxLinks, maxEmbeds)
+  const flagReason = flagBodyAutomatic(body, maxEmbeds)
   if (flagReason && replyData?.id) {
     await admin.from("moderation_flags").insert({
       content_type: "forum_reply",
