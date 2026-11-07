@@ -20,16 +20,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark")
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem("theme")
-    const nextTheme: Theme = storedTheme === "light" ? "light" : "dark"
+    let nextTheme: Theme = "dark"
+    try {
+      nextTheme = window.localStorage.getItem("theme") === "light" ? "light" : "dark"
+    } catch {
+      // Storage can be blocked in embedded previews or privacy-restricted browsers.
+    }
     setThemeState(nextTheme)
     document.documentElement.classList.toggle("dark", nextTheme === "dark")
+    document.documentElement.classList.toggle("light", nextTheme === "light")
   }, [])
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme)
-    window.localStorage.setItem("theme", nextTheme)
     document.documentElement.classList.toggle("dark", nextTheme === "dark")
+    document.documentElement.classList.toggle("light", nextTheme === "light")
+    try {
+      window.localStorage.setItem("theme", nextTheme)
+    } catch {
+      // Apply the selection even when it cannot be persisted.
+    }
   }
 
   return (
