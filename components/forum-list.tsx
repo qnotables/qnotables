@@ -171,7 +171,7 @@ function ThreadCard({ thread, isSignedIn, mounted }: { thread: ThreadListItem; i
         {thread.sourceUrl && <a href={thread.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="label-mono mt-3 inline-flex max-w-full items-start gap-1 break-words text-[10px] text-primary hover:underline" onClick={(event) => event.stopPropagation()}><Link2 className="mt-0.5 h-3 w-3 shrink-0" /> <span className="break-words">Open primary source</span></a>}
         {tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1">{tags.map((tag) => <span key={tag} className="label-mono border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">#{tag}</span>)}</div>}
         <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3 border-t border-border pt-3">
-          <ShareButtons title={thread.title} url={href} excerpt={excerpt} />
+          <ShareButtons title={thread.title} url={href} excerpt={excerpt} className="border border-border px-2.5 py-2 text-[10px]" />
           {isSignedIn && <ForumThreadUpvote threadId={thread.id} initialUpVotes={thread.upVoteCount} userVote={thread.userVote} />}
           <div className="label-mono flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">{thread.authorName}</span>

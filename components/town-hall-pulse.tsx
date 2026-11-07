@@ -3,6 +3,7 @@ import Link from "next/link"
 import { ArrowUpRight, MessageSquare, Radio, ScanSearch, UserRound } from "lucide-react"
 import type { PulseCard, PulseSettings, TownHallPulse } from "@/lib/pulse"
 import { PulseImagePreview, PulseVideoPreview } from "@/components/pulse-video-preview"
+import { ShareButtons } from "@/components/share-buttons"
 
 function formatActivity(value: string): string {
   const date = new Date(value)
@@ -67,11 +68,13 @@ function PulseCardView({ card }: { card: PulseCard }) {
         )}
         <span className="label-mono shrink-0 text-[9px] text-muted-foreground">{card.authorUsername ? `@${card.authorUsername}` : "COMMUNITY MEMBER"}</span>
       </div>
-      <div className="relative mt-auto flex items-end justify-between gap-3 pt-5">
+      <div className="relative mt-auto flex flex-col gap-3 pt-5">
         <span className="label-mono inline-flex items-center gap-2 text-[10px] text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           {card.replyCount} {card.replyCount === 1 ? "REPLY" : "REPLIES"} · {formatActivity(card.activityAt)}
         </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ShareButtons title={card.title} url={card.href} excerpt={card.excerpt} className="border border-border px-2.5 py-2 text-[10px]" />
         <Link
           href={card.href}
           className="label-mono inline-flex shrink-0 items-center gap-1 border border-primary px-2.5 py-2 text-[10px] font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -79,6 +82,7 @@ function PulseCardView({ card }: { card: PulseCard }) {
         >
           JOIN DISCUSSION <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
+        </div>
       </div>
     </article>
   )
