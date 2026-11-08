@@ -22,14 +22,9 @@ function PulseCardView({ card }: { card: PulseCard }) {
         <span className="label-mono text-[10px] text-muted-foreground">{card.sourceStatus}</span>
       </div>
       {card.video ? (
-        <Link
-          href={card.href}
-          className="relative z-10 mt-5 block overflow-hidden border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          aria-label={`Open discussion: ${card.title}`}
-        >
+        <div className="relative mt-5 overflow-hidden border border-border">
           <PulseVideoPreview video={card.video} title={card.title} />
-          <span className="label-mono pointer-events-none absolute left-2 top-2 border border-primary bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-primary backdrop-blur-sm">VIDEO PREVIEW</span>
-        </Link>
+        </div>
       ) : card.ogImageUrl ? (
         <Link
           href={card.href}
