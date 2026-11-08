@@ -5,6 +5,7 @@ import type { KeyboardEvent } from "react"
 import Link from "next/link"
 import { Flag, Hash, LogIn, Radio, Send, Trash2, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -64,12 +65,12 @@ export function LiveChatButton({ onlineCount }: ChatButtonProps) {
   const [open, setOpen] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [unread, setUnread] = useState(0)
-  const unreadRef = useRef(0)
   const handleIncoming = useCallback((incomingUserId: string) => {
-    if (!open || incomingUserId === userId) return
-    unreadRef.current += 1
-    setUnread(unreadRef.current)
+    if (open || incomingUserId === userId) return
+    setUnread((count) => count + 1)
   }, [open, userId])
+  const hasUnread = unread > 0 && !open
+  const notification = `${unread} new ${unread === 1 ? "message" : "messages"} — check in with the community`
 
   useEffect(() => {
     const supabase = createClient()
@@ -89,26 +90,25 @@ export function LiveChatButton({ onlineCount }: ChatButtonProps) {
   }, [])
 
   useEffect(() => {
-    if (open) {
-      unreadRef.current = 0
-      setUnread(0)
-    }
-  }, [open])
+    if (open || !userId) setUnread(0)
+  }, [open, userId])
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative flex min-h-9 items-center gap-2 border border-border px-2.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-        aria-label={userId ? "Open QNotables live chat" : "Sign in to join QNotables live chat"}
+        className={cn("relative flex min-h-9 items-center gap-2 border px-2.5 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", hasUnread ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}
+        aria-label={hasUnread ? `Open QNotables live chat: ${notification}` : userId ? "Open QNotables live chat" : "Sign in to join QNotables live chat"}
+        title={hasUnread ? notification : "Check in with the community"}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
         <Hash className="h-4 w-4" aria-hidden="true" />
         <span className="label-mono text-foreground">Chat</span>
-        {unread > 0 && !open ? <span className="label-mono bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">{unread > 9 ? "9+" : unread}</span> : null}
+        {hasUnread ? <span aria-hidden="true" className="label-mono bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">NEW {unread > 9 ? "9+" : unread}</span> : null}
       </button>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{hasUnread ? notification : ""}</span>
       <LiveChatDialog open={open} onOpenChange={setOpen} userId={userId} onlineCount={onlineCount} onIncoming={handleIncoming} />
     </>
   )
@@ -141,6 +141,11 @@ function LiveChatDialog({
   const scrollRef = useRef<HTMLDivElement>(null)
   const hasLoadedRef = useRef(false)
   const supabaseRef = useRef(createClient())
+  const onIncomingRef = useRef(onIncoming)
+
+  useEffect(() => {
+    onIncomingRef.current = onIncoming
+  }, [onIncoming])
 
   const loadMessages = useCallback(async () => {
     if (!userId) return
@@ -187,7 +192,7 @@ function LiveChatDialog({
         const next = payload.new as { id: string; user_id: string; body: string; created_at: string }
         const { data: author } = await supabaseRef.current.from("profiles").select("id, display_name, username, avatar_url").eq("id", next.user_id).maybeSingle()
         if (!mounted) return
-        onIncoming(next.user_id)
+        onIncomingRef.current(next.user_id)
         setMessages((current) => current.some((message) => message.id === next.id) ? current : [...current, {
           id: next.id,
           userId: next.user_id,
@@ -217,7 +222,7 @@ function LiveChatDialog({
       mounted = false
       void Promise.resolve(supabaseRef.current.removeChannel(channel)).catch(() => undefined)
     }
-  }, [onIncoming, userId])
+  }, [userId])
 
   useEffect(() => {
     if (open && messages.length > 0) {
