@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Play } from "lucide-react"
 import { CardImage } from "@/components/card-image"
+import { XPostEmbed } from "@/components/x-post-embed"
 import type { PostVideoMedia } from "@/lib/post-media"
 
 export function PulseImagePreview({ src, alt }: { src: string; alt: string }) {
@@ -52,8 +53,14 @@ export function PulseVideoPreview({ video, title }: { video: PostVideoMedia; tit
           </span>
           <span className="sr-only">Play video preview</span>
         </button>
+        <span className="label-mono pointer-events-none absolute left-2 top-2 border border-primary bg-background/80 px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-primary backdrop-blur-sm">VIDEO PREVIEW</span>
       </div>
     )
+  }
+
+  const xPostUrl = video.src.match(/^https?:\/\/(?:www\.|mobile\.)?(?:x\.com|twitter\.com)\/(?:\w+\/status|i\/web\/status)\/\d+/i)?.[0]
+  if (xPostUrl) {
+    return <div className="min-w-0 overflow-hidden border border-border bg-muted/30"><XPostEmbed url={xPostUrl} compact /></div>
   }
 
   return (
