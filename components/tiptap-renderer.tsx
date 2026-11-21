@@ -15,6 +15,8 @@ import { XPostEmbed } from "@/components/x-post-embed"
 import { omitPostMedia, resolveFirstPostMedia } from "@/lib/post-media"
 import { preprocessBody } from "@/lib/forum-utils"
 import { isApprovedIframeSrc } from "@/lib/media-utils"
+import { getEmbedBlock } from "@/lib/publishing-embed"
+import { PublishingEmbedCard } from "@/components/publishing-embed"
 export { isTiptapJson } from "@/lib/tiptap-utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -240,6 +242,11 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
       )
     }
 
+    case "publishingEmbed": {
+      const block = getEmbedBlock(node.attrs)
+      return block ? <PublishingEmbedCard key={`${key}-${block.proof}`} block={block} /> : null
+    }
+
     case "embedBlock": {
       const provider = typeof node.attrs?.provider === "string" ? node.attrs.provider : ""
       const embedUrl = typeof node.attrs?.embedUrl === "string" ? node.attrs.embedUrl : ""
@@ -260,6 +267,7 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
             {title && <span className="label-mono ml-2 text-xs text-foreground">{title}</span>}
           </div>
 
+          {isSafeUrl(originalUrl || embedUrl) && <a className="block break-all px-3 py-2 text-sm text-primary hover:underline" href={originalUrl || embedUrl} target="_blank" rel="noopener noreferrer nofollow">{title || "Open original source"}</a>}
           {isX ? (
             isSafeUrl(originalUrl) && <XPostEmbed url={originalUrl} />
           ) : (
@@ -304,26 +312,8 @@ function renderNode(node: TiptapNode, index: number): ReactNode {
 
     case "htmlEmbedBlock": {
       const html = typeof node.attrs?.html === "string" ? node.attrs.html : ""
-      const height = typeof node.attrs?.height === "number" ? node.attrs.height : 480
       if (!html) return null
-      return (
-        <div key={key} className="my-4 overflow-hidden border border-border bg-card">
-          <div className="border-b border-border bg-muted/60 px-3 py-1.5">
-            <span className="label-mono text-xs text-muted-foreground">HTML EMBED</span>
-          </div>
-          {/* Sandboxed: deliberately omits allow-same-origin so injected scripts
-              run in an opaque origin and cannot reach our cookies/DOM. */}
-          <iframe
-            srcDoc={html}
-            title="HTML embed"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"
-            className="w-full border-0 bg-white"
-            style={{ height: `${height}px` }}
-          />
-        </div>
-      )
+      return <aside key={key} className="my-4 border border-border bg-card p-3 text-sm text-muted-foreground">This legacy HTML embed is unavailable.</aside>
     }
 
     default:

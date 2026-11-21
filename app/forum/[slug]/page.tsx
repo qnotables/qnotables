@@ -460,6 +460,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ slug: s
           authorId={t.author_id}
           authorName={t.profiles?.display_name ?? "operator"}
           isOwner={user?.id === t.author_id}
+          isDraft={isDraft}
           isAdmin={isAdmin}
           category={t.category}
           tags={t.tags}

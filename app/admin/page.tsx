@@ -119,6 +119,14 @@ export default async function AdminPage() {
                 </div>
               </Link>
 
+              <Link href="/admin/embeds" className="group flex items-start justify-between gap-4 border border-border bg-card p-6 transition-colors hover:border-primary">
+                <div>
+                  <h3 className="stencil text-foreground group-hover:text-primary">Embed Providers</h3>
+                  <p className="label-mono mt-2 text-sm text-muted-foreground">Approve external origins and review compatibility issues</p>
+                </div>
+                <ArrowRight className="size-5 shrink-0 text-muted-foreground group-hover:text-primary" />
+              </Link>
+
               {/* Archives Management */}
               <Link
                 href="/dashboard/archives"

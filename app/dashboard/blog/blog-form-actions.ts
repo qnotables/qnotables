@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isAdminEmail } from "@/lib/admin"
+import { createClient } from "@/lib/supabase/server"
+import { checkPublishingDocument } from "@/lib/embed-trust"
 import { validateDashboardAccess } from "@/lib/dashboard-auth"
 import { logActivity } from "@/lib/dashboard-data"
 
@@ -73,6 +76,10 @@ export async function createPostDashboard(
   const f = parseForm(formData)
   if (f.title.length < 3) return { error: "Title must be at least 3 characters." }
   if (f.body.length < 10) return { error: "Body is too short." }
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
+  const document = checkPublishingDocument(f.body, isAdminEmail(user?.email))
+  if (document.error) return { error: document.error }
 
   const publishedAt = parsePublishedAt(f.published_at)
   if (publishedAt === undefined) return { error: "Published date and time is invalid." }
@@ -97,7 +104,7 @@ export async function createPostDashboard(
     priority: f.priority,
     cover_image: f.cover_image,
     author_name: f.author_name,
-    read_minutes: Math.max(1, Math.round(wordCount(f.body) / 180)),
+    read_minutes: Math.max(1, Math.round(wordCount(document.text) / 180)),
     seo_title: f.seo_title,
     seo_description: f.seo_description,
     og_image_url: f.og_image_url,
@@ -131,6 +138,10 @@ export async function updatePostDashboard(
   const f = parseForm(formData)
   if (f.title.length < 3) return { error: "Title must be at least 3 characters." }
   if (f.body.length < 10) return { error: "Body is too short." }
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
+  const document = checkPublishingDocument(f.body, isAdminEmail(user?.email))
+  if (document.error) return { error: document.error }
 
   const publishedAtInput = parsePublishedAt(f.published_at)
   if (publishedAtInput === undefined) return { error: "Published date and time is invalid." }
@@ -164,7 +175,7 @@ export async function updatePostDashboard(
       priority: f.priority,
       cover_image: f.cover_image,
       author_name: f.author_name,
-      read_minutes: Math.max(1, Math.round(wordCount(f.body) / 180)),
+      read_minutes: Math.max(1, Math.round(wordCount(document.text) / 180)),
       seo_title: f.seo_title,
       seo_description: f.seo_description,
       og_image_url: f.og_image_url,

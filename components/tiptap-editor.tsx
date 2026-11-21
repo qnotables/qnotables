@@ -39,7 +39,6 @@ import {
   GalleryHorizontal,
   Maximize2,
 } from "lucide-react"
-import { detectEmbedUrl, type EmbedData } from "@/lib/tiptap-embed-utils"
 import {
   ALLOWED_IMAGE_TYPES,
   ALLOWED_VIDEO_TYPES,
@@ -54,7 +53,11 @@ import {
   MediaUploadButton,
   MediaPreviewGrid,
 } from "@/components/editor/MediaUploadButton"
-import { EmbedMediaModal } from "@/components/editor/EmbedMediaModal"
+import { PublishingEmbedDialog } from "@/components/editor/publishing-embed-dialog"
+import { PublishingEmbedNode } from "@/components/editor/publishing-embed-node"
+import { TiptapRenderer } from "@/components/tiptap-renderer"
+import { Button } from "@/components/ui/button"
+import { externalEmbedUrl, type PublishingEmbed } from "@/lib/publishing-embed"
 import { XPostEmbed } from "@/components/x-post-embed"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -247,7 +250,7 @@ function HtmlEmbedBlockView({
   node: { attrs: { html: string; height: number } }
   deleteNode: () => void
 }) {
-  const { html, height } = node.attrs
+  const { html } = node.attrs
   return (
     <NodeViewWrapper className="html-embed-block-wrapper my-4 select-none" contentEditable={false}>
       <div className="relative overflow-hidden border border-border bg-card">
@@ -265,17 +268,8 @@ function HtmlEmbedBlockView({
             <X className="h-3 w-3" />
           </button>
         </div>
-        {/* Sandboxed: deliberately omits allow-same-origin so injected
-            scripts run in an opaque origin and cannot reach our cookies/DOM. */}
-        <iframe
-          srcDoc={html}
-          title="HTML embed"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"
-          className="w-full border-0 bg-white"
-          style={{ height: `${height || 480}px` }}
-        />
+        <p className="p-3 text-sm text-muted-foreground">Legacy HTML is not executed. Replace it with a supported embed to display it inline.</p>
+        <details className="px-3 pb-3 text-sm"><summary>View saved source</summary><pre className="max-h-40 overflow-auto whitespace-pre-wrap">{html}</pre></details>
       </div>
     </NodeViewWrapper>
   )
@@ -369,8 +363,13 @@ export function TiptapEditor({
   const [tab, setTab] = useState<"write" | "preview">("write")
   const [media, setMedia] = useState<UploadedMedia[]>([])
   const [dragOver, setDragOver] = useState(false)
-  const [pendingEmbed, setPendingEmbed] = useState<EmbedData | null>(null)
+  const [pendingEmbed, setPendingEmbed] = useState<string | null>(null)
+  const [embedDialog, setEmbedDialog] = useState<string | null>(null)
   const [jsonValue, setJsonValue] = useState<string>("")
+  const serializedInput = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (jsonValue) serializedInput.current?.dispatchEvent(new Event("input", { bubbles: true }))
+  }, [jsonValue])
   const [previewText, setPreviewText] = useState<string>("")
 
   const imageDone = media.filter((m) => m.kind === "image" && m.status === "done").length
@@ -465,6 +464,7 @@ export function TiptapEditor({
       EmbedBlock,
       VideoBlock,
       HtmlEmbedBlock,
+      PublishingEmbedNode,
     ],
     content: getInitialContent(),
     onUpdate({ editor }) {
@@ -497,15 +497,11 @@ export function TiptapEditor({
             return true
           }
         }
-        // Then check for embed URLs
         const text = event.clipboardData?.getData("text/plain")?.trim() ?? ""
-        if (text) {
-          const embed = detectEmbedUrl(text)
-          if (embed) {
-            event.preventDefault()
-            setPendingEmbed(embed)
-            return true
-          }
+        if (isSignedIn && text && (/^<iframe\b/i.test(text) ? text.length <= 4000 : Boolean(externalEmbedUrl(text)))) {
+          event.preventDefault()
+          setPendingEmbed(text)
+          return true
         }
         return false
       },
@@ -633,57 +629,9 @@ export function TiptapEditor({
     }).run()
   }
 
-  // ─── EmbedMediaModal callbacks ────────────────────────────────────────────
-
-  function onEmbedImageUrl(url: string) {
-    editor?.chain().focus().setImage({ src: url }).run()
-  }
-
-  function onEmbedUrl(embed: EmbedData) {
-    editor?.chain().focus().insertContent({
-      type: "embedBlock",
-      attrs: {
-        provider: embed.provider,
-        originalUrl: embed.originalUrl,
-        embedUrl: embed.embedUrl,
-        title: embed.title,
-      },
-    }).run()
-    setPendingEmbed(null)
-  }
-
-  function onIframeCode(src: string, title: string) {
-    // For Tiptap, insert as embedBlock using direct src
-    editor?.chain().focus().insertContent({
-      type: "embedBlock",
-      attrs: {
-        provider: "iframe",
-        originalUrl: src,
-        embedUrl: src,
-        title,
-      },
-    }).run()
-  }
-
-  // Admin-only: embed an arbitrary https website as an iframe-style embed block.
-  function onWebsiteUrl(url: string, title: string) {
-    editor?.chain().focus().insertContent({
-      type: "embedBlock",
-      attrs: {
-        provider: "website",
-        originalUrl: url,
-        embedUrl: url,
-        title,
-      },
-    }).run()
-  }
-
-  // Admin-only: embed raw HTML inside a sandboxed iframe.
-  function onHtmlEmbed(html: string) {
-    editor?.chain().focus().insertContent({
-      type: "htmlEmbedBlock",
-      attrs: { html, height: 480 },
-    }).run()
+  function insertPublishingEmbed(block: PublishingEmbed) {
+    editor?.chain().focus().insertContent({ type: "publishingEmbed", attrs: block }).run()
+    setEmbedDialog(null)
   }
 
   // ─── Link insertion ────────────────────────────────────────────────────────
@@ -696,7 +644,7 @@ export function TiptapEditor({
       return
     }
     if (editor?.state.selection.empty) {
-      editor.chain().focus().insertContent(`<a href="${url.trim()}">${url.trim()}</a>`).run()
+      editor.chain().focus().insertContent({ type: "text", text: url.trim(), marks: [{ type: "link", attrs: { href: url.trim() } }] }).run()
     } else {
       editor?.chain().focus().setLink({ href: url.trim() }).run()
     }
@@ -704,19 +652,10 @@ export function TiptapEditor({
 
   // ─── Pending embed banner (from paste detection) ──────────────────────────
 
-  function confirmEmbed(embed: EmbedData) {
-    onEmbedUrl(embed)
-  }
-
   function dismissEmbed() {
-    if (pendingEmbed) {
-      editor
-        ?.chain()
-        .focus()
-        .insertContent(
-          `<a href="${pendingEmbed.originalUrl}" target="_blank" rel="noopener noreferrer nofollow">${pendingEmbed.originalUrl}</a>`,
-        )
-        .run()
+    if (pendingEmbed && editor) {
+      const url = externalEmbedUrl(pendingEmbed)
+      editor.chain().focus().insertContent({ type: "text", text: pendingEmbed, ...(url ? { marks: [{ type: "link", attrs: { href: url.href } }] } : {}) }).run()
     }
     setPendingEmbed(null)
   }
@@ -915,16 +854,9 @@ export function TiptapEditor({
         media={media}
       />
 
-      {/* Embed Media — single unified dropdown.
-          Arbitrary website/HTML embeds are enabled only in the blog editor. */}
-      <EmbedMediaModal
-        onImageUrl={onEmbedImageUrl}
-        onEmbedUrl={onEmbedUrl}
-        onIframeCode={onIframeCode}
-        allowArbitrary={uploadFolder === "blog"}
-        onWebsiteUrl={onWebsiteUrl}
-        onHtmlEmbed={onHtmlEmbed}
-      />
+      <Button type="button" size="sm" variant="outline" disabled={!isSignedIn} onClick={() => setEmbedDialog("")}>
+        <Globe data-icon="inline-start" /> Embed
+      </Button>
     </div>
   )
 
@@ -993,8 +925,8 @@ export function TiptapEditor({
       {/* Preview area */}
       {tab === "preview" && (
         <div className="min-h-[200px] bg-background px-5 py-4">
-          {previewText.trim() ? (
-            <TiptapPreview editor={editor} />
+          {editor?.state.doc.content.size && !editor.isEmpty ? (
+            <TiptapRenderer content={jsonValue} />
           ) : (
             <p className="label-mono text-muted-foreground">Nothing to preview yet.</p>
           )}
@@ -1006,72 +938,19 @@ export function TiptapEditor({
 
       {/* Pending embed banner (pasted URL auto-detected) */}
       {pendingEmbed && (
-        <EmbedConfirmBanner
-          embed={pendingEmbed}
-          onConfirm={confirmEmbed}
-          onDismiss={dismissEmbed}
-        />
+        <div className="flex flex-wrap items-center gap-2 border-t border-border bg-muted px-4 py-2">
+          <span role="status" className="min-w-0 flex-1 truncate text-sm">External source detected</span>
+          <Button type="button" size="sm" onClick={() => { setEmbedDialog(pendingEmbed); setPendingEmbed(null) }}>Preview embed</Button>
+          <Button type="button" size="sm" variant="outline" onClick={dismissEmbed}>{pendingEmbed.startsWith("<") ? "Paste as text" : "Keep as link"}</Button>
+        </div>
       )}
+      {embedDialog !== null && <PublishingEmbedDialog initialInput={embedDialog} onClose={() => { setEmbedDialog(null); editor?.commands.focus() }} onApply={insertPublishingEmbed} />}
 
       {/* Media thumbnail grid */}
       <MediaPreviewGrid media={media} onRemove={removeMedia} />
 
       {/* Serialized JSON for form submission */}
-      <input type="hidden" name={name} id={id} value={jsonValue} required={required} />
-    </div>
-  )
-}
-
-// ─── Inline preview ────────────────────────────────────────────────────────────
-
-function TiptapPreview({ editor }: { editor: ReturnType<typeof useEditor> }) {
-  const html = editor?.getHTML() ?? ""
-  return (
-    <div
-      className="tiptap-preview-prose leading-relaxed text-foreground/90"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  )
-}
-
-// ─── Embed confirm banner ──────────────────────────────────────────────────────
-
-function EmbedConfirmBanner({
-  embed,
-  onConfirm,
-  onDismiss,
-}: {
-  embed: EmbedData
-  onConfirm: (e: EmbedData) => void
-  onDismiss: () => void
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-t border-primary/40 bg-primary/10 px-4 py-2.5">
-      <div className="flex items-center gap-2 min-w-0">
-        <Film className="h-4 w-4 flex-shrink-0 text-primary" />
-        <span className="label-mono text-xs text-foreground">
-          Embed {embed.provider.toUpperCase()} video?
-        </span>
-        <span className="label-mono truncate text-xs text-muted-foreground">
-          {embed.originalUrl}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => onConfirm(embed)}
-          className="label-mono inline-flex items-center gap-1 bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <CheckCircle2 className="h-3 w-3" /> Embed
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="label-mono inline-flex items-center gap-1 border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Link2 className="h-3 w-3" /> As Link
-        </button>
-      </div>
+      <input ref={serializedInput} type="hidden" name={name} id={id} value={jsonValue} required={required} />
     </div>
   )
 }

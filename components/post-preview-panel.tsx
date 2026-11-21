@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Eye, FileText } from "lucide-react"
+import { TiptapRenderer } from "@/components/tiptap-renderer"
 import { Markdown } from "@/components/markdown"
+import { isTiptapJson } from "@/lib/tiptap-utils"
 
 interface PostPreviewPanelProps {
   /** Controlled from the parent form via event listeners on the named inputs */
@@ -58,7 +60,7 @@ export function PostPreviewPanel({ initialTitle = "", initialBody = "" }: PostPr
                 <h1 className="stencil mb-4 text-2xl leading-tight text-foreground">{title}</h1>
               )}
               {body ? (
-                <Markdown content={body} />
+                isTiptapJson(body) ? <TiptapRenderer content={body} /> : <Markdown content={body} />
               ) : (
                 <p className="label-mono text-muted-foreground">Start writing to see the preview…</p>
               )}
