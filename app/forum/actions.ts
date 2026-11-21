@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isAdminEmail } from "@/lib/admin"
+import { checkPublishingDocument } from "@/lib/embed-trust"
 import { isApprovedIframeSrc } from "@/lib/media-utils"
 import {
   parseTags,
@@ -32,7 +33,7 @@ const THREAD_SOURCE_URL_MAX = 2_048
 
 const ALLOWED_TIPTAP_NODES = new Set([
   "doc", "paragraph", "text", "heading", "bulletList", "orderedList", "listItem",
-  "blockquote", "codeBlock", "hardBreak", "horizontalRule", "image", "videoBlock", "embedBlock",
+  "blockquote", "codeBlock", "hardBreak", "horizontalRule", "image", "videoBlock", "embedBlock", "publishingEmbed",
 ])
 
 async function notifySlackAboutForumReply({
@@ -87,9 +88,13 @@ function collectMediaUrls(document: unknown): string[] {
 }
 
 function parseRichContent(raw: string, format: string) {
+  if (raw.length > THREAD_BODY_MAX) throw new Error("The post body is too long.")
+  const checked = checkPublishingDocument(raw, true)
+  if (checked.error) throw new Error(checked.error)
   if (format !== "tiptap") {
+    if (checked.hasEmbeds) throw new Error("Embeds require the rich-text editor.")
     const clean = sanitizeBody(raw)
-    return { body: clean, contentJson: null, plainText: clean.replace(/<[^>]*>/g, " ") }
+    return { body: clean, contentJson: null, plainText: clean.replace(/<[^>]*>/g, " "), hasHtml: false }
   }
 
   let document: unknown
@@ -128,7 +133,7 @@ function parseRichContent(raw: string, format: string) {
   walk(document)
 
   const plainText = textParts.join(" ").replace(/\s+/g, " ").trim()
-  return { body: JSON.stringify(document), contentJson: document, plainText }
+  return { body: JSON.stringify(document), contentJson: document, plainText, hasHtml: checked.hasHtml }
 }
 
 export async function createThread(formData: FormData) {
@@ -181,6 +186,7 @@ export async function createThread(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to post." }
+  if (richContent.hasHtml && !isAdminEmail(user.email)) return { error: "Custom HTML is restricted to administrators." }
 
   // Rate limit: 1 post per 30 s
   const rl = checkRateLimit(user.id, "post", SPAM_LIMITS.POST_COOLDOWN_MS, 1)
@@ -271,11 +277,11 @@ export async function createThread(formData: FormData) {
 
   revalidatePath("/forum")
 
-  if (isPending) {
-    return { error: null, pending: true, message: "Your post is pending review by a moderator." }
-  }
   if (status === "draft") {
     return { error: null, draft: true, id: data.id, slug: data.slug, message: "Draft saved." }
+  }
+  if (isPending) {
+    return { error: null, pending: true, message: "Your post is pending review by a moderator." }
   }
 
   redirect(`/forum/${data.slug || data.id}`)
@@ -314,16 +320,38 @@ export async function updateThread(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to edit." }
+  if (richContent.hasHtml && !isAdminEmail(user.email)) return { error: "Custom HTML is restricted to administrators." }
 
   const { data: current } = await supabase
     .from("forum_threads")
-    .select("slug, body, content_json, content_format, content_version")
+    .select("slug, body, content_json, content_format, content_version, status, is_pending, is_soft_deleted")
     .eq("id", id)
     .eq("author_id", user.id)
     .maybeSingle()
   if (!current) return { error: "You do not have permission to edit this thread." }
   if (current.content_version !== expectedVersion) {
     return { error: "This thread changed in another tab. Reload before saving.", conflict: true }
+  }
+
+  const publishDraft = formData.get("intent") === "publish"
+  if (publishDraft && (current.status !== "draft" || current.is_soft_deleted)) return { error: "Only an active draft can be published." }
+
+  const admin = createAdminClient()
+  const { data: settings, error: settingsError } = await admin.from("site_settings")
+    .select("forum_max_embeds, forum_moderation_mode").eq("id", 1).maybeSingle()
+  if (publishDraft && settingsError) return { error: "Could not check publishing settings. Try again." }
+  const embedCheck = hasTooManyEmbeds(body, settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST)
+  if (!embedCheck.ok) return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
+
+  let pendingPublication = Boolean(current.is_pending)
+  if (publishDraft) {
+    const rate = checkRateLimit(user.id, "post", SPAM_LIMITS.POST_COOLDOWN_MS, 1)
+    if (!rate.allowed) return { error: `Posting too fast. Please wait ${Math.ceil(rate.retryAfterMs / 1000)}s before publishing.` }
+    if (settings?.forum_moderation_mode) {
+      const { data: profile, error } = await supabase.from("profiles").select("created_at, post_count").eq("id", user.id).maybeSingle()
+      if (error) return { error: "Could not check moderation eligibility. Try again." }
+      pendingPublication ||= isNewUser(profile ?? {})
+    }
   }
 
   const { error: revisionError } = await supabase.from("forum_revisions").insert({
@@ -346,6 +374,7 @@ export async function updateThread(formData: FormData) {
       content_format: contentFormat,
       content_version: expectedVersion + 1,
       excerpt: buildExcerpt(richContent.plainText, 200),
+      ...(publishDraft ? { status: "published", published_at: new Date().toISOString(), is_pending: pendingPublication } : {}),
       category,
       desk,
       tags,
@@ -375,7 +404,8 @@ export async function updateThread(formData: FormData) {
   if (current.slug) revalidatePath(`/forum/${current.slug}`)
   revalidatePath("/forum")
   revalidatePath("/")
-  return { error: null }
+  if (publishDraft) revalidatePath("/dashboard/moderation")
+  return { error: null, body, pending: publishDraft && pendingPublication }
 }
 
 export async function deleteThread(formData: FormData) {
@@ -449,6 +479,7 @@ export async function createReply(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to reply." }
+  if (richContent.hasHtml && !isAdminEmail(user.email)) return { error: "Custom HTML is restricted to administrators." }
 
   // Rate limit: 1 reply per 30 s
   const rl = checkRateLimit(user.id, "post", SPAM_LIMITS.POST_COOLDOWN_MS, 1)
@@ -609,6 +640,7 @@ export async function updateReply(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { error: "You must be signed in to edit." }
+  if (richContent.hasHtml && !isAdminEmail(user.email)) return { error: "Custom HTML is restricted to administrators." }
 
   const { data: reply } = await supabase
     .from("forum_replies")
@@ -630,6 +662,10 @@ export async function updateReply(formData: FormData) {
   if (reply.content_version !== expectedVersion) {
     return { error: "This reply changed in another tab. Reload before saving your edits.", conflict: true }
   }
+
+  const { data: settings } = await createAdminClient().from("site_settings").select("forum_max_embeds").eq("id", 1).maybeSingle()
+  const embedCheck = hasTooManyEmbeds(richContent.body, settings?.forum_max_embeds ?? SPAM_LIMITS.MAX_EMBEDS_PER_POST)
+  if (!embedCheck.ok) return { error: `Too many embeds (${embedCheck.count}). Maximum allowed: ${embedCheck.max}.` }
 
   const { error: revisionError } = await supabase.from("forum_revisions").insert({
     content_type: "reply",

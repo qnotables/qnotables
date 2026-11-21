@@ -129,7 +129,7 @@ export function countEmbeds(body: string): number {
   if (body.trimStart().startsWith("{")) {
     try {
       const doc = JSON.parse(body)
-      tiptapEmbeds = countTiptapNodes(doc, "embedBlock")
+      tiptapEmbeds = countTiptapNodes(doc, "embedBlock") + countTiptapNodes(doc, "publishingEmbed")
     } catch {
       // Not JSON — skip
     }
@@ -309,7 +309,7 @@ function stripTiptapMedia(node: unknown): unknown {
   const n = node as Record<string, unknown>
 
   // Remove image and embedBlock nodes entirely
-  if (n["type"] === "image" || n["type"] === "embedBlock") {
+  if (n["type"] === "image" || n["type"] === "embedBlock" || n["type"] === "publishingEmbed") {
     return null
   }
 

@@ -21,6 +21,7 @@ interface ThreadArticleProps {
   authorId: string | null
   authorName: string
   isOwner: boolean
+  isDraft?: boolean
   isAdmin: boolean
   category: string | null
   tags: string | null
@@ -86,6 +87,7 @@ export function ThreadArticle({
   authorId,
   authorName,
   isOwner,
+  isDraft = false,
   isAdmin,
   category,
   tags,
@@ -126,6 +128,8 @@ export function ThreadArticle({
       setError(res.error)
       return
     }
+    if (res?.body) setLocalBody(res.body)
+    if (res?.pending) setNotice("Your post is pending review by a moderator.")
     setEditing(false)
   }
 
@@ -247,6 +251,7 @@ export function ThreadArticle({
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save Changes
             </button>
+            {isDraft && <button type="submit" name="intent" value="publish" disabled={pending} className="label-mono border border-primary px-4 py-2 font-semibold text-primary hover:bg-primary/10 disabled:opacity-60">Post Thread</button>}
             <button
               type="button"
               onClick={() => {

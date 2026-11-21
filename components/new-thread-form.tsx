@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
+import Link from "next/link"
 import { X } from "lucide-react"
 import { ChevronDown } from "lucide-react"
 import { createThread } from "@/app/forum/actions"
@@ -52,7 +53,7 @@ export function NewThreadForm({ initialDraft, imported = false }: { initialDraft
   const [showImportNotice, setShowImportNotice] = useState(imported)
   const [error, setError] = useState<string | null>(null)
   const [pendingMsg, setPendingMsg] = useState<string | null>(null)
-  const [draftMsg, setDraftMsg] = useState<string | null>(null)
+  const [draftMsg, setDraftMsg] = useState<{ message: string; href: string } | null>(null)
   const [pending, startTransition] = useTransition()
   const [title, setTitle] = useState(initialDraft?.title ?? "")
   const [dirty, setDirty] = useState(false)
@@ -90,7 +91,7 @@ export function NewThreadForm({ initialDraft, imported = false }: { initialDraft
         setPendingMsg(res.message ?? "Your post is pending review by a moderator.")
       } else if (res?.draft) {
         setDirty(false)
-        setDraftMsg(res.message ?? "Draft saved. You can find it and publish it later.")
+        setDraftMsg({ message: res.message ?? "Draft saved.", href: `/forum/${encodeURIComponent(res.slug || res.id)}` })
       }
       // On success (published, no pending/draft), the server action redirects.
     })
@@ -256,7 +257,7 @@ export function NewThreadForm({ initialDraft, imported = false }: { initialDraft
 
       {draftMsg ? (
         <p className="label-mono border border-primary/40 bg-primary/10 px-4 py-3 text-primary">
-          {draftMsg}
+          {draftMsg.message} <Link href={draftMsg.href} className="underline underline-offset-4">Open saved draft</Link>
         </p>
       ) : null}
 

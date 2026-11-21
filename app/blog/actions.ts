@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { getAdminUser } from "@/lib/admin"
+import { getAdminUser, isAdminEmail } from "@/lib/admin"
+import { checkPublishingDocument } from "@/lib/embed-trust"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 function slugify(input: string): string {
@@ -58,7 +59,9 @@ export async function createPost(
   const slug = customSlug ? slugify(customSlug) : slugify(title)
   if (!slug) return { error: "Could not derive a valid slug from the title." }
 
-  const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
+  const document = checkPublishingDocument(body, isAdminEmail(admin.email))
+  if (document.error) return { error: document.error }
+  const readMinutes = Math.max(1, Math.round(wordCount(document.text) / 180))
   const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
   // Always persist the chosen publish date; fall back to now only when publishing and no date was given
   const publishedAt = publishedAtRaw
@@ -136,7 +139,9 @@ export async function updatePost(
   if (body.length < 10) return { error: "Body is too short." }
   if (!slug) return { error: "Could not derive a valid slug." }
 
-  const readMinutes = Math.max(1, Math.round(wordCount(body) / 180))
+  const document = checkPublishingDocument(body, isAdminEmail(admin.email))
+  if (document.error) return { error: document.error }
+  const readMinutes = Math.max(1, Math.round(wordCount(document.text) / 180))
   const publishedAtRaw = String(formData.get("published_at") ?? "").trim()
   // Always persist the chosen publish date; fall back to now only when publishing and no date was given
   const publishedAt = publishedAtRaw
