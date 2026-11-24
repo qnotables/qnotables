@@ -12,7 +12,7 @@ function frameUrl(block: PublishingEmbed) {
 }
 
 export function PublishingEmbedCard({ block }: { block: PublishingEmbed }) {
-  const [active, setActive] = useState(false)
+  const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(true)
   const { url, title, description, mode, target, kind, width, height } = block.payload
   const domain = url ? new URL(url).hostname : "Administrator-provided content"
