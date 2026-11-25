@@ -37,6 +37,7 @@ const secondaryLinks = [
   { label: "MY SIGNALS", href: "/account/signals" },
   { label: "ABOUT", href: "/about" },
   { label: "NEW TO Q", href: "/new-to-q" },
+  { label: "NURSERY", href: "/shop/nursery" },
 ]
 
 const allCategories = Array.from(new Set(["NOTABLES", ...categories]))

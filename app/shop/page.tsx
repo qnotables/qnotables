@@ -72,6 +72,19 @@ export default function ShopPage() {
           </div>
         </section>
 
+        <section aria-labelledby="nursery-shop-link" className="border-b border-border bg-card px-4 py-10 md:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2">
+              <p className="label-mono text-primary">Partner shop</p>
+              <h2 id="nursery-shop-link" className="stencil text-2xl">Roosters Ridge Nursery</h2>
+              <p className="text-sm text-muted-foreground">Browse live plants from the nursery&apos;s Shopify catalog.</p>
+            </div>
+            <Link href="/shop/nursery" className="label-mono border border-primary px-4 py-3 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+              Browse plants
+            </Link>
+          </div>
+        </section>
+
         <ShopFAQ />
       </main>
 
